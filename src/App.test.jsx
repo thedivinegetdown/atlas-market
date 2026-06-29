@@ -3,9 +3,9 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import App from './App'
 
 describe('App', () => {
-  it('renders the main heading', () => {
+  it('renders the trading workspace heading', () => {
     const markup = renderToStaticMarkup(<App />)
 
-    expect(markup).toContain('Get started')
+    expect(markup).toContain('Institutional Trading Workspace')
   })
 })
