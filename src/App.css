@@ -123,6 +123,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.execution-panel {
+  grid-column: 1 / -1;
+}
+
 .panel,
 .metric-card,
 .score-panel {
@@ -202,7 +206,14 @@ h1 {
   gap: 12px;
 }
 
-.guardrail-card {
+.execution-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.guardrail-card,
+.execution-card {
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -217,6 +228,18 @@ h1 {
 
 .guardrail-card.rejected {
   border-color: rgba(239, 68, 68, 0.32);
+}
+
+.execution-card.filled {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.execution-card.rejected {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.execution-card.not_filled {
+  border-color: rgba(234, 179, 8, 0.32);
 }
 
 .guardrail-card-header {
@@ -259,6 +282,12 @@ h1 {
 }
 
 .guardrail-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.execution-metrics {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
@@ -443,7 +472,9 @@ tr:last-child td {
   }
 
   .guardrail-grid,
-  .guardrail-metrics {
+  .guardrail-metrics,
+  .execution-grid,
+  .execution-metrics {
     grid-template-columns: 1fr;
   }
 

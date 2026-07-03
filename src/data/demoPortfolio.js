@@ -137,3 +137,24 @@ export const demoProposedTrades = Object.freeze([
     paperTrading: true,
   }),
 ])
+
+export const demoExecutionQuotes = Object.freeze({
+  'paper-trade-approved': Object.freeze({
+    bid: 525.78,
+    ask: 525.92,
+    last: 525.86,
+    low: 525.4,
+    high: 526.3,
+    liquidityScore: 94,
+    timestamp: '2026-07-03T15:00:00Z',
+  }),
+  'paper-trade-rejected': Object.freeze({
+    bid: 5461.75,
+    ask: 5462.75,
+    last: 5462.5,
+    low: 5458,
+    high: 5476,
+    liquidityScore: 82,
+    timestamp: '2026-07-03T15:00:00Z',
+  }),
+})

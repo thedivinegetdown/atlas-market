@@ -1,8 +1,14 @@
 import { useMemo } from 'react'
 import './App.css'
+import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
-import { demoPortfolio, demoProposedTrades, guardrailDemoPortfolio } from './data/demoPortfolio.js'
+import {
+  demoExecutionQuotes,
+  demoPortfolio,
+  demoProposedTrades,
+  guardrailDemoPortfolio,
+} from './data/demoPortfolio.js'
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', {
@@ -59,12 +65,21 @@ function App() {
   const risk = useMemo(() => evaluatePortfolioRisk(demoPortfolio, { emitEvent: false }), [])
   const guardrails = useMemo(() => demoProposedTrades.map((trade) => ({
     label: trade.label,
+    tradeId: trade.id,
     result: evaluateTradeGuardrail(
       trade.id === 'paper-trade-approved' ? guardrailDemoPortfolio : demoPortfolio,
       trade,
       { emitEvent: false },
     ),
   })), [])
+  const executions = useMemo(() => guardrails.map((guardrail) => ({
+    label: guardrail.label,
+    result: simulateTradeExecution(
+      guardrail.result,
+      demoExecutionQuotes[guardrail.tradeId],
+      { emitEvent: false },
+    ),
+  })), [guardrails])
   const riskTone = getRiskTone(risk.summary.riskLevel)
 
   return (
@@ -132,6 +147,42 @@ function App() {
                     </li>
                   ))}
                 </ul>
+                <span className="event-line">{result.eventType}</span>
+              </section>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel execution-panel">
+          <div className="panel-heading">
+            <h2>Execution Simulation</h2>
+            <span>Paper fills only. No live brokerage integration.</span>
+          </div>
+          <div className="execution-grid">
+            {executions.map(({ label, result }) => (
+              <section key={`${label}-${result.finalStatus}`} className={`execution-card ${result.finalStatus}`}>
+                <div className="guardrail-card-header">
+                  <div>
+                    <span>{label}</span>
+                    <strong>{result.proposedTrade?.symbol ?? 'N/A'}</strong>
+                  </div>
+                  <span className={`decision-pill ${result.finalStatus === 'filled' ? 'positive' : result.finalStatus === 'rejected' ? 'danger' : 'warning'}`}>
+                    {result.finalStatus}
+                  </span>
+                </div>
+                <p>{result.reason}</p>
+                {result.fill ? (
+                  <div className="execution-metrics">
+                    <MetricCard label="Fill Price" value={formatCurrency(result.fill.fillPrice)} />
+                    <MetricCard label="Slippage" value={`${formatNumber(result.fill.slippageBps)} bps`} />
+                    <MetricCard label="Slippage $" value={formatCurrency(result.fill.slippageAmount)} />
+                    <MetricCard label="Fees" value={formatCurrency(result.fill.fees)} />
+                    <MetricCard label="Notional" value={formatCurrency(result.fill.notional)} />
+                    <MetricCard label="Cash Impact" value={formatCurrency(result.fill.cashImpact)} />
+                  </div>
+                ) : (
+                  <p className="empty-state">No simulated fill was created.</p>
+                )}
                 <span className="event-line">{result.eventType}</span>
               </section>
             ))}
