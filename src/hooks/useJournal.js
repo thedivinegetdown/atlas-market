@@ -1,41 +1,48 @@
-import { useEffect, useState } from 'react'
-import { createJournalRepository } from '../../lib/repositories/journalRepository.js'
+import { useCallback, useEffect, useState } from 'react'
+import { workspaceApiClient } from '../api/workspaceApiClient.js'
+import { useEventBus } from './useEventBus.js'
 
-const journalRepository = createJournalRepository()
+export function useJournal({ search = '', symbol = 'all', result = 'all' } = {}) {
+  const [entries, setEntries] = useState([])
+  const [filteredEntries, setFilteredEntries] = useState([])
+  const [symbols, setSymbols] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState(null)
 
-function ensureSeedEntries() {
-  const existing = journalRepository.list()
-  if (existing.length > 0) {
-    return existing
-  }
+  const refresh = useCallback(async () => {
+    setIsRefreshing(true)
+    setError(null)
 
-  journalRepository.create({
-    strategy: 'Opening Range',
-    message: 'Reviewed SPY watchlist conditions before paper order routing.',
-    result: 'neutral',
-  })
-  journalRepository.create({
-    strategy: 'Risk Review',
-    message: 'Confirmed position sizing remains inside portfolio exposure limits.',
-    result: 'neutral',
-  })
-
-  return journalRepository.list()
-}
-
-export function useJournal() {
-  const [entries, setEntries] = useState(() => ensureSeedEntries())
-
-  const refresh = () => {
-    setEntries(journalRepository.list())
-  }
+    try {
+      const response = await workspaceApiClient.getJournalSummary({ search, symbol, result })
+      setFilteredEntries(response.entries ?? [])
+      setEntries(response.entries ?? [])
+      setSymbols(response.symbols ?? [])
+      return response.entries ?? []
+    } catch (refreshError) {
+      setError(refreshError instanceof Error ? refreshError.message : 'Unable to load journal')
+      return []
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [result, search, symbol])
 
   useEffect(() => {
-    refresh()
-  }, [])
+    void refresh()
+  }, [refresh])
+
+  // Auto-refresh when journal events fire
+  useEventBus('journal:created', () => void refresh(), [refresh])
 
   return {
     entries,
+    filteredEntries,
+    symbols,
+    isLoading,
+    isRefreshing,
+    error,
     refresh,
   }
 }

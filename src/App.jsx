@@ -9,19 +9,28 @@ import {
 } from './components/layout.jsx'
 import {
   JournalSummaryPanel,
+  DiagnosticsPanel,
+  AlertsPanel,
+  ScannerPanel,
   OrderEntryPanel,
   OrdersPanel,
+  EquityCurvePanel,
   PortfolioSummaryPanel,
   PositionsPanel,
   RiskPanel,
   SignalPanel,
-  SymbolOverviewPanel,
+  MarketOverviewPanel,
   WatchlistPanel,
 } from './components/panels.jsx'
+import { useMarketOverview } from './hooks/useMarketOverview.js'
 import { useOrders } from './hooks/useOrders.js'
+import { usePositions } from './hooks/usePositions.js'
 import { usePortfolio } from './hooks/usePortfolio.js'
+import { usePortfolioAnalytics } from './hooks/usePortfolioAnalytics.js'
+import { useEquityCurve } from './hooks/useEquityCurve.js'
 import { useRisk } from './hooks/useRisk.js'
 import { useSignals } from './hooks/useSignals.js'
+import { useSystemHealth } from './hooks/useSystemHealth.js'
 import { useWatchlist } from './hooks/useWatchlist.js'
 
 const navigationItems = [
@@ -54,25 +63,52 @@ function getMarketStatus(date = new Date()) {
 
 function App() {
   const watchlist = useWatchlist()
+  const marketOverview = useMarketOverview({
+    symbol: watchlist.selectedSymbol,
+    initialQuote: watchlist.selectedQuote,
+  })
   const portfolio = usePortfolio()
+  const portfolioAnalytics = usePortfolioAnalytics()
+  const equityCurve = useEquityCurve()
   const orders = useOrders()
-  const signals = useSignals(watchlist.selectedQuote)
+  const activeQuote = marketOverview.quote ?? watchlist.selectedQuote
+  const positions = usePositions({
+    quotes: watchlist.quotes,
+    activeQuote,
+    accountValue: portfolioAnalytics.summary.accountValue,
+  })
+  const signals = useSignals(activeQuote)
+  const systemHealth = useSystemHealth()
   const risk = useRisk({
     portfolio: portfolio.portfolio,
-    quote: watchlist.selectedQuote,
+    accountSummary: portfolioAnalytics.summary,
+    quote: activeQuote,
   })
   const [activeItem, setActiveItem] = useState('Dashboard')
+  const [journalRefreshKey, setJournalRefreshKey] = useState(0)
 
   const marketStatus = useMemo(() => getMarketStatus(), [])
-  const connectionStatus = watchlist.selectedQuote?.health?.available
-    ? `Connected: ${watchlist.selectedQuote.health.provider}`
+  const connectionStatus = activeQuote?.health?.available
+    ? `Connected: ${activeQuote.health.provider}`
     : 'Connected: mock'
 
   const refreshWorkspace = () => {
     void watchlist.refresh()
+    void marketOverview.refresh()
     portfolio.refresh()
+    portfolioAnalytics.refresh()
+    equityCurve.refresh()
     orders.refresh()
+    positions.refresh()
     risk.refresh()
+  }
+
+  const refreshExecutionPanels = () => {
+    void orders.refresh()
+    positions.refresh()
+    portfolioAnalytics.refresh()
+    equityCurve.refresh()
+    setJournalRefreshKey((value) => value + 1)
   }
 
   return (
@@ -82,7 +118,7 @@ function App() {
           items={navigationItems}
           activeItem={activeItem}
           onNavigate={setActiveItem}
-          summary={portfolio.summary}
+          summary={portfolioAnalytics.summary}
         />
       }
       topNav={
@@ -90,7 +126,7 @@ function App() {
           selectedSymbol={watchlist.selectedSymbol}
           marketStatus={marketStatus}
           connectionStatus={connectionStatus}
-          accountValue={portfolio.summary.accountValue}
+          accountValue={portfolioAnalytics.summary.accountValue}
           isRefreshing={watchlist.isRefreshing}
           onRefresh={refreshWorkspace}
         />
@@ -106,29 +142,87 @@ function App() {
               onRefresh={watchlist.refresh}
             />
           </PanelContainer>
-          <PanelContainer title="Symbol" minWidth={300}>
-            <SymbolOverviewPanel quote={watchlist.selectedQuote} />
+          <PanelContainer title="Market Overview" minWidth={300}>
+            <MarketOverviewPanel
+              symbol={watchlist.selectedSymbol}
+              quote={activeQuote}
+              loading={marketOverview.isLoading}
+              refreshing={marketOverview.isRefreshing}
+              error={marketOverview.error}
+              onRefresh={marketOverview.refresh}
+            />
           </PanelContainer>
           <PanelContainer title="Signal">
-            <SignalPanel signal={signals.signal} />
+            <SignalPanel
+              signal={signals.signal}
+              symbol={watchlist.selectedSymbol}
+              loading={signals.isLoading}
+              refreshing={signals.isRefreshing}
+              error={signals.error}
+              onRefresh={signals.refresh}
+            />
           </PanelContainer>
           <PanelContainer title="Risk">
-            <RiskPanel risk={risk.risk} />
+            <RiskPanel
+              risk={risk.risk}
+              symbol={watchlist.selectedSymbol}
+              loading={risk.isLoading}
+              refreshing={risk.isRefreshing}
+              error={risk.error}
+              onRefresh={risk.refresh}
+            />
           </PanelContainer>
           <PanelContainer title="Order Entry" minWidth={320}>
-            <OrderEntryPanel portfolio={portfolio.portfolio} quote={watchlist.selectedQuote} />
+            <OrderEntryPanel
+              portfolio={portfolio.portfolio}
+              quote={activeQuote}
+              onMutationSuccess={refreshExecutionPanels}
+            />
           </PanelContainer>
           <PanelContainer id="portfolio" title="Portfolio" size="wide">
-            <PortfolioSummaryPanel summary={portfolio.summary} />
+            <PortfolioSummaryPanel
+              summary={portfolioAnalytics.summary}
+              loading={portfolioAnalytics.isLoading}
+              error={portfolioAnalytics.error}
+            />
+          </PanelContainer>
+          <PanelContainer id="analytics" title="Equity Curve" size="wide">
+            <EquityCurvePanel
+              points={equityCurve.points}
+              drawdowns={equityCurve.drawdowns}
+              timeline={equityCurve.timeline}
+              maxDrawdown={equityCurve.maxDrawdown}
+              loading={equityCurve.isLoading}
+              error={equityCurve.error}
+            />
           </PanelContainer>
           <PanelContainer id="orders" title="Orders" size="wide">
-            <OrdersPanel orders={orders.orders} onCancelOrder={orders.cancelOrder} onRefresh={orders.refresh} />
+            <OrdersPanel
+              orders={orders.orders}
+              activeSymbol={watchlist.selectedSymbol}
+              onCancelOrder={orders.cancelOrder}
+              onRefresh={orders.refresh}
+              onMutationSuccess={refreshExecutionPanels}
+            />
           </PanelContainer>
           <PanelContainer id="positions" title="Positions" size="full">
-            <PositionsPanel positions={portfolio.summary.openPositions} />
+            <PositionsPanel
+              positions={positions.positions}
+              activeSymbol={watchlist.selectedSymbol}
+              onRefresh={positions.refresh}
+            />
           </PanelContainer>
           <PanelContainer id="journal" title="Journal" size="full">
-            <JournalSummaryPanel />
+            <JournalSummaryPanel key={journalRefreshKey} activeSymbol={watchlist.selectedSymbol} />
+          </PanelContainer>
+          <PanelContainer title="Alerts" size="full">
+            <AlertsPanel activeSymbol={watchlist.selectedSymbol} />
+          </PanelContainer>
+          <PanelContainer title="Scanner" size="full">
+            <ScannerPanel />
+          </PanelContainer>
+          <PanelContainer id="settings" title="Diagnostics" size="wide">
+            <DiagnosticsPanel healthState={systemHealth} />
           </PanelContainer>
         </Workspace>
       }

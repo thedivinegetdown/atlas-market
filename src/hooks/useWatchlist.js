@@ -1,35 +1,86 @@
-import { useEffect, useMemo, useState } from 'react'
-import { createMarketDataService } from '../../lib/market/marketDataService.js'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { workspaceApiClient } from '../api/workspaceApiClient.js'
+import { createPollingSubscription } from '../../lib/market/pollingSubscription.js'
 
-const marketDataService = createMarketDataService()
 const defaultSymbols = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META']
+const emptyQuotes = []
 
-export function useWatchlist() {
-  const [quotes, setQuotes] = useState([])
-  const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbols[0])
+function getErrorMessage(error) {
+  return error instanceof Error ? error.message : 'Unable to load market data'
+}
+
+export function useWatchlist({
+  initialQuotes = emptyQuotes,
+  initialSymbol = defaultSymbols[0],
+  pollingIntervalMs = null,
+} = {}) {
+  const [quotes, setQuotes] = useState(initialQuotes)
+  const [selectedSymbol, setSelectedSymbol] = useState(initialSymbol)
+  const [isLoading, setIsLoading] = useState(initialQuotes.length === 0)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [error, setError] = useState(null)
 
-  const fetchQuotes = async () => {
+  const fetchQuotes = useCallback(async () => {
     setIsRefreshing(true)
-    const nextQuotes = await marketDataService.getWatchlistQuotes()
-    setQuotes(nextQuotes)
-    setIsRefreshing(false)
-  }
+    setError(null)
+
+    try {
+      const response = await workspaceApiClient.getWatchlist()
+      const nextQuotes = response.quotes ?? []
+      setQuotes(nextQuotes)
+
+      if (!selectedSymbol && nextQuotes[0]?.symbol) {
+        setSelectedSymbol(nextQuotes[0].symbol)
+      }
+
+      return nextQuotes
+    } catch (fetchError) {
+      setError(getErrorMessage(fetchError))
+      return []
+    } finally {
+      setIsLoading(false)
+      setIsRefreshing(false)
+    }
+  }, [selectedSymbol])
 
   useEffect(() => {
+    if (initialQuotes.length > 0) {
+      setQuotes(initialQuotes)
+      setIsLoading(false)
+      return
+    }
+
+    if (pollingIntervalMs) {
+      const subscription = createPollingSubscription({
+        intervalMs: pollingIntervalMs,
+        fetcher: fetchQuotes,
+        onError: (subscriptionError) => setError(getErrorMessage(subscriptionError)),
+      })
+      subscription.start()
+      return () => subscription.stop()
+    }
+
     void fetchQuotes()
-  }, [])
+  }, [fetchQuotes, initialQuotes, pollingIntervalMs])
 
   const selectedQuote = useMemo(() => {
     return quotes.find((quote) => quote.symbol === selectedSymbol) ?? quotes[0] ?? null
   }, [quotes, selectedSymbol])
 
+  const selectSymbol = useCallback((symbol) => {
+    if (symbol) {
+      setSelectedSymbol(symbol)
+    }
+  }, [])
+
   return {
     quotes,
     selectedSymbol,
-    setSelectedSymbol,
+    setSelectedSymbol: selectSymbol,
     selectedQuote,
+    isLoading,
     isRefreshing,
+    error,
     refresh: fetchQuotes,
   }
 }

@@ -78,7 +78,7 @@ describe('Part 10 workspace', () => {
     expect(container.textContent).toContain('Account Value')
   })
 
-  it('supports order entry submission and displays orders', () => {
+  it('supports order entry submission and displays orders', async () => {
     const { container } = renderWithRoot(
       <div>
         <OrderEntryPanel />
@@ -93,15 +93,17 @@ describe('Part 10 workspace', () => {
     act(() => {
       ticker.value = 'AAPL'
       ticker.dispatchEvent(new Event('input', { bubbles: true }))
-      quantity.value = '10'
+      quantity.value = '1'
       quantity.dispatchEvent(new Event('input', { bubbles: true }))
-      price.value = '190'
+      price.value = '100'
       price.dispatchEvent(new Event('input', { bubbles: true }))
     })
 
     const form = container.querySelector('form')
-    act(() => {
+    await act(async () => {
       form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
+      await Promise.resolve()
+      await Promise.resolve()
     })
 
     expect(container.textContent).toContain('AAPL')
