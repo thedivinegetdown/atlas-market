@@ -147,6 +147,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.strategy-attribution-panel {
+  grid-column: 1 / -1;
+}
+
 .panel,
 .metric-card,
 .score-panel {
@@ -379,7 +383,14 @@ h1 {
   gap: 12px;
 }
 
-.rebalance-card {
+.strategy-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rebalance-card,
+.strategy-card {
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -406,9 +417,19 @@ h1 {
   color: var(--text);
 }
 
+.strategy-card {
+  border-color: rgba(56, 189, 248, 0.24);
+}
+
 .rebalance-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.strategy-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -657,7 +678,9 @@ tr:last-child td {
   .analytics-columns,
   .rebalance-summary,
   .rebalance-grid,
-  .rebalance-metrics {
+  .rebalance-metrics,
+  .strategy-grid,
+  .strategy-metrics {
     grid-template-columns: 1fr;
   }
 

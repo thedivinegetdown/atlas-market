@@ -33,5 +33,8 @@ describe('App', () => {
     expect(markup).toContain('Rebalancing Recommendations')
     expect(markup).toContain('portfolio.rebalance.recommended')
     expect(markup).toContain('Recommendations only')
+    expect(markup).toContain('Strategy Attribution')
+    expect(markup).toContain('strategy.attribution.evaluated')
+    expect(markup).toContain('Index Pullback')
   })
 })

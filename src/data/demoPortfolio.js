@@ -150,6 +150,8 @@ export const demoProposedTrades = Object.freeze([
   Object.freeze({
     id: 'paper-trade-approved',
     label: 'Controlled ETF add',
+    strategy: 'Index Pullback',
+    signal: 'Risk-aligned continuation',
     symbol: 'SPY',
     assetType: 'etf',
     side: 'buy',
@@ -163,6 +165,8 @@ export const demoProposedTrades = Object.freeze([
   Object.freeze({
     id: 'paper-trade-rejected',
     label: 'Oversized futures short',
+    strategy: 'Volatility Breakout',
+    signal: 'Rejected risk expansion',
     symbol: 'ES',
     assetType: 'futures',
     side: 'short',

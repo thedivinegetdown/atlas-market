@@ -4,6 +4,7 @@ import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioA
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
 import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
+import { evaluateStrategyAttribution } from './core/analytics/strategyAttributionEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
@@ -104,6 +105,10 @@ function App() {
     }, { emitEvent: false }),
   })), [accountingUpdates, executions, guardrails])
   const performance = useMemo(() => evaluatePaperPerformance(
+    journalRecords.map((record) => record.result),
+    { emitEvent: false },
+  ), [journalRecords])
+  const strategyAttribution = useMemo(() => evaluateStrategyAttribution(
     journalRecords.map((record) => record.result),
     { emitEvent: false },
   ), [journalRecords])
@@ -337,6 +342,38 @@ function App() {
           </div>
           <p className="empty-state">{performance.excludedReason}</p>
           <span className="event-line">{performance.eventType}</span>
+        </article>
+
+        <article className="panel strategy-attribution-panel">
+          <div className="panel-heading">
+            <h2>Strategy Attribution</h2>
+            <span>Paper performance by originating strategy or signal.</span>
+          </div>
+          <div className="strategy-grid">
+            {strategyAttribution.strategies.map((strategy) => (
+              <section key={strategy.strategy} className="strategy-card">
+                <div className="guardrail-card-header">
+                  <div>
+                    <span>Strategy</span>
+                    <strong>{strategy.strategy}</strong>
+                  </div>
+                  <span className={`decision-pill ${strategy.netRealizedPnl >= 0 ? 'positive' : 'danger'}`}>
+                    {formatCurrency(strategy.netRealizedPnl)}
+                  </span>
+                </div>
+                <div className="strategy-metrics">
+                  <MetricCard label="Trades" value={formatNumber(strategy.trades)} />
+                  <MetricCard label="Win Rate" value={formatPercent(strategy.winRate)} />
+                  <MetricCard label="Average Win" value={formatCurrency(strategy.averageWin)} />
+                  <MetricCard label="Average Loss" value={formatCurrency(strategy.averageLoss)} />
+                  <MetricCard label="Profit Factor" value={formatNumber(strategy.profitFactor)} />
+                  <MetricCard label="Expectancy" value={formatCurrency(strategy.expectancy)} />
+                </div>
+                <p className="empty-state">Symbols: {strategy.symbols.length ? strategy.symbols.join(', ') : 'No filled trades'}</p>
+              </section>
+            ))}
+          </div>
+          <span className="event-line">{strategyAttribution.eventType}</span>
         </article>
 
         <article className="panel portfolio-analytics-panel">
