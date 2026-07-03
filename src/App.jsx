@@ -3,6 +3,7 @@ import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
+import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
@@ -106,6 +107,11 @@ function App() {
     journalRecords.map((record) => record.result),
     { emitEvent: false },
   ), [journalRecords])
+  const rebalancing = useMemo(() => recommendPortfolioRebalance(demoPortfolio, {
+    emitEvent: false,
+    analyticsSnapshot: portfolioAnalytics,
+    riskSnapshot: risk,
+  }), [portfolioAnalytics, risk])
   const primaryAccounting = accountingUpdates[0]?.result
   const riskTone = getRiskTone(risk.summary.riskLevel)
 
@@ -399,6 +405,41 @@ function App() {
             </section>
           </div>
           <span className="event-line">{portfolioAnalytics.eventType}</span>
+        </article>
+
+        <article className="panel rebalance-panel">
+          <div className="panel-heading">
+            <h2>Rebalancing Recommendations</h2>
+            <span>Recommendations only. No automatic trades.</span>
+          </div>
+          <div className="rebalance-summary">
+            <MetricCard label="Confidence" value={formatPercent(rebalancing.confidence)} />
+            <MetricCard label="Actions" value={formatNumber(rebalancing.recommendations.length)} />
+            <MetricCard label="Reductions" value={formatNumber(rebalancing.actionCounts.reduce ?? 0)} />
+            <MetricCard label="Adds" value={formatNumber(rebalancing.actionCounts.add ?? 0)} />
+          </div>
+          <p className="empty-state">{rebalancing.rationaleSummary}</p>
+          <div className="rebalance-grid">
+            {rebalancing.recommendations.map((action) => (
+              <section key={`${action.type}-${action.scope}-${action.target}`} className={`rebalance-card ${action.type}`}>
+                <div className="guardrail-card-header">
+                  <div>
+                    <span>{action.scope}</span>
+                    <strong>{action.target}</strong>
+                  </div>
+                  <span className={`decision-pill ${action.type === 'reduce' ? 'danger' : action.type === 'add' ? 'positive' : 'warning'}`}>
+                    {action.type}
+                  </span>
+                </div>
+                <p>{action.rationale}</p>
+                <div className="rebalance-metrics">
+                  <MetricCard label="Priority" value={action.priority} />
+                  <MetricCard label="Confidence" value={formatPercent(action.confidence)} />
+                </div>
+              </section>
+            ))}
+          </div>
+          <span className="event-line">{rebalancing.eventType}</span>
         </article>
 
         <article className="panel">

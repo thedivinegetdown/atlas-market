@@ -30,5 +30,8 @@ describe('App', () => {
     expect(markup).toContain('portfolio.analytics.updated')
     expect(markup).toContain('Diversification')
     expect(markup).toContain('Drift')
+    expect(markup).toContain('Rebalancing Recommendations')
+    expect(markup).toContain('portfolio.rebalance.recommended')
+    expect(markup).toContain('Recommendations only')
   })
 })
