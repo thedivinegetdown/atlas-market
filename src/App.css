@@ -139,6 +139,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.portfolio-analytics-panel {
+  grid-column: 1 / -1;
+}
+
 .panel,
 .metric-card,
 .score-panel {
@@ -353,6 +357,46 @@ h1 {
   gap: 8px;
 }
 
+.analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.analytics-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.analytics-columns section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.analytics-columns h3 {
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.mini-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mini-row span {
+  color: var(--text-muted);
+}
+
+.mini-row strong {
+  color: var(--text-strong);
+}
+
 .event-chain {
   display: flex;
   gap: 6px;
@@ -559,7 +603,9 @@ tr:last-child td {
   .accounting-metrics,
   .journal-grid,
   .journal-metrics,
-  .performance-grid {
+  .performance-grid,
+  .analytics-grid,
+  .analytics-columns {
     grid-template-columns: 1fr;
   }
 

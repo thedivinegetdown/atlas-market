@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
+import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
@@ -67,6 +68,10 @@ function ExposureBar({ label, value, tone }) {
 
 function App() {
   const risk = useMemo(() => evaluatePortfolioRisk(demoPortfolio, { emitEvent: false }), [])
+  const portfolioAnalytics = useMemo(() => evaluatePortfolioAnalytics(demoPortfolio, {
+    emitEvent: false,
+    riskSnapshot: risk,
+  }), [risk])
   const guardrails = useMemo(() => demoProposedTrades.map((trade) => ({
     label: trade.label,
     tradeId: trade.id,
@@ -326,6 +331,74 @@ function App() {
           </div>
           <p className="empty-state">{performance.excludedReason}</p>
           <span className="event-line">{performance.eventType}</span>
+        </article>
+
+        <article className="panel portfolio-analytics-panel">
+          <div className="panel-heading">
+            <h2>Portfolio Analytics</h2>
+            <span>Independent exposure, composition, diversification, and drift evaluation.</span>
+          </div>
+          <div className="analytics-grid">
+            <MetricCard label="Gross Exposure" value={formatPercent(portfolioAnalytics.exposure.grossExposure)} />
+            <MetricCard label="Net Exposure" value={formatPercent(portfolioAnalytics.exposure.netExposure)} />
+            <MetricCard label="Leverage" value={`${formatNumber(portfolioAnalytics.exposure.leverage)}x`} />
+            <MetricCard label="Long Exposure" value={formatPercent(portfolioAnalytics.exposure.longExposure)} />
+            <MetricCard label="Short Exposure" value={formatPercent(portfolioAnalytics.exposure.shortExposure)} />
+            <MetricCard label="Diversification" value={`${formatNumber(portfolioAnalytics.diversification.score)} ${portfolioAnalytics.diversification.label}`} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Asset Class</h3>
+              {portfolioAnalytics.exposure.byAssetClass.map((item) => (
+                <div key={item.assetType} className="mini-row">
+                  <span>{item.assetType}</span>
+                  <strong>{formatPercent(item.weight)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Sector</h3>
+              {portfolioAnalytics.exposure.bySector.map((item) => (
+                <div key={item.name} className="mini-row">
+                  <span>{item.name}</span>
+                  <strong>{formatPercent(item.weight)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Symbol</h3>
+              {portfolioAnalytics.exposure.bySymbol.slice(0, 5).map((item) => (
+                <div key={`${item.symbol}-${item.side}`} className="mini-row">
+                  <span>{item.symbol}</span>
+                  <strong>{formatPercent(item.weight)}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Concentration</h3>
+              <p className="empty-state">
+                Largest position: {portfolioAnalytics.concentration.largestPosition?.symbol ?? 'N/A'} at {formatPercent(portfolioAnalytics.concentration.concentrationRisk)}
+              </p>
+            </section>
+            <section>
+              <h3>Drift</h3>
+              {portfolioAnalytics.drift.hasDrift ? portfolioAnalytics.drift.items.slice(0, 3).map((item) => (
+                <div key={`${item.scope}-${item.name}`} className="mini-row">
+                  <span>{item.name}</span>
+                  <strong>{formatPercent(item.driftPct)}</strong>
+                </div>
+              )) : <p className="empty-state">No material portfolio drift detected.</p>}
+            </section>
+            <section>
+              <h3>Insights</h3>
+              {portfolioAnalytics.insights.map((insight) => (
+                <p key={insight} className="empty-state">{insight}</p>
+              ))}
+            </section>
+          </div>
+          <span className="event-line">{portfolioAnalytics.eventType}</span>
         </article>
 
         <article className="panel">

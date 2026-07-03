@@ -8,6 +8,7 @@ export const demoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'SPY',
       assetType: 'etf',
+      sector: 'Index',
       side: 'long',
       quantity: 120,
       averagePrice: 512.4,
@@ -21,6 +22,7 @@ export const demoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'AAPL',
       assetType: 'equity',
+      sector: 'Technology',
       side: 'long',
       quantity: 90,
       averagePrice: 186.2,
@@ -34,6 +36,7 @@ export const demoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'BTC-USD',
       assetType: 'crypto',
+      sector: 'Digital Assets',
       side: 'long',
       quantity: 0.35,
       averagePrice: 62800,
@@ -47,6 +50,7 @@ export const demoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'EURUSD',
       assetType: 'forex',
+      sector: 'Currency',
       side: 'long',
       quantity: 25000,
       averagePrice: 1.0825,
@@ -60,6 +64,7 @@ export const demoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'ES',
       assetType: 'futures',
+      sector: 'Index Futures',
       side: 'short',
       quantity: 1,
       averagePrice: 5480,
@@ -83,6 +88,7 @@ export const guardrailDemoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'SPY',
       assetType: 'etf',
+      sector: 'Index',
       side: 'long',
       quantity: 55,
       averagePrice: 512.4,
@@ -96,6 +102,7 @@ export const guardrailDemoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'AAPL',
       assetType: 'equity',
+      sector: 'Technology',
       side: 'long',
       quantity: 35,
       averagePrice: 186.2,
@@ -119,6 +126,7 @@ export const accountingDemoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'SPY',
       assetType: 'etf',
+      sector: 'Index',
       side: 'long',
       quantity: 55,
       averagePrice: 512.4,
@@ -128,6 +136,7 @@ export const accountingDemoPortfolio = Object.freeze({
     Object.freeze({
       symbol: 'AAPL',
       assetType: 'equity',
+      sector: 'Technology',
       side: 'long',
       quantity: 35,
       averagePrice: 186.2,
