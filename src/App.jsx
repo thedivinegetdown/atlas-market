@@ -4,6 +4,7 @@ import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioA
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
 import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
+import { evaluateRiskAdjustedPerformance } from './core/analytics/riskAdjustedPerformanceEngine.js'
 import { evaluateStrategyAttribution } from './core/analytics/strategyAttributionEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
@@ -108,6 +109,14 @@ function App() {
     journalRecords.map((record) => record.result),
     { emitEvent: false },
   ), [journalRecords])
+  const riskAdjustedPerformance = useMemo(() => evaluateRiskAdjustedPerformance(
+    journalRecords.map((record) => record.result),
+    {
+      emitEvent: false,
+      performanceSnapshot: performance,
+      startingEquity: accountingDemoPortfolio.accountValue,
+    },
+  ), [journalRecords, performance])
   const strategyAttribution = useMemo(() => evaluateStrategyAttribution(
     journalRecords.map((record) => record.result),
     { emitEvent: false },
@@ -342,6 +351,38 @@ function App() {
           </div>
           <p className="empty-state">{performance.excludedReason}</p>
           <span className="event-line">{performance.eventType}</span>
+        </article>
+
+        <article className="panel risk-adjusted-performance-panel">
+          <div className="panel-heading">
+            <h2>Risk-Adjusted Performance</h2>
+            <span>Quality of paper returns after rejected and non-filled trades are excluded.</span>
+          </div>
+          <div className="risk-adjusted-summary">
+            <MetricCard label="Grade" value={riskAdjustedPerformance.metrics.riskAdjustedGrade} />
+            <MetricCard label="Sharpe-style Score" value={formatNumber(riskAdjustedPerformance.metrics.sharpeStyleScore)} />
+            <MetricCard label="Sortino-style Score" value={formatNumber(riskAdjustedPerformance.metrics.sortinoStyleDownsideScore)} />
+            <MetricCard label="Volatility Estimate" value={formatPercent(riskAdjustedPerformance.metrics.volatilityEstimate)} />
+            <MetricCard label="Max Drawdown" value={formatPercent(riskAdjustedPerformance.metrics.maxDrawdown)} />
+            <MetricCard label="Average Drawdown" value={formatPercent(riskAdjustedPerformance.metrics.averageDrawdown)} />
+            <MetricCard label="Recovery Factor" value={formatNumber(riskAdjustedPerformance.metrics.recoveryFactor)} />
+            <MetricCard label="Return Observations" value={formatNumber(riskAdjustedPerformance.returnSeries.length)} />
+          </div>
+          {riskAdjustedPerformance.returnSeries.length > 0 ? (
+            <div className="return-series">
+              {riskAdjustedPerformance.returnSeries.map((point) => (
+                <div key={point.tradeId} className="return-row">
+                  <span>{point.symbol}</span>
+                  <strong className={point.returnPct >= 0 ? 'positive' : 'negative'}>{formatPercent(point.returnPct)}</strong>
+                  <span>{formatCurrency(point.endingEquity)}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="empty-state">No filled paper trade returns are available for risk-adjusted scoring.</p>
+          )}
+          <p className="empty-state">{riskAdjustedPerformance.excludedReason}</p>
+          <span className="event-line">{riskAdjustedPerformance.eventType}</span>
         </article>
 
         <article className="panel strategy-attribution-panel">

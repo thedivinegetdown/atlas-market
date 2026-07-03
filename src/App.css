@@ -139,6 +139,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.risk-adjusted-performance-panel {
+  grid-column: 1 / -1;
+}
+
 .portfolio-analytics-panel {
   grid-column: 1 / -1;
 }
@@ -363,6 +367,36 @@ h1 {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+}
+
+.risk-adjusted-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.return-series {
+  display: grid;
+  gap: 8px;
+}
+
+.return-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #0b1220;
+}
+
+.return-row span {
+  color: var(--text-muted);
+}
+
+.return-row strong {
+  color: var(--text-strong);
 }
 
 .analytics-grid {
@@ -674,6 +708,7 @@ tr:last-child td {
   .journal-grid,
   .journal-metrics,
   .performance-grid,
+  .risk-adjusted-summary,
   .analytics-grid,
   .analytics-columns,
   .rebalance-summary,
