@@ -135,6 +135,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.performance-panel {
+  grid-column: 1 / -1;
+}
+
 .panel,
 .metric-card,
 .score-panel {
@@ -343,6 +347,12 @@ h1 {
   gap: 8px;
 }
 
+.performance-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .event-chain {
   display: flex;
   gap: 6px;
@@ -548,7 +558,8 @@ tr:last-child td {
   .accounting-grid,
   .accounting-metrics,
   .journal-grid,
-  .journal-metrics {
+  .journal-metrics,
+  .performance-grid {
     grid-template-columns: 1fr;
   }
 

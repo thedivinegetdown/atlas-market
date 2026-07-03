@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
+import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
@@ -96,6 +97,10 @@ function App() {
       accountingUpdate: accountingUpdates[index]?.result,
     }, { emitEvent: false }),
   })), [accountingUpdates, executions, guardrails])
+  const performance = useMemo(() => evaluatePaperPerformance(
+    journalRecords.map((record) => record.result),
+    { emitEvent: false },
+  ), [journalRecords])
   const primaryAccounting = accountingUpdates[0]?.result
   const riskTone = getRiskTone(risk.summary.riskLevel)
 
@@ -300,6 +305,27 @@ function App() {
               </section>
             ))}
           </div>
+        </article>
+
+        <article className="panel performance-panel">
+          <div className="panel-heading">
+            <h2>Paper Performance</h2>
+            <span>Analytics from recorded filled journal records.</span>
+          </div>
+          <div className="performance-grid">
+            <MetricCard label="Total Trades" value={formatNumber(performance.metrics.totalTrades)} />
+            <MetricCard label="Win Rate" value={formatPercent(performance.metrics.winRate)} />
+            <MetricCard label="Average Win" value={formatCurrency(performance.metrics.averageWin)} />
+            <MetricCard label="Average Loss" value={formatCurrency(performance.metrics.averageLoss)} />
+            <MetricCard label="Profit Factor" value={formatNumber(performance.metrics.profitFactor)} />
+            <MetricCard label="Net Realized P&L" value={formatCurrency(performance.metrics.netRealizedPnl)} />
+            <MetricCard label="Largest Win" value={formatCurrency(performance.metrics.largestWin)} />
+            <MetricCard label="Largest Loss" value={formatCurrency(performance.metrics.largestLoss)} />
+            <MetricCard label="Expectancy" value={formatCurrency(performance.metrics.expectancy)} />
+            <MetricCard label="Excluded Trades" value={formatNumber(performance.excludedTrades)} />
+          </div>
+          <p className="empty-state">{performance.excludedReason}</p>
+          <span className="event-line">{performance.eventType}</span>
         </article>
 
         <article className="panel">
