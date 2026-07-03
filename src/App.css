@@ -459,13 +459,59 @@ tbody tr:hover,
   color: var(--positive);
 }
 
+.signal-card.strong-buy strong {
+  color: var(--positive);
+}
+
 .signal-card.sell strong,
+.signal-card.strong-sell strong,
 .signal-card.avoid strong {
   color: var(--negative);
 }
 
 .signal-card.hold strong {
   color: var(--warning);
+}
+
+.signal-card.watch strong,
+.signal-card.neutral strong,
+.signal-card.reduce strong {
+  color: var(--warning);
+}
+
+.insight-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.insight-columns section {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 12px;
+  background: #0b1220;
+}
+
+.insight-columns h4 {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.insight-columns ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.insight-columns li + li {
+  margin-top: 6px;
+}
+
+.timestamp-line {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
 }
 
 .order-form {

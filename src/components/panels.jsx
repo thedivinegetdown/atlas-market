@@ -12,6 +12,7 @@ import { useScanners } from '../hooks/useScanners.js'
 import { useMarketOverview } from '../hooks/useMarketOverview.js'
 import { useSystemHealth } from '../hooks/useSystemHealth.js'
 import { useWatchlist } from '../hooks/useWatchlist.js'
+import { useDecision } from '../hooks/useDecision.js'
 import { createSignalEngine } from '../../lib/signals/signalEngine.js'
 import { ErrorDisplay } from './ErrorDisplay.jsx'
 
@@ -379,6 +380,99 @@ export function RiskPanel({
           <article><span>Buying Power Impact</span><strong>{formatPercent(resolvedRisk.buyingPowerImpact)}</strong></article>
           <article><span>Status</span><strong>{resolvedRisk.approved ? 'Approved' : 'Blocked'}</strong></article>
         </div>
+      ) : null}
+    </div>
+  )
+}
+
+export function DecisionPanel({
+  decision,
+  assetProfile,
+  symbol,
+  loading,
+  refreshing,
+  error,
+  onRefresh,
+}) {
+  const fallback = useDecision(symbol)
+  const hasControlledDecision = decision !== undefined || loading !== undefined || error !== undefined
+  const resolvedDecision = hasControlledDecision ? decision : fallback.decision
+  const resolvedAssetProfile = assetProfile ?? fallback.assetProfile
+  const activeSymbol = symbol ?? fallback.activeSymbol
+  const resolvedLoading = loading ?? (!hasControlledDecision && fallback.isLoading)
+  const resolvedRefreshing = refreshing ?? (!hasControlledDecision && fallback.isRefreshing)
+  const resolvedError = error ?? (!hasControlledDecision ? fallback.error : null)
+  const refresh = onRefresh ?? (!hasControlledDecision ? fallback.refresh : undefined)
+  const actionClass = String(resolvedDecision?.recommendedAction ?? 'neutral').replace('_', '-')
+
+  if (!activeSymbol) {
+    return (
+      <div className="panel-stack">
+        <h3>Decision Intelligence</h3>
+        <EmptyState label="Select a symbol to evaluate trade quality." />
+      </div>
+    )
+  }
+
+  return (
+    <div className="panel-stack">
+      <div className="panel-actions">
+        <div>
+          <h3>Decision Intelligence</h3>
+          <p>{activeSymbol}</p>
+        </div>
+        {refresh ? (
+          <button type="button" aria-label={`Refresh ${activeSymbol} decision intelligence`} onClick={refresh}>
+            {resolvedRefreshing ? 'Refreshing...' : 'Refresh decision'}
+          </button>
+        ) : null}
+      </div>
+      {resolvedLoading && !resolvedDecision ? <StateMessage>Loading decision intelligence...</StateMessage> : null}
+      {resolvedError ? <StateMessage type="error">{resolvedError}</StateMessage> : null}
+      {!resolvedLoading && !resolvedError && !resolvedDecision ? <EmptyState label="No decision available for this symbol." /> : null}
+      {resolvedDecision ? (
+        <>
+          <div className={`signal-card ${actionClass}`}>
+            <span>Overall Decision</span>
+            <strong>{resolvedDecision.overallDecision}</strong>
+            <p>{resolvedDecision.confidenceExplanation}</p>
+          </div>
+          <div className="metric-grid">
+            <article><span>Overall Score</span><strong>{formatNumber(resolvedDecision.overallScore)}</strong></article>
+            <article><span>Confidence</span><strong>{formatPercent(resolvedDecision.confidence)}</strong></article>
+            <article><span>Trend Score</span><strong>{formatNumber(resolvedDecision.trendScore)}</strong></article>
+            <article><span>Momentum Score</span><strong>{formatNumber(resolvedDecision.momentumScore)}</strong></article>
+            <article><span>Risk Score</span><strong>{formatNumber(resolvedDecision.riskScore)}</strong></article>
+            <article><span>Volatility Score</span><strong>{formatNumber(resolvedDecision.volatilityScore)}</strong></article>
+            <article><span>Liquidity Score</span><strong>{formatNumber(resolvedDecision.liquidityScore)}</strong></article>
+            <article><span>Exposure Score</span><strong>{formatNumber(resolvedDecision.portfolioExposureScore)}</strong></article>
+            <article><span>Position Size</span><strong>{formatNumber(resolvedDecision.recommendedPositionSize)} {resolvedAssetProfile?.quantityLabel ?? 'shares'}</strong></article>
+            <article><span>Recommended Stop</span><strong>{formatCurrency(resolvedDecision.recommendedStop)}</strong></article>
+            <article><span>Recommended Target</span><strong>{formatCurrency(resolvedDecision.recommendedTarget)}</strong></article>
+            <article><span>Risk / Reward</span><strong>{formatNumber(resolvedDecision.riskRewardRatio)}</strong></article>
+          </div>
+          <div className="insight-columns">
+            <section>
+              <h4>Positive Factors</h4>
+              {resolvedDecision.positiveFactors?.length ? (
+                <ul>{resolvedDecision.positiveFactors.map((factor) => <li key={factor}>{factor}</li>)}</ul>
+              ) : <EmptyState label="No dominant positive factors." />}
+            </section>
+            <section>
+              <h4>Negative Factors</h4>
+              {resolvedDecision.negativeFactors?.length ? (
+                <ul>{resolvedDecision.negativeFactors.map((factor) => <li key={factor}>{factor}</li>)}</ul>
+              ) : <EmptyState label="No dominant negative factors." />}
+            </section>
+            <section>
+              <h4>Warnings</h4>
+              {resolvedDecision.warnings?.length ? (
+                <ul>{resolvedDecision.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul>
+              ) : <EmptyState label="No active warnings." />}
+            </section>
+          </div>
+          <p className="timestamp-line">Last evaluated {formatTimestamp(resolvedDecision.timestamp)}</p>
+        </>
       ) : null}
     </div>
   )

@@ -12,6 +12,7 @@ import {
   DiagnosticsPanel,
   AlertsPanel,
   ScannerPanel,
+  DecisionPanel,
   OrderEntryPanel,
   OrdersPanel,
   EquityCurvePanel,
@@ -29,6 +30,7 @@ import { usePortfolio } from './hooks/usePortfolio.js'
 import { usePortfolioAnalytics } from './hooks/usePortfolioAnalytics.js'
 import { useEquityCurve } from './hooks/useEquityCurve.js'
 import { useRisk } from './hooks/useRisk.js'
+import { useDecision } from './hooks/useDecision.js'
 import { useSignals } from './hooks/useSignals.js'
 import { useSystemHealth } from './hooks/useSystemHealth.js'
 import { useWatchlist } from './hooks/useWatchlist.js'
@@ -84,6 +86,7 @@ function App() {
     accountSummary: portfolioAnalytics.summary,
     quote: activeQuote,
   })
+  const decision = useDecision(watchlist.selectedSymbol)
   const [activeItem, setActiveItem] = useState('Dashboard')
   const [journalRefreshKey, setJournalRefreshKey] = useState(0)
 
@@ -101,6 +104,7 @@ function App() {
     orders.refresh()
     positions.refresh()
     risk.refresh()
+    decision.refresh()
   }
 
   const refreshExecutionPanels = () => {
@@ -170,6 +174,17 @@ function App() {
               refreshing={risk.isRefreshing}
               error={risk.error}
               onRefresh={risk.refresh}
+            />
+          </PanelContainer>
+          <PanelContainer title="Decision Intelligence" size="wide">
+            <DecisionPanel
+              decision={decision.decision}
+              assetProfile={decision.assetProfile}
+              symbol={watchlist.selectedSymbol}
+              loading={decision.isLoading}
+              refreshing={decision.isRefreshing}
+              error={decision.error}
+              onRefresh={decision.refresh}
             />
           </PanelContainer>
           <PanelContainer title="Order Entry" minWidth={320}>

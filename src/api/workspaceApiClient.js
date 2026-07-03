@@ -123,6 +123,10 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
       return request('risk-summary', { symbol }, 'Unable to load risk summary')
     },
 
+    getDecision(symbol) {
+      return request('decision', { symbol }, 'Unable to load decision intelligence')
+    },
+
     getPortfolioSummary() {
       return request('portfolio-summary', {}, 'Unable to load portfolio summary')
     },

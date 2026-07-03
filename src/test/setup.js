@@ -4,6 +4,7 @@ import { handler as createAlertHandler } from '../../netlify/functions/create-al
 import { handler as createScannerHandler } from '../../netlify/functions/create-scanner.js'
 import { handler as deleteAlertHandler } from '../../netlify/functions/delete-alert.js'
 import { handler as deleteScannerHandler } from '../../netlify/functions/delete-scanner.js'
+import { handler as decisionHandler } from '../../netlify/functions/decision.js'
 import { handler as evaluateAlertsHandler } from '../../netlify/functions/evaluate-alerts.js'
 import { handler as evaluateScannersHandler } from '../../netlify/functions/evaluate-scanners.js'
 import { handler as healthHandler } from '../../netlify/functions/health.js'
@@ -29,6 +30,7 @@ const handlers = {
   'create-scanner': createScannerHandler,
   'delete-alert': deleteAlertHandler,
   'delete-scanner': deleteScannerHandler,
+  decision: decisionHandler,
   'equity-curve': equityCurveHandler,
   'evaluate-alerts': evaluateAlertsHandler,
   'evaluate-scanners': evaluateScannersHandler,
