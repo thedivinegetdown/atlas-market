@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
+import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import {
@@ -86,6 +87,15 @@ function App() {
     label: execution.label,
     result: applyPaperPortfolioAccounting(accountingDemoPortfolio, execution.result, { emitEvent: false }),
   })), [executions])
+  const journalRecords = useMemo(() => guardrails.map((guardrail, index) => ({
+    label: guardrail.label,
+    result: recordPaperTradeJournal({
+      proposedTrade: demoProposedTrades.find((trade) => trade.id === guardrail.tradeId),
+      guardrailDecision: guardrail.result,
+      executionSimulation: executions[index]?.result,
+      accountingUpdate: accountingUpdates[index]?.result,
+    }, { emitEvent: false }),
+  })), [accountingUpdates, executions, guardrails])
   const primaryAccounting = accountingUpdates[0]?.result
   const riskTone = getRiskTone(risk.summary.riskLevel)
 
@@ -254,6 +264,42 @@ function App() {
               </table>
             </div>
           ) : null}
+        </article>
+
+        <article className="panel journal-panel">
+          <div className="panel-heading">
+            <h2>Paper Trade Journal</h2>
+            <span>Normalized lifecycle record from proposal through accounting.</span>
+          </div>
+          <div className="journal-grid">
+            {journalRecords.map(({ label, result }) => (
+              <section key={`${label}-${result.journalStatus}`} className={`journal-card ${result.journalStatus}`}>
+                <div className="guardrail-card-header">
+                  <div>
+                    <span>{label}</span>
+                    <strong>{result.symbol}</strong>
+                  </div>
+                  <span className={`decision-pill ${result.journalStatus === 'recorded' ? 'positive' : 'danger'}`}>
+                    {result.journalStatus}
+                  </span>
+                </div>
+                <div className="journal-metrics">
+                  <MetricCard label="Side" value={result.side ?? 'N/A'} />
+                  <MetricCard label="Quantity" value={formatNumber(result.quantity)} />
+                  <MetricCard label="Fill" value={result.fill ? formatCurrency(result.fill.fillPrice) : 'N/A'} />
+                  <MetricCard label="Realized P&L" value={formatCurrency(result.realizedPnl)} />
+                  <MetricCard label="Decision Gate" value={result.decisionGate.guardrail} />
+                  <MetricCard label="Accounting" value={result.decisionGate.accounting} />
+                </div>
+                <div className="event-chain">
+                  {result.eventChain.map((event) => (
+                    <span key={`${result.tradeId}-${event.eventType}`}>{event.eventType}</span>
+                  ))}
+                </div>
+                <span className="event-line">{result.eventType}</span>
+              </section>
+            ))}
+          </div>
         </article>
 
         <article className="panel">

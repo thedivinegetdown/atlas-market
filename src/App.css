@@ -131,6 +131,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.journal-panel {
+  grid-column: 1 / -1;
+}
+
 .panel,
 .metric-card,
 .score-panel {
@@ -222,9 +226,16 @@ h1 {
   gap: 12px;
 }
 
+.journal-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
 .guardrail-card,
 .execution-card,
-.accounting-card {
+.accounting-card,
+.journal-card {
   display: grid;
   gap: 12px;
   padding: 14px;
@@ -258,6 +269,14 @@ h1 {
 }
 
 .accounting-card.rejected {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.journal-card.recorded {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.journal-card.rejected {
   border-color: rgba(239, 68, 68, 0.32);
 }
 
@@ -316,6 +335,28 @@ h1 {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+}
+
+.journal-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.event-chain {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.event-chain span {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 5px 8px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: rgba(15, 23, 42, 0.72);
 }
 
 .guardrail-checks {
@@ -505,7 +546,9 @@ tr:last-child td {
   .execution-grid,
   .execution-metrics,
   .accounting-grid,
-  .accounting-metrics {
+  .accounting-metrics,
+  .journal-grid,
+  .journal-metrics {
     grid-template-columns: 1fr;
   }
 
