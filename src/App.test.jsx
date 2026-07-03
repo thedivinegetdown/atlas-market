@@ -17,5 +17,8 @@ describe('App', () => {
     expect(markup).toContain('trade.execution.simulated')
     expect(markup).toContain('Fill Price')
     expect(markup).toContain('Fees')
+    expect(markup).toContain('Paper Accounting')
+    expect(markup).toContain('portfolio.accounting.updated')
+    expect(markup).toContain('Realized P&amp;L')
   })
 })

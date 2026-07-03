@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import './App.css'
+import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import {
+  accountingDemoPortfolio,
   demoExecutionQuotes,
   demoPortfolio,
   demoProposedTrades,
@@ -80,6 +82,11 @@ function App() {
       { emitEvent: false },
     ),
   })), [guardrails])
+  const accountingUpdates = useMemo(() => executions.map((execution) => ({
+    label: execution.label,
+    result: applyPaperPortfolioAccounting(accountingDemoPortfolio, execution.result, { emitEvent: false }),
+  })), [executions])
+  const primaryAccounting = accountingUpdates[0]?.result
   const riskTone = getRiskTone(risk.summary.riskLevel)
 
   return (
@@ -187,6 +194,66 @@ function App() {
               </section>
             ))}
           </div>
+        </article>
+
+        <article className="panel accounting-panel">
+          <div className="panel-heading">
+            <h2>Paper Accounting</h2>
+            <span>Applies simulated fills to paper account state.</span>
+          </div>
+          <div className="accounting-grid">
+            {accountingUpdates.map(({ label, result }) => (
+              <section key={`${label}-${result.status}`} className={`accounting-card ${result.status === 'rejected' ? 'rejected' : 'updated'}`}>
+                <div className="guardrail-card-header">
+                  <div>
+                    <span>{label}</span>
+                    <strong>{result.status}</strong>
+                  </div>
+                  <span className={`decision-pill ${result.status === 'rejected' ? 'danger' : 'positive'}`}>
+                    {result.executionStatus}
+                  </span>
+                </div>
+                <p>{result.reason}</p>
+                <div className="accounting-metrics">
+                  <MetricCard label="Cash" value={formatCurrency(result.account.cash)} />
+                  <MetricCard label="Equity" value={formatCurrency(result.account.equity)} />
+                  <MetricCard label="Realized P&L" value={formatCurrency(result.account.realizedPnl)} />
+                </div>
+                <span className="event-line">{result.eventType}</span>
+              </section>
+            ))}
+          </div>
+          {primaryAccounting ? (
+            <div className="table-wrap compact-table">
+              <table>
+                <caption>Updated paper positions after accounting</caption>
+                <thead>
+                  <tr>
+                    <th>Symbol</th>
+                    <th>Asset</th>
+                    <th>Side</th>
+                    <th>Quantity</th>
+                    <th>Average Price</th>
+                    <th>Market Value</th>
+                    <th>Unrealized P&L</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {primaryAccounting.positions.map((position) => (
+                    <tr key={`${position.symbol}-${position.assetType}-${position.side}`}>
+                      <td><strong>{position.symbol}</strong></td>
+                      <td>{position.assetType}</td>
+                      <td>{position.side}</td>
+                      <td>{formatNumber(position.quantity)} {position.quantityTerm}</td>
+                      <td>{formatCurrency(position.averagePrice)}</td>
+                      <td>{formatCurrency(position.marketValue)}</td>
+                      <td className={position.unrealizedPnl >= 0 ? 'positive' : 'negative'}>{formatCurrency(position.unrealizedPnl)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
         </article>
 
         <article className="panel">

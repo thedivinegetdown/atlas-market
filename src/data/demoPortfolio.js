@@ -109,6 +109,34 @@ export const guardrailDemoPortfolio = Object.freeze({
   ]),
 })
 
+export const accountingDemoPortfolio = Object.freeze({
+  id: 'paper-accounting-demo',
+  accountValue: 125000,
+  cash: 86200,
+  buyingPower: 86200,
+  realizedPnl: 725,
+  positions: Object.freeze([
+    Object.freeze({
+      symbol: 'SPY',
+      assetType: 'etf',
+      side: 'long',
+      quantity: 55,
+      averagePrice: 512.4,
+      currentPrice: 526.18,
+      realizedPnl: 0,
+    }),
+    Object.freeze({
+      symbol: 'AAPL',
+      assetType: 'equity',
+      side: 'long',
+      quantity: 35,
+      averagePrice: 186.2,
+      currentPrice: 192.44,
+      realizedPnl: 0,
+    }),
+  ]),
+})
+
 export const demoProposedTrades = Object.freeze([
   Object.freeze({
     id: 'paper-trade-approved',
