@@ -3,9 +3,11 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import App from './App'
 
 describe('App', () => {
-  it('renders the trading workspace heading', () => {
+  it('renders the portfolio risk dashboard', () => {
     const markup = renderToStaticMarkup(<App />)
 
-    expect(markup).toContain('Institutional Trading Workspace')
+    expect(markup).toContain('Portfolio Risk Intelligence')
+    expect(markup).toContain('Paper Trading only')
+    expect(markup).toContain('portfolio.risk.evaluated')
   })
 })

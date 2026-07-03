@@ -1,247 +1,208 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import './App.css'
-import {
-  DashboardLayout,
-  PanelContainer,
-  Sidebar,
-  TopNavigation,
-  Workspace,
-} from './components/layout.jsx'
-import {
-  JournalSummaryPanel,
-  DiagnosticsPanel,
-  AlertsPanel,
-  ScannerPanel,
-  DecisionPanel,
-  OrderEntryPanel,
-  OrdersPanel,
-  EquityCurvePanel,
-  PortfolioSummaryPanel,
-  PositionsPanel,
-  RiskPanel,
-  SignalPanel,
-  MarketOverviewPanel,
-  WatchlistPanel,
-} from './components/panels.jsx'
-import { useMarketOverview } from './hooks/useMarketOverview.js'
-import { useOrders } from './hooks/useOrders.js'
-import { usePositions } from './hooks/usePositions.js'
-import { usePortfolio } from './hooks/usePortfolio.js'
-import { usePortfolioAnalytics } from './hooks/usePortfolioAnalytics.js'
-import { useEquityCurve } from './hooks/useEquityCurve.js'
-import { useRisk } from './hooks/useRisk.js'
-import { useDecision } from './hooks/useDecision.js'
-import { useSignals } from './hooks/useSignals.js'
-import { useSystemHealth } from './hooks/useSystemHealth.js'
-import { useWatchlist } from './hooks/useWatchlist.js'
+import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
+import { demoPortfolio } from './data/demoPortfolio.js'
 
-const navigationItems = [
-  { label: 'Dashboard', href: '#dashboard' },
-  { label: 'Watchlist', href: '#watchlist' },
-  { label: 'Portfolio', href: '#portfolio' },
-  { label: 'Orders', href: '#orders' },
-  { label: 'Positions', href: '#positions' },
-  { label: 'Journal', href: '#journal' },
-  { label: 'Analytics', href: '#analytics' },
-  { label: 'Settings', href: '#settings' },
-]
+function formatCurrency(value) {
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 2,
+  }).format(Number(value ?? 0))
+}
 
-function getMarketStatus(date = new Date()) {
-  const day = date.getDay()
-  const minutes = date.getHours() * 60 + date.getMinutes()
-  const regularOpen = 9 * 60 + 30
-  const regularClose = 16 * 60
+function formatNumber(value) {
+  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(Number(value ?? 0))
+}
 
-  if (day === 0 || day === 6) {
-    return { label: 'Market Closed', tone: 'neutral' }
-  }
+function formatPercent(value) {
+  return `${Number(value ?? 0).toFixed(2)}%`
+}
 
-  if (minutes >= regularOpen && minutes < regularClose) {
-    return { label: 'Market Open', tone: 'positive' }
-  }
+function formatDate(value) {
+  return new Date(value).toLocaleString()
+}
 
-  return { label: 'After Hours', tone: 'warning' }
+function getRiskTone(level) {
+  if (level === 'critical' || level === 'high') return 'danger'
+  if (level === 'elevated') return 'warning'
+  return 'positive'
+}
+
+function MetricCard({ label, value, tone }) {
+  return (
+    <article className={`metric-card ${tone ?? ''}`}>
+      <span>{label}</span>
+      <strong>{value}</strong>
+    </article>
+  )
+}
+
+function ExposureBar({ label, value, tone }) {
+  const width = Math.min(100, Math.abs(Number(value ?? 0)))
+
+  return (
+    <div className="exposure-row">
+      <div>
+        <span>{label}</span>
+        <strong>{formatPercent(value)}</strong>
+      </div>
+      <div className="exposure-track" aria-hidden="true">
+        <span className={tone ?? ''} style={{ width: `${width}%` }} />
+      </div>
+    </div>
+  )
 }
 
 function App() {
-  const watchlist = useWatchlist()
-  const marketOverview = useMarketOverview({
-    symbol: watchlist.selectedSymbol,
-    initialQuote: watchlist.selectedQuote,
-  })
-  const portfolio = usePortfolio()
-  const portfolioAnalytics = usePortfolioAnalytics()
-  const equityCurve = useEquityCurve()
-  const orders = useOrders()
-  const activeQuote = marketOverview.quote ?? watchlist.selectedQuote
-  const positions = usePositions({
-    quotes: watchlist.quotes,
-    activeQuote,
-    accountValue: portfolioAnalytics.summary.accountValue,
-  })
-  const signals = useSignals(activeQuote)
-  const systemHealth = useSystemHealth()
-  const risk = useRisk({
-    portfolio: portfolio.portfolio,
-    accountSummary: portfolioAnalytics.summary,
-    quote: activeQuote,
-  })
-  const decision = useDecision(watchlist.selectedSymbol)
-  const [activeItem, setActiveItem] = useState('Dashboard')
-  const [journalRefreshKey, setJournalRefreshKey] = useState(0)
-
-  const marketStatus = useMemo(() => getMarketStatus(), [])
-  const connectionStatus = activeQuote?.health?.available
-    ? `Connected: ${activeQuote.health.provider}`
-    : 'Connected: mock'
-
-  const refreshWorkspace = () => {
-    void watchlist.refresh()
-    void marketOverview.refresh()
-    portfolio.refresh()
-    portfolioAnalytics.refresh()
-    equityCurve.refresh()
-    orders.refresh()
-    positions.refresh()
-    risk.refresh()
-    decision.refresh()
-  }
-
-  const refreshExecutionPanels = () => {
-    void orders.refresh()
-    positions.refresh()
-    portfolioAnalytics.refresh()
-    equityCurve.refresh()
-    setJournalRefreshKey((value) => value + 1)
-  }
+  const risk = useMemo(() => evaluatePortfolioRisk(demoPortfolio, { emitEvent: false }), [])
+  const riskTone = getRiskTone(risk.summary.riskLevel)
 
   return (
-    <DashboardLayout
-      sidebar={
-        <Sidebar
-          items={navigationItems}
-          activeItem={activeItem}
-          onNavigate={setActiveItem}
-          summary={portfolioAnalytics.summary}
-        />
-      }
-      topNav={
-        <TopNavigation
-          selectedSymbol={watchlist.selectedSymbol}
-          marketStatus={marketStatus}
-          connectionStatus={connectionStatus}
-          accountValue={portfolioAnalytics.summary.accountValue}
-          isRefreshing={watchlist.isRefreshing}
-          onRefresh={refreshWorkspace}
-        />
-      }
-      main={
-        <Workspace>
-          <PanelContainer id="watchlist" title="Watchlist" size="wide">
-            <WatchlistPanel
-              quotes={watchlist.quotes}
-              selectedSymbol={watchlist.selectedSymbol}
-              onSelectSymbol={watchlist.setSelectedSymbol}
-              refreshing={watchlist.isRefreshing}
-              onRefresh={watchlist.refresh}
-            />
-          </PanelContainer>
-          <PanelContainer title="Market Overview" minWidth={300}>
-            <MarketOverviewPanel
-              symbol={watchlist.selectedSymbol}
-              quote={activeQuote}
-              loading={marketOverview.isLoading}
-              refreshing={marketOverview.isRefreshing}
-              error={marketOverview.error}
-              onRefresh={marketOverview.refresh}
-            />
-          </PanelContainer>
-          <PanelContainer title="Signal">
-            <SignalPanel
-              signal={signals.signal}
-              symbol={watchlist.selectedSymbol}
-              loading={signals.isLoading}
-              refreshing={signals.isRefreshing}
-              error={signals.error}
-              onRefresh={signals.refresh}
-            />
-          </PanelContainer>
-          <PanelContainer title="Risk">
-            <RiskPanel
-              risk={risk.risk}
-              symbol={watchlist.selectedSymbol}
-              loading={risk.isLoading}
-              refreshing={risk.isRefreshing}
-              error={risk.error}
-              onRefresh={risk.refresh}
-            />
-          </PanelContainer>
-          <PanelContainer title="Decision Intelligence" size="wide">
-            <DecisionPanel
-              decision={decision.decision}
-              assetProfile={decision.assetProfile}
-              symbol={watchlist.selectedSymbol}
-              loading={decision.isLoading}
-              refreshing={decision.isRefreshing}
-              error={decision.error}
-              onRefresh={decision.refresh}
-            />
-          </PanelContainer>
-          <PanelContainer title="Order Entry" minWidth={320}>
-            <OrderEntryPanel
-              portfolio={portfolio.portfolio}
-              quote={activeQuote}
-              onMutationSuccess={refreshExecutionPanels}
-            />
-          </PanelContainer>
-          <PanelContainer id="portfolio" title="Portfolio" size="wide">
-            <PortfolioSummaryPanel
-              summary={portfolioAnalytics.summary}
-              loading={portfolioAnalytics.isLoading}
-              error={portfolioAnalytics.error}
-            />
-          </PanelContainer>
-          <PanelContainer id="analytics" title="Equity Curve" size="wide">
-            <EquityCurvePanel
-              points={equityCurve.points}
-              drawdowns={equityCurve.drawdowns}
-              timeline={equityCurve.timeline}
-              maxDrawdown={equityCurve.maxDrawdown}
-              loading={equityCurve.isLoading}
-              error={equityCurve.error}
-            />
-          </PanelContainer>
-          <PanelContainer id="orders" title="Orders" size="wide">
-            <OrdersPanel
-              orders={orders.orders}
-              activeSymbol={watchlist.selectedSymbol}
-              onCancelOrder={orders.cancelOrder}
-              onRefresh={orders.refresh}
-              onMutationSuccess={refreshExecutionPanels}
-            />
-          </PanelContainer>
-          <PanelContainer id="positions" title="Positions" size="full">
-            <PositionsPanel
-              positions={positions.positions}
-              activeSymbol={watchlist.selectedSymbol}
-              onRefresh={positions.refresh}
-            />
-          </PanelContainer>
-          <PanelContainer id="journal" title="Journal" size="full">
-            <JournalSummaryPanel key={journalRefreshKey} activeSymbol={watchlist.selectedSymbol} />
-          </PanelContainer>
-          <PanelContainer title="Alerts" size="full">
-            <AlertsPanel activeSymbol={watchlist.selectedSymbol} />
-          </PanelContainer>
-          <PanelContainer title="Scanner" size="full">
-            <ScannerPanel />
-          </PanelContainer>
-          <PanelContainer id="settings" title="Diagnostics" size="wide">
-            <DiagnosticsPanel healthState={systemHealth} />
-          </PanelContainer>
-        </Workspace>
-      }
-    />
+    <main className="risk-dashboard">
+      <header className="risk-header">
+        <div>
+          <p className="eyebrow">Atlas Market</p>
+          <h1>Portfolio Risk Intelligence</h1>
+          <p className="header-copy">
+            Asset-agnostic paper portfolio risk evaluation across exposure, concentration, leverage,
+            volatility, liquidity, and open risk.
+          </p>
+          <p className="workspace-line">
+            Institutional Trading Workspace integration: Watchlist, Market Overview, Signal Panel, Risk Panel,
+            Order Entry, Portfolio Summary, and Portfolio controls remain paper-mode aligned.
+          </p>
+        </div>
+        <div className="header-status" aria-label="Portfolio risk status">
+          <span className="paper-pill">Paper Trading only</span>
+          <span className={`risk-pill ${riskTone}`}>{risk.summary.riskLevel}</span>
+          <span className="timestamp">Evaluated {formatDate(risk.timestamp)}</span>
+        </div>
+      </header>
+
+      <section className="hero-grid" aria-label="Portfolio risk summary">
+        <article className="score-panel">
+          <span>Risk Score</span>
+          <strong>{formatNumber(risk.summary.riskScore)}</strong>
+          <p>{risk.eventType}</p>
+        </article>
+        <MetricCard label="Account Value" value={formatCurrency(risk.account.accountValue)} />
+        <MetricCard label="Cash" value={formatCurrency(risk.account.cash)} />
+        <MetricCard label="Buying Power" value={formatCurrency(risk.account.buyingPower)} />
+        <MetricCard label="Open Risk" value={formatCurrency(risk.summary.openRisk)} tone={risk.summary.openRiskPct > 2 ? 'warning' : ''} />
+      </section>
+
+      <section className="dashboard-grid">
+        <article className="panel">
+          <div className="panel-heading">
+            <h2>Exposure Intelligence</h2>
+            <span>Portfolio limits</span>
+          </div>
+          <div className="exposure-stack">
+            <ExposureBar label="Gross Exposure" value={risk.summary.grossExposure} tone={risk.summary.grossExposure > 100 ? 'warning' : 'positive'} />
+            <ExposureBar label="Net Exposure" value={risk.summary.netExposure} tone={Math.abs(risk.summary.netExposure) > 80 ? 'warning' : 'positive'} />
+            <ExposureBar label="Concentration" value={risk.summary.concentrationRisk} tone={risk.summary.concentrationRisk > 25 ? 'danger' : 'positive'} />
+            <ExposureBar label="Open Risk" value={risk.summary.openRiskPct} tone={risk.summary.openRiskPct > 2.5 ? 'danger' : 'positive'} />
+          </div>
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <h2>Risk Factors</h2>
+            <span>Weighted portfolio profile</span>
+          </div>
+          <div className="metric-grid">
+            <MetricCard label="Leverage" value={`${formatNumber(risk.summary.leverage)}x`} />
+            <MetricCard label="Portfolio VaR" value={formatPercent(risk.summary.portfolioVar)} />
+            <MetricCard label="Volatility" value={formatPercent(risk.summary.weightedVolatility)} />
+            <MetricCard label="Liquidity" value={formatNumber(risk.summary.weightedLiquidityScore)} />
+            <MetricCard label="Beta" value={formatNumber(risk.summary.portfolioBeta)} />
+            <MetricCard label="Drawdown" value={formatPercent(risk.summary.drawdownPct)} />
+          </div>
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <h2>Asset Allocation</h2>
+            <span>Asset-agnostic model</span>
+          </div>
+          <div className="allocation-list">
+            {risk.assetExposure.map((asset) => (
+              <div key={asset.assetType} className="allocation-row">
+                <div>
+                  <strong>{asset.assetType}</strong>
+                  <span>{asset.count} position{asset.count === 1 ? '' : 's'}</span>
+                </div>
+                <div>
+                  <strong>{formatPercent(asset.weight)}</strong>
+                  <span>{formatCurrency(asset.marketValue)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="panel">
+          <div className="panel-heading">
+            <h2>Warnings</h2>
+            <span>Risk controls</span>
+          </div>
+          {risk.warnings.length > 0 ? (
+            <ul className="warning-list">
+              {risk.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            </ul>
+          ) : (
+            <p className="empty-state">No active portfolio risk warnings.</p>
+          )}
+          <div className="recommendations">
+            <h3>Recommendations</h3>
+            <ul>
+              {risk.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}
+            </ul>
+          </div>
+        </article>
+      </section>
+
+      <section className="panel positions-panel">
+        <div className="panel-heading">
+          <h2>Position Risk</h2>
+          <span>No live orders. Paper risk review only.</span>
+        </div>
+        <div className="table-wrap">
+          <table>
+            <caption>Asset-agnostic position risk table</caption>
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Asset</th>
+                <th>Side</th>
+                <th>Quantity</th>
+                <th>Current</th>
+                <th>Market Value</th>
+                <th>Weight</th>
+                <th>Open Risk</th>
+                <th>Liquidity</th>
+              </tr>
+            </thead>
+            <tbody>
+              {risk.positions.map((position) => (
+                <tr key={`${position.symbol}-${position.assetType}`}>
+                  <td><strong>{position.symbol}</strong></td>
+                  <td>{position.assetType}</td>
+                  <td className={position.side === 'short' ? 'negative' : 'positive'}>{position.side}</td>
+                  <td>{formatNumber(position.quantity)} {position.quantityLabel}</td>
+                  <td>{formatCurrency(position.currentPrice)}</td>
+                  <td>{formatCurrency(position.absoluteMarketValue)}</td>
+                  <td>{formatPercent(position.weight)}</td>
+                  <td>{formatCurrency(position.dollarRisk)}</td>
+                  <td>{formatNumber(position.liquidityScore)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
   )
 }
 
