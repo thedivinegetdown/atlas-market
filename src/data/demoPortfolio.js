@@ -72,3 +72,68 @@ export const demoPortfolio = Object.freeze({
     }),
   ]),
 })
+
+export const guardrailDemoPortfolio = Object.freeze({
+  id: 'paper-guardrail-demo',
+  accountValue: 125000,
+  cash: 86200,
+  buyingPower: 86200,
+  drawdownPct: 1.8,
+  positions: Object.freeze([
+    Object.freeze({
+      symbol: 'SPY',
+      assetType: 'etf',
+      side: 'long',
+      quantity: 55,
+      averagePrice: 512.4,
+      currentPrice: 526.18,
+      volatility: 1.25,
+      beta: 1,
+      liquidityScore: 96,
+      stopPrice: 506,
+      unrealizedPnl: 757.9,
+    }),
+    Object.freeze({
+      symbol: 'AAPL',
+      assetType: 'equity',
+      side: 'long',
+      quantity: 35,
+      averagePrice: 186.2,
+      currentPrice: 192.44,
+      volatility: 1.85,
+      beta: 1.18,
+      liquidityScore: 94,
+      stopPrice: 181,
+      unrealizedPnl: 218.4,
+    }),
+  ]),
+})
+
+export const demoProposedTrades = Object.freeze([
+  Object.freeze({
+    id: 'paper-trade-approved',
+    label: 'Controlled ETF add',
+    symbol: 'SPY',
+    assetType: 'etf',
+    side: 'buy',
+    orderType: 'limit',
+    quantity: 8,
+    price: 526,
+    stopPrice: 513,
+    timeInForce: 'DAY',
+    paperTrading: true,
+  }),
+  Object.freeze({
+    id: 'paper-trade-rejected',
+    label: 'Oversized futures short',
+    symbol: 'ES',
+    assetType: 'futures',
+    side: 'short',
+    orderType: 'limit',
+    quantity: 2,
+    price: 5462.5,
+    stopPrice: 5520,
+    timeInForce: 'DAY',
+    paperTrading: true,
+  }),
+])

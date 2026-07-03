@@ -1,7 +1,8 @@
 import { useMemo } from 'react'
 import './App.css'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
-import { demoPortfolio } from './data/demoPortfolio.js'
+import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
+import { demoPortfolio, demoProposedTrades, guardrailDemoPortfolio } from './data/demoPortfolio.js'
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', {
@@ -56,6 +57,14 @@ function ExposureBar({ label, value, tone }) {
 
 function App() {
   const risk = useMemo(() => evaluatePortfolioRisk(demoPortfolio, { emitEvent: false }), [])
+  const guardrails = useMemo(() => demoProposedTrades.map((trade) => ({
+    label: trade.label,
+    result: evaluateTradeGuardrail(
+      trade.id === 'paper-trade-approved' ? guardrailDemoPortfolio : demoPortfolio,
+      trade,
+      { emitEvent: false },
+    ),
+  })), [])
   const riskTone = getRiskTone(risk.summary.riskLevel)
 
   return (
@@ -93,6 +102,42 @@ function App() {
       </section>
 
       <section className="dashboard-grid">
+        <article className="panel guardrail-panel">
+          <div className="panel-heading">
+            <h2>Trade Guardrails</h2>
+            <span>Pre-lifecycle paper trade safety</span>
+          </div>
+          <div className="guardrail-grid">
+            {guardrails.map(({ label, result }) => (
+              <section key={result.proposedTrade.symbol + label} className={`guardrail-card ${result.approved ? 'approved' : 'rejected'}`}>
+                <div className="guardrail-card-header">
+                  <div>
+                    <span>{label}</span>
+                    <strong>{result.proposedTrade.symbol}</strong>
+                  </div>
+                  <span className={`decision-pill ${result.approved ? 'positive' : 'danger'}`}>
+                    {result.decision}
+                  </span>
+                </div>
+                <p>{result.reason}</p>
+                <div className="guardrail-metrics">
+                  <MetricCard label="Trade Risk" value={formatPercent(result.metrics.riskPct)} />
+                  <MetricCard label="Portfolio Heat" value={formatPercent(result.metrics.portfolioHeatAfterTrade)} />
+                  <MetricCard label="Required Capital" value={formatCurrency(result.metrics.marginRequirement)} />
+                </div>
+                <ul className="guardrail-checks">
+                  {result.checks.map((check) => (
+                    <li key={`${result.proposedTrade.symbol}-${check.name}`} className={check.passed ? 'positive' : 'danger'}>
+                      {check.message}
+                    </li>
+                  ))}
+                </ul>
+                <span className="event-line">{result.eventType}</span>
+              </section>
+            ))}
+          </div>
+        </article>
+
         <article className="panel">
           <div className="panel-heading">
             <h2>Exposure Intelligence</h2>
