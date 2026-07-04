@@ -114,6 +114,81 @@ h1 {
   margin-bottom: 14px;
 }
 
+.workspace-layout {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.workspace-rail {
+  position: sticky;
+  top: 18px;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.9);
+}
+
+.workspace-rail > div {
+  display: grid;
+  gap: 4px;
+}
+
+.workspace-rail strong {
+  color: var(--text-strong);
+}
+
+.workspace-rail-kicker {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.workspace-rail nav {
+  display: grid;
+  gap: 7px;
+}
+
+.workspace-rail-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 36px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: #0b1220;
+  text-decoration: none;
+}
+
+.workspace-rail-item span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.workspace-rail-item strong {
+  overflow: hidden;
+  max-width: 84px;
+  color: var(--text-strong);
+  font-size: 11px;
+  text-align: right;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.workspace-panels {
+  margin-bottom: 0;
+}
+
 .dashboard-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   margin-bottom: 14px;
@@ -164,6 +239,12 @@ h1 {
 }
 
 .market-data-health-panel {
+  grid-column: 1 / -1;
+}
+
+.scanner-signal-panel,
+.risk-overview-panel,
+.event-timeline-panel {
   grid-column: 1 / -1;
 }
 
@@ -576,6 +657,49 @@ h1 {
   gap: 8px;
 }
 
+.scanner-signal-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.scanner-match-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.scanner-match-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.scanner-match-card div {
+  display: grid;
+  gap: 3px;
+}
+
+.scanner-match-card span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.scanner-match-card strong {
+  color: var(--text-strong);
+}
+
+.scanner-match-card p {
+  margin: 0;
+  color: var(--text);
+  font-size: 12px;
+}
+
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -703,6 +827,45 @@ h1 {
 
 .event-line {
   font-family: var(--font-mono);
+}
+
+.event-timeline {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.event-timeline-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.event-timeline-item div {
+  display: grid;
+  gap: 4px;
+}
+
+.event-timeline-item div:last-child {
+  justify-items: end;
+}
+
+.event-timeline-item strong {
+  color: var(--text-strong);
+}
+
+.event-timeline-item span,
+.event-timeline-item time {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  font-size: 12px;
 }
 
 .exposure-stack {
@@ -854,8 +1017,17 @@ tr:last-child td {
 @media (max-width: 1180px) {
   .risk-header,
   .hero-grid,
-  .dashboard-grid {
+  .dashboard-grid,
+  .workspace-layout {
     grid-template-columns: 1fr;
+  }
+
+  .workspace-rail {
+    position: static;
+  }
+
+  .workspace-rail nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .header-status {
@@ -895,6 +1067,8 @@ tr:last-child td {
   .strategy-manager-list,
   .strategy-manager-metrics,
   .market-data-health-grid,
+  .scanner-signal-grid,
+  .scanner-match-list,
   .analytics-grid,
   .analytics-columns,
   .rebalance-summary,
@@ -908,5 +1082,14 @@ tr:last-child td {
   .panel-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .workspace-rail nav,
+  .event-timeline-item {
+    grid-template-columns: 1fr;
+  }
+
+  .event-timeline-item div:last-child {
+    justify-items: start;
   }
 }

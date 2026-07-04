@@ -16,6 +16,7 @@ import { recommendPositionSize } from './core/risk/positionSizingEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStrategyPortfolioManager.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
+import { createSignalEngine } from '../lib/signals/signalEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -72,6 +73,30 @@ function ExposureBar({ label, value, tone }) {
         <span className={tone ?? ''} style={{ width: `${width}%` }} />
       </div>
     </div>
+  )
+}
+
+function WorkspaceLayout({ navigation, children }) {
+  return (
+    <section className="workspace-layout" aria-label="Institutional trading workspace">
+      <aside className="workspace-rail" aria-label="Workspace operating panels">
+        <div>
+          <span className="workspace-rail-kicker">Workspace</span>
+          <strong>Paper Trading OS</strong>
+        </div>
+        <nav>
+          {navigation.map((item) => (
+            <a key={item.id} href={`#${item.id}`} className="workspace-rail-item">
+              <span>{item.label}</span>
+              <strong>{item.status}</strong>
+            </a>
+          ))}
+        </nav>
+      </aside>
+      <section className="dashboard-grid workspace-panels">
+        {children}
+      </section>
+    </section>
   )
 }
 
@@ -214,12 +239,109 @@ function App() {
       eventType: MARKET_DATA_ADAPTER_CHECKED_EVENT,
     }
   }, [])
+  const scannerSignal = useMemo(() => {
+    const quote = {
+      symbol: demoProposedTrades[0].symbol,
+      assetType: demoProposedTrades[0].assetType,
+      price: demoExecutionQuotes['paper-trade-approved'].last,
+      open: 524.8,
+      high: demoExecutionQuotes['paper-trade-approved'].high,
+      low: demoExecutionQuotes['paper-trade-approved'].low,
+      previousClose: 524.66,
+      volume: 1240000,
+      averageVolume: 990000,
+      bid: demoExecutionQuotes['paper-trade-approved'].bid,
+      ask: demoExecutionQuotes['paper-trade-approved'].ask,
+      timestamp: demoExecutionQuotes['paper-trade-approved'].timestamp,
+    }
+    const signal = createSignalEngine().evaluateQuote(quote)
+
+    return {
+      quote,
+      signal,
+      matches: [
+        {
+          scanner: 'Momentum Pullback',
+          symbol: quote.symbol,
+          assetType: quote.assetType,
+          criteria: ['price_above', 'signal_bullish', 'risk_acceptable'],
+          evaluatedAt: quote.timestamp,
+        },
+      ],
+    }
+  }, [])
   const rebalancing = useMemo(() => recommendPortfolioRebalance(demoPortfolio, {
     emitEvent: false,
     analyticsSnapshot: portfolioAnalytics,
     riskSnapshot: risk,
   }), [portfolioAnalytics, risk])
   const riskTone = getRiskTone(risk.summary.riskLevel)
+  const eventTimeline = useMemo(() => [
+    {
+      label: 'Market data adapter checked',
+      eventType: marketDataAdapterHealth.eventType,
+      status: marketDataAdapterHealth.health.status,
+      timestamp: marketDataAdapterHealth.health.checkedAt,
+    },
+    {
+      label: 'Portfolio risk evaluated',
+      eventType: risk.eventType,
+      status: risk.summary.riskLevel,
+      timestamp: risk.timestamp,
+    },
+    {
+      label: 'Trade guardrail evaluated',
+      eventType: guardrails[0]?.result.eventType,
+      status: guardrails[0]?.result.decision,
+      timestamp: guardrails[0]?.result.timestamp,
+    },
+    {
+      label: 'Execution simulation completed',
+      eventType: executions[0]?.result.eventType,
+      status: executions[0]?.result.finalStatus,
+      timestamp: executions[0]?.result.timestamp,
+    },
+    {
+      label: 'Portfolio accounting updated',
+      eventType: primaryAccounting?.eventType,
+      status: primaryAccounting?.status,
+      timestamp: primaryAccounting?.timestamp,
+    },
+    {
+      label: 'Journal record captured',
+      eventType: journalRecords[0]?.result.eventType,
+      status: journalRecords[0]?.result.journalStatus,
+      timestamp: journalRecords[0]?.result.timestamp,
+    },
+    {
+      label: 'AI decision orchestrated',
+      eventType: aiDecision.eventType,
+      status: aiDecision.finalDecision,
+      timestamp: aiDecision.timestamp,
+    },
+    {
+      label: 'Strategy manager evaluated',
+      eventType: strategyPortfolioManager.eventType,
+      status: strategyPortfolioManager.strategyApprovalStatus,
+      timestamp: strategyPortfolioManager.timestamp,
+    },
+  ].filter((event) => event.eventType), [aiDecision, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, risk, strategyPortfolioManager])
+  const workspaceNavigation = [
+    { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
+    { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
+    { id: 'ai-decision', label: 'AI Decision', status: aiDecision.finalDecision },
+    { id: 'risk', label: 'Risk', status: risk.summary.riskLevel },
+    { id: 'position-sizing', label: 'Sizing', status: positionSizing.status },
+    { id: 'guardrails', label: 'Guardrails', status: guardrails[0]?.result.decision ?? 'review' },
+    { id: 'execution', label: 'Execution', status: executions[0]?.result.finalStatus ?? 'pending' },
+    { id: 'accounting', label: 'Accounting', status: primaryAccounting?.status ?? 'ready' },
+    { id: 'journal', label: 'Journal', status: journalRecords[0]?.result.journalStatus ?? 'ready' },
+    { id: 'performance', label: 'Performance', status: performance.metrics.totalTrades },
+    { id: 'portfolio-analytics', label: 'Analytics', status: portfolioAnalytics.diversification.label },
+    { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
+    { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
+    { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
+  ]
 
   return (
     <main className="risk-dashboard">
@@ -255,8 +377,89 @@ function App() {
         <MetricCard label="Open Risk" value={formatCurrency(risk.summary.openRisk)} tone={risk.summary.openRiskPct > 2 ? 'warning' : ''} />
       </section>
 
-      <section className="dashboard-grid">
-        <article className="panel guardrail-panel">
+      <WorkspaceLayout navigation={workspaceNavigation}>
+        <article id="market-data-health" className={`panel market-data-health-panel ${marketDataAdapterHealth.health.status}`}>
+          <div className="panel-heading">
+            <h2>Market Data Health</h2>
+            <span>Mock adapter default. Paper trading only.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{marketDataAdapterHealth.metadata.name}</span>
+              <strong>{marketDataAdapterHealth.health.status}</strong>
+            </div>
+            <span className={`decision-pill ${marketDataAdapterHealth.health.status === 'healthy' ? 'positive' : marketDataAdapterHealth.health.status === 'stale' ? 'warning' : 'danger'}`}>
+              {marketDataAdapterHealth.metadata.id}
+            </span>
+          </div>
+          <div className="market-data-health-grid">
+            <MetricCard label="Provider" value={marketDataAdapterHealth.health.provider} />
+            <MetricCard label="Available" value={marketDataAdapterHealth.health.available ? 'yes' : 'no'} />
+            <MetricCard label="Stale Data" value={marketDataAdapterHealth.health.stale ? 'yes' : 'no'} />
+            <MetricCard label="Capabilities" value={formatNumber(marketDataAdapterHealth.metadata.capabilities.length)} />
+            <MetricCard label="Asset Types" value={formatNumber(marketDataAdapterHealth.metadata.assetTypes.length)} />
+            <MetricCard label="Paper Mode" value={marketDataAdapterHealth.health.paperTrading ? 'enabled' : 'disabled'} />
+          </div>
+          <p className="empty-state">No paid data API is required for this adapter foundation.</p>
+          <span className="event-line">{marketDataAdapterHealth.eventType}</span>
+        </article>
+
+        <article id="scanner-signal" className="panel scanner-signal-panel">
+          <div className="panel-heading">
+            <h2>Scanner / Signal Panel</h2>
+            <span>Existing signal engine output from normalized paper market data.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{scannerSignal.quote.symbol} {scannerSignal.quote.assetType}</span>
+              <strong>{scannerSignal.signal.action}</strong>
+            </div>
+            <span className="decision-pill positive">
+              {formatPercent(scannerSignal.signal.confidence)} confidence
+            </span>
+          </div>
+          <div className="scanner-signal-grid">
+            <MetricCard label="Last Price" value={formatCurrency(scannerSignal.quote.price)} />
+            <MetricCard label="Signal Score" value={formatNumber(scannerSignal.signal.score)} />
+            <MetricCard label="Trend" value={scannerSignal.signal.trendDirection} />
+            <MetricCard label="Momentum" value={formatNumber(scannerSignal.signal.momentum)} />
+            <MetricCard label="Breakout" value={scannerSignal.signal.breakout} />
+            <MetricCard label="Mean Reversion" value={scannerSignal.signal.meanReversion} />
+            <MetricCard label="Bull Score" value={formatNumber(scannerSignal.signal.bullScore)} />
+            <MetricCard label="Bear Score" value={formatNumber(scannerSignal.signal.bearScore)} />
+          </div>
+          <div className="scanner-match-list">
+            {scannerSignal.matches.map((match) => (
+              <section key={`${match.scanner}-${match.symbol}`} className="scanner-match-card">
+                <div>
+                  <span>{match.scanner}</span>
+                  <strong>{match.symbol}</strong>
+                </div>
+                <p>{match.criteria.join(' / ')}</p>
+                <span>{formatDate(match.evaluatedAt)}</span>
+              </section>
+            ))}
+          </div>
+          <p className="empty-state">{scannerSignal.signal.thesis}</p>
+        </article>
+
+        <article id="risk" className="panel risk-overview-panel">
+          <div className="panel-heading">
+            <h2>Risk Panel</h2>
+            <span>Portfolio limits and current paper risk status.</span>
+          </div>
+          <div className="metric-grid">
+            <MetricCard label="Risk Score" value={formatNumber(risk.summary.riskScore)} tone={riskTone} />
+            <MetricCard label="Open Risk" value={formatCurrency(risk.summary.openRisk)} />
+            <MetricCard label="Portfolio Heat" value={formatPercent(risk.summary.openRiskPct)} />
+            <MetricCard label="Concentration" value={formatPercent(risk.summary.concentrationRisk)} />
+            <MetricCard label="Liquidity" value={formatNumber(risk.summary.weightedLiquidityScore)} />
+            <MetricCard label="Drawdown" value={formatPercent(risk.summary.drawdownPct)} />
+          </div>
+          <span className="event-line">{risk.eventType}</span>
+        </article>
+
+        <article id="guardrails" className="panel guardrail-panel">
           <div className="panel-heading">
             <h2>Trade Guardrails</h2>
             <span>Pre-lifecycle paper trade safety</span>
@@ -292,7 +495,7 @@ function App() {
           </div>
         </article>
 
-        <article className="panel execution-panel">
+        <article id="execution" className="panel execution-panel">
           <div className="panel-heading">
             <h2>Execution Simulation</h2>
             <span>Paper fills only. No live brokerage integration.</span>
@@ -328,7 +531,7 @@ function App() {
           </div>
         </article>
 
-        <article className="panel accounting-panel">
+        <article id="accounting" className="panel accounting-panel">
           <div className="panel-heading">
             <h2>Paper Accounting</h2>
             <span>Applies simulated fills to paper account state.</span>
@@ -388,7 +591,7 @@ function App() {
           ) : null}
         </article>
 
-        <article className="panel journal-panel">
+        <article id="journal" className="panel journal-panel">
           <div className="panel-heading">
             <h2>Paper Trade Journal</h2>
             <span>Normalized lifecycle record from proposal through accounting.</span>
@@ -424,7 +627,7 @@ function App() {
           </div>
         </article>
 
-        <article className="panel performance-panel">
+        <article id="performance" className="panel performance-panel">
           <div className="panel-heading">
             <h2>Paper Performance</h2>
             <span>Analytics from recorded filled journal records.</span>
@@ -445,7 +648,7 @@ function App() {
           <span className="event-line">{performance.eventType}</span>
         </article>
 
-        <article className="panel risk-adjusted-performance-panel">
+        <article id="risk-adjusted-performance" className="panel risk-adjusted-performance-panel">
           <div className="panel-heading">
             <h2>Risk-Adjusted Performance</h2>
             <span>Quality of paper returns after rejected and non-filled trades are excluded.</span>
@@ -477,7 +680,7 @@ function App() {
           <span className="event-line">{riskAdjustedPerformance.eventType}</span>
         </article>
 
-        <article className={`panel drawdown-protection-panel ${drawdownProtection.protectionStatus}`}>
+        <article id="drawdown-protection" className={`panel drawdown-protection-panel ${drawdownProtection.protectionStatus}`}>
           <div className="panel-heading">
             <h2>Drawdown Protection</h2>
             <span>Paper risk protection before new trades are allowed.</span>
@@ -511,7 +714,7 @@ function App() {
           <span className="event-line">{drawdownProtection.eventType}</span>
         </article>
 
-        <article className={`panel position-sizing-panel ${positionSizing.status}`}>
+        <article id="position-sizing" className={`panel position-sizing-panel ${positionSizing.status}`}>
           <div className="panel-heading">
             <h2>Position Sizing</h2>
             <span>Paper-only sizing recommendation before guardrail and execution.</span>
@@ -544,7 +747,7 @@ function App() {
           <span className="event-line">{positionSizing.eventType}</span>
         </article>
 
-        <article className={`panel capital-allocation-panel ${capitalAllocation.allocationStatus}`}>
+        <article id="capital-allocation" className={`panel capital-allocation-panel ${capitalAllocation.allocationStatus}`}>
           <div className="panel-heading">
             <h2>Capital Allocation</h2>
             <span>Paper capital recommendations by strategy, asset class, and symbol.</span>
@@ -599,7 +802,7 @@ function App() {
           <span className="event-line">{capitalAllocation.eventType}</span>
         </article>
 
-        <article className={`panel ai-decision-panel ${aiDecision.finalDecision}`}>
+        <article id="ai-decision" className={`panel ai-decision-panel ${aiDecision.finalDecision}`}>
           <div className="panel-heading">
             <h2>AI Decision Orchestrator</h2>
             <span>Final paper decision from signals, risk, sizing, allocation, protection, and performance.</span>
@@ -632,7 +835,7 @@ function App() {
           <span className="event-line">{aiDecision.eventType}</span>
         </article>
 
-        <article className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
+        <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
           <div className="panel-heading">
             <h2>Multi-Strategy Manager</h2>
             <span>Strategy-level conflict, priority, exposure, and risk budget coordination.</span>
@@ -679,33 +882,7 @@ function App() {
           <span className="event-line">{strategyPortfolioManager.eventType}</span>
         </article>
 
-        <article className={`panel market-data-health-panel ${marketDataAdapterHealth.health.status}`}>
-          <div className="panel-heading">
-            <h2>Market Data Health</h2>
-            <span>Mock adapter default. Paper trading only.</span>
-          </div>
-          <div className="guardrail-card-header">
-            <div>
-              <span>{marketDataAdapterHealth.metadata.name}</span>
-              <strong>{marketDataAdapterHealth.health.status}</strong>
-            </div>
-            <span className={`decision-pill ${marketDataAdapterHealth.health.status === 'healthy' ? 'positive' : marketDataAdapterHealth.health.status === 'stale' ? 'warning' : 'danger'}`}>
-              {marketDataAdapterHealth.metadata.id}
-            </span>
-          </div>
-          <div className="market-data-health-grid">
-            <MetricCard label="Provider" value={marketDataAdapterHealth.health.provider} />
-            <MetricCard label="Available" value={marketDataAdapterHealth.health.available ? 'yes' : 'no'} />
-            <MetricCard label="Stale Data" value={marketDataAdapterHealth.health.stale ? 'yes' : 'no'} />
-            <MetricCard label="Capabilities" value={formatNumber(marketDataAdapterHealth.metadata.capabilities.length)} />
-            <MetricCard label="Asset Types" value={formatNumber(marketDataAdapterHealth.metadata.assetTypes.length)} />
-            <MetricCard label="Paper Mode" value={marketDataAdapterHealth.health.paperTrading ? 'enabled' : 'disabled'} />
-          </div>
-          <p className="empty-state">No paid data API is required for this adapter foundation.</p>
-          <span className="event-line">{marketDataAdapterHealth.eventType}</span>
-        </article>
-
-        <article className="panel strategy-attribution-panel">
+        <article id="strategy-attribution" className="panel strategy-attribution-panel">
           <div className="panel-heading">
             <h2>Strategy Attribution</h2>
             <span>Paper performance by originating strategy or signal.</span>
@@ -737,7 +914,7 @@ function App() {
           <span className="event-line">{strategyAttribution.eventType}</span>
         </article>
 
-        <article className="panel portfolio-analytics-panel">
+        <article id="portfolio-analytics" className="panel portfolio-analytics-panel">
           <div className="panel-heading">
             <h2>Portfolio Analytics</h2>
             <span>Independent exposure, composition, diversification, and drift evaluation.</span>
@@ -840,6 +1017,27 @@ function App() {
           <span className="event-line">{rebalancing.eventType}</span>
         </article>
 
+        <article id="event-timeline" className="panel event-timeline-panel">
+          <div className="panel-heading">
+            <h2>Event Timeline</h2>
+            <span>Event-driven paper trading lifecycle sequence.</span>
+          </div>
+          <ol className="event-timeline">
+            {eventTimeline.map((event) => (
+              <li key={`${event.eventType}-${event.label}`} className="event-timeline-item">
+                <div>
+                  <strong>{event.label}</strong>
+                  <span>{event.eventType}</span>
+                </div>
+                <div>
+                  <span className="decision-pill">{event.status}</span>
+                  <time dateTime={event.timestamp}>{formatDate(event.timestamp)}</time>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </article>
+
         <article className="panel">
           <div className="panel-heading">
             <h2>Exposure Intelligence</h2>
@@ -908,7 +1106,7 @@ function App() {
             </ul>
           </div>
         </article>
-      </section>
+      </WorkspaceLayout>
 
       <section className="panel positions-panel">
         <div className="panel-heading">
