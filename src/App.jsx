@@ -15,6 +15,7 @@ import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { recommendPositionSize } from './core/risk/positionSizingEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStrategyPortfolioManager.js'
+import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -205,6 +206,14 @@ function App() {
     strategyAttribution,
     portfolioRisk: risk,
   }, { emitEvent: false }), [aiDecision, capitalAllocation, portfolioAnalytics, risk, strategyAttribution])
+  const marketDataAdapterHealth = useMemo(() => {
+    const adapter = createMarketDataAdapter()
+    return {
+      metadata: adapter.metadata,
+      health: adapter.getProviderHealth(),
+      eventType: MARKET_DATA_ADAPTER_CHECKED_EVENT,
+    }
+  }, [])
   const rebalancing = useMemo(() => recommendPortfolioRebalance(demoPortfolio, {
     emitEvent: false,
     analyticsSnapshot: portfolioAnalytics,
@@ -668,6 +677,32 @@ function App() {
             ))}
           </div>
           <span className="event-line">{strategyPortfolioManager.eventType}</span>
+        </article>
+
+        <article className={`panel market-data-health-panel ${marketDataAdapterHealth.health.status}`}>
+          <div className="panel-heading">
+            <h2>Market Data Health</h2>
+            <span>Mock adapter default. Paper trading only.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{marketDataAdapterHealth.metadata.name}</span>
+              <strong>{marketDataAdapterHealth.health.status}</strong>
+            </div>
+            <span className={`decision-pill ${marketDataAdapterHealth.health.status === 'healthy' ? 'positive' : marketDataAdapterHealth.health.status === 'stale' ? 'warning' : 'danger'}`}>
+              {marketDataAdapterHealth.metadata.id}
+            </span>
+          </div>
+          <div className="market-data-health-grid">
+            <MetricCard label="Provider" value={marketDataAdapterHealth.health.provider} />
+            <MetricCard label="Available" value={marketDataAdapterHealth.health.available ? 'yes' : 'no'} />
+            <MetricCard label="Stale Data" value={marketDataAdapterHealth.health.stale ? 'yes' : 'no'} />
+            <MetricCard label="Capabilities" value={formatNumber(marketDataAdapterHealth.metadata.capabilities.length)} />
+            <MetricCard label="Asset Types" value={formatNumber(marketDataAdapterHealth.metadata.assetTypes.length)} />
+            <MetricCard label="Paper Mode" value={marketDataAdapterHealth.health.paperTrading ? 'enabled' : 'disabled'} />
+          </div>
+          <p className="empty-state">No paid data API is required for this adapter foundation.</p>
+          <span className="event-line">{marketDataAdapterHealth.eventType}</span>
         </article>
 
         <article className="panel strategy-attribution-panel">
