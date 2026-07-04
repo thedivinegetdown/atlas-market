@@ -10,6 +10,7 @@ import { simulateTradeExecution } from './core/execution/executionSimulationEngi
 import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
 import { evaluateDrawdownProtection } from './core/risk/drawdownProtectionEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
+import { recommendPositionSize } from './core/risk/positionSizingEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import {
   accountingDemoPortfolio,
@@ -128,6 +129,21 @@ function App() {
       equityPeak: accountingDemoPortfolio.accountValue,
     },
   ), [journalRecords, primaryAccounting, riskAdjustedPerformance])
+  const positionSizing = useMemo(() => recommendPositionSize(
+    guardrailDemoPortfolio,
+    demoProposedTrades[0],
+    {
+      emitEvent: false,
+      portfolioRisk: evaluatePortfolioRisk(guardrailDemoPortfolio, { emitEvent: false }),
+      drawdownProtection,
+      guardrailDecision: guardrails[0]?.result,
+      limits: {
+        equityRiskPct: 0.75,
+        maxRiskPerTradePct: 1,
+        maxPositionValuePct: 8,
+      },
+    },
+  ), [drawdownProtection, guardrails])
   const strategyAttribution = useMemo(() => evaluateStrategyAttribution(
     journalRecords.map((record) => record.result),
     { emitEvent: false },
@@ -427,6 +443,39 @@ function App() {
             <p className="empty-state">Drawdown protection is clear for paper trading review.</p>
           )}
           <span className="event-line">{drawdownProtection.eventType}</span>
+        </article>
+
+        <article className={`panel position-sizing-panel ${positionSizing.status}`}>
+          <div className="panel-heading">
+            <h2>Position Sizing</h2>
+            <span>Paper-only sizing recommendation before guardrail and execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{positionSizing.proposedTrade.symbol}</span>
+              <strong>{formatNumber(positionSizing.suggestedQuantity)} {positionSizing.quantityTerm}</strong>
+            </div>
+            <span className={`decision-pill ${positionSizing.status === 'recommended' ? 'positive' : 'danger'}`}>
+              {positionSizing.status}
+            </span>
+          </div>
+          <p className="empty-state">{positionSizing.reason}</p>
+          <div className="position-sizing-grid">
+            <MetricCard label="Dollar Risk" value={formatCurrency(positionSizing.metrics.dollarRisk)} />
+            <MetricCard label="Risk %" value={formatPercent(positionSizing.metrics.riskPct)} />
+            <MetricCard label="Stop Distance" value={formatCurrency(positionSizing.metrics.stopDistance)} />
+            <MetricCard label="Target Risk" value={formatCurrency(positionSizing.metrics.targetRiskAmount)} />
+            <MetricCard label="Max Position Cap" value={`${formatNumber(positionSizing.sizing.maxPositionValueQuantity)} ${positionSizing.quantityTerm}`} />
+            <MetricCard label="Buying Power Cap" value={`${formatNumber(positionSizing.sizing.buyingPowerQuantity)} ${positionSizing.quantityTerm}`} />
+            <MetricCard label="Drawdown Status" value={positionSizing.constraints.drawdownProtectionStatus} />
+            <MetricCard label="Guardrail" value={positionSizing.constraints.guardrailDecision} />
+          </div>
+          {positionSizing.errors.length > 0 ? (
+            <ul className="warning-list">
+              {positionSizing.errors.map((error) => <li key={error}>{error}</li>)}
+            </ul>
+          ) : null}
+          <span className="event-line">{positionSizing.eventType}</span>
         </article>
 
         <article className="panel strategy-attribution-panel">
