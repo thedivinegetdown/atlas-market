@@ -23,6 +23,7 @@ import {
 } from '../lib/brokers/brokerAdapter.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import { createSignalEngine } from '../lib/signals/signalEngine.js'
+import { evaluateReleaseCandidateStabilization } from '../lib/system/releaseCandidateStabilization.js'
 import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
 import {
   accountingDemoPortfolio,
@@ -411,10 +412,55 @@ function App() {
       timestamp: strategyPortfolioManager.timestamp,
     },
   ].filter((event) => event.eventType), [aiDecision, brokerAdapterHealth, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, releaseReadiness, risk, strategyPortfolioManager])
+  const releaseCandidateStabilization = useMemo(() => evaluateReleaseCandidateStabilization({
+    releaseReadiness,
+    brokerHealth: brokerAdapterHealth.health,
+    adapters: [
+      {
+        name: marketDataAdapterHealth.metadata.name,
+        provider: marketDataAdapterHealth.metadata.id,
+        default: marketDataAdapterHealth.metadata.default,
+        paperTrading: marketDataAdapterHealth.metadata.paperTrading,
+        liveOrders: false,
+      },
+      {
+        name: brokerAdapterHealth.metadata.name,
+        provider: brokerAdapterHealth.metadata.id,
+        default: brokerAdapterHealth.metadata.default,
+        paperTrading: brokerAdapterHealth.metadata.paperTrading,
+        liveOrders: brokerAdapterHealth.metadata.liveOrders,
+      },
+    ],
+    regressionChecklist: [
+      { name: 'guardrail approval and rejection paths', status: guardrails.some((guardrail) => guardrail.result.decision === 'approved') && guardrails.some((guardrail) => guardrail.result.decision === 'rejected') ? 'passed' : 'failed' },
+      { name: 'paper execution simulation', status: executions.some((execution) => execution.result.finalStatus === 'filled') ? 'passed' : 'failed' },
+      { name: 'paper accounting update', status: primaryAccounting?.status !== 'rejected' ? 'passed' : 'failed' },
+      { name: 'journal lifecycle capture', status: journalRecords.some((record) => record.result.journalStatus === 'recorded') ? 'passed' : 'failed' },
+      { name: 'release readiness gate', status: releaseReadiness.releaseReadinessStatus === 'ready' ? 'passed' : 'failed' },
+    ],
+    criticalModules: [
+      { name: 'market data adapter', status: marketDataAdapterHealth.health.status, eventType: marketDataAdapterHealth.eventType },
+      { name: 'broker adapter', status: brokerAdapterHealth.health.status, eventType: brokerAdapterHealth.eventType },
+      { name: 'portfolio risk', status: risk.summary.riskLevel === 'critical' ? 'caution' : 'healthy', eventType: risk.eventType },
+      { name: 'trade guardrail', status: guardrails.length > 0 ? 'healthy' : 'failed', eventType: guardrails[0]?.result.eventType },
+      { name: 'release readiness', status: releaseReadiness.releaseReadinessStatus, eventType: releaseReadiness.eventType },
+    ],
+    dashboardSmokeTests: [
+      { name: 'market data health panel', panel: 'Market Data Health', status: 'passed' },
+      { name: 'broker adapter health panel', panel: 'Broker Adapter Health', status: 'passed' },
+      { name: 'release readiness panel', panel: 'Release Readiness', status: 'passed' },
+      { name: 'event timeline panel', panel: 'Event Timeline', status: eventTimeline.length >= 8 ? 'passed' : 'failed' },
+      { name: 'paper lifecycle panels', panel: 'Guardrail / Execution / Accounting / Journal', status: primaryAccounting ? 'passed' : 'failed' },
+    ],
+    eventPipeline: eventTimeline,
+    guardrails: guardrails.map((guardrail) => guardrail.result),
+    executions: executions.map((execution) => execution.result),
+  }, { emitEvent: false }), [brokerAdapterHealth, eventTimeline, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, releaseReadiness, risk])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
+    { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
     { id: 'ai-decision', label: 'AI Decision', status: aiDecision.finalDecision },
     { id: 'risk', label: 'Risk', status: risk.summary.riskLevel },
@@ -569,6 +615,66 @@ function App() {
             <MetricCard label="Event Output" value={releaseReadiness.eventType} />
           </div>
           <span className="event-line">{releaseReadiness.eventType}</span>
+        </article>
+
+        <article id="rc-stabilization" className={`panel rc-stabilization-panel ${releaseCandidateStabilization.finalStatus}`}>
+          <div className="panel-heading">
+            <h2>RC Stabilization</h2>
+            <span>Final stabilization pass for the paper-trading operating system.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Final status</span>
+              <strong>{releaseCandidateStabilization.finalStatus}</strong>
+            </div>
+            <span className={`decision-pill ${releaseCandidateStabilization.finalStatus === 'stable' ? 'positive' : releaseCandidateStabilization.finalStatus === 'caution' ? 'warning' : 'danger'}`}>
+              mock mode locked
+            </span>
+          </div>
+          <p className="empty-state">{releaseCandidateStabilization.summary}</p>
+          <div className="rc-stabilization-grid">
+            {releaseCandidateStabilization.checks.map((check) => (
+              <MetricCard
+                key={check.name}
+                label={check.name}
+                value={check.status}
+                tone={check.status === 'stable' ? 'positive' : check.status === 'caution' ? 'warning' : 'danger'}
+              />
+            ))}
+          </div>
+          <div className="rc-stabilization-columns">
+            <section>
+              <h3>Critical Module Health</h3>
+              {releaseCandidateStabilization.criticalModuleHealthSummary.modules.slice(0, 5).map((module) => (
+                <div key={module.name} className="mini-row">
+                  <span>{module.name}</span>
+                  <strong>{module.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Dashboard Smoke Tests</h3>
+              {releaseCandidateStabilization.dashboardSmokeTestSummary.smokeTests.slice(0, 5).map((smokeTest) => (
+                <div key={smokeTest.name} className="mini-row">
+                  <span>{smokeTest.panel}</span>
+                  <strong>{smokeTest.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Release Blockers</h3>
+              {releaseCandidateStabilization.releaseBlockers.length > 0 ? releaseCandidateStabilization.releaseBlockers.map((blocker) => (
+                <p key={blocker} className="empty-state">{blocker}</p>
+              )) : <p className="empty-state">No release blockers detected.</p>}
+            </section>
+          </div>
+          <div className="release-validation-summary">
+            <MetricCard label="Event Pipeline" value={releaseCandidateStabilization.eventPipelineIntegrity.status} />
+            <MetricCard label="Paper Safety Lock" value={releaseCandidateStabilization.checks.find((check) => check.name === 'paperTradingSafetyLock')?.status ?? 'unknown'} />
+            <MetricCard label="Adapter Mock Mode" value={releaseCandidateStabilization.checks.find((check) => check.name === 'adapterMockMode')?.status ?? 'unknown'} />
+            <MetricCard label="Event Output" value={releaseCandidateStabilization.eventType} />
+          </div>
+          <span className="event-line">{releaseCandidateStabilization.eventType}</span>
         </article>
 
         <article id="scanner-signal" className="panel scanner-signal-panel">

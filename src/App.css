@@ -244,6 +244,7 @@ h1 {
 
 .broker-adapter-health-panel,
 .release-readiness-panel,
+.rc-stabilization-panel,
 .scanner-signal-panel,
 .risk-overview-panel,
 .event-timeline-panel {
@@ -677,6 +678,18 @@ h1 {
   border-color: rgba(239, 68, 68, 0.32);
 }
 
+.rc-stabilization-panel.stable {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.rc-stabilization-panel.caution {
+  border-color: rgba(234, 179, 8, 0.32);
+}
+
+.rc-stabilization-panel.blocked {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
 .market-data-health-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -715,10 +728,31 @@ h1 {
 }
 
 .release-readiness-grid,
+.rc-stabilization-grid,
 .release-validation-summary {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+}
+
+.rc-stabilization-columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.rc-stabilization-columns section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.rc-stabilization-columns h3 {
+  font-size: 13px;
+  text-transform: uppercase;
 }
 
 .release-readiness-list {
@@ -1172,6 +1206,8 @@ tr:last-child td {
   .broker-adapter-summary,
   .release-readiness-grid,
   .release-readiness-list,
+  .rc-stabilization-grid,
+  .rc-stabilization-columns,
   .release-validation-summary,
   .scanner-signal-grid,
   .scanner-match-list,
