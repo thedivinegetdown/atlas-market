@@ -8,6 +8,7 @@ import { evaluateRiskAdjustedPerformance } from './core/analytics/riskAdjustedPe
 import { evaluateStrategyAttribution } from './core/analytics/strategyAttributionEngine.js'
 import { simulateTradeExecution } from './core/execution/executionSimulationEngine.js'
 import { recordPaperTradeJournal } from './core/journal/paperTradeJournalEngine.js'
+import { evaluateDrawdownProtection } from './core/risk/drawdownProtectionEngine.js'
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import {
@@ -96,6 +97,7 @@ function App() {
     label: execution.label,
     result: applyPaperPortfolioAccounting(accountingDemoPortfolio, execution.result, { emitEvent: false }),
   })), [executions])
+  const primaryAccounting = accountingUpdates[0]?.result
   const journalRecords = useMemo(() => guardrails.map((guardrail, index) => ({
     label: guardrail.label,
     result: recordPaperTradeJournal({
@@ -117,6 +119,15 @@ function App() {
       startingEquity: accountingDemoPortfolio.accountValue,
     },
   ), [journalRecords, performance])
+  const drawdownProtection = useMemo(() => evaluateDrawdownProtection(
+    primaryAccounting ?? accountingDemoPortfolio,
+    journalRecords.map((record) => record.result),
+    {
+      emitEvent: false,
+      riskAdjustedPerformance,
+      equityPeak: accountingDemoPortfolio.accountValue,
+    },
+  ), [journalRecords, primaryAccounting, riskAdjustedPerformance])
   const strategyAttribution = useMemo(() => evaluateStrategyAttribution(
     journalRecords.map((record) => record.result),
     { emitEvent: false },
@@ -126,7 +137,6 @@ function App() {
     analyticsSnapshot: portfolioAnalytics,
     riskSnapshot: risk,
   }), [portfolioAnalytics, risk])
-  const primaryAccounting = accountingUpdates[0]?.result
   const riskTone = getRiskTone(risk.summary.riskLevel)
 
   return (
@@ -383,6 +393,40 @@ function App() {
           )}
           <p className="empty-state">{riskAdjustedPerformance.excludedReason}</p>
           <span className="event-line">{riskAdjustedPerformance.eventType}</span>
+        </article>
+
+        <article className={`panel drawdown-protection-panel ${drawdownProtection.protectionStatus}`}>
+          <div className="panel-heading">
+            <h2>Drawdown Protection</h2>
+            <span>Paper risk protection before new trades are allowed.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Protection Status</span>
+              <strong>{drawdownProtection.protectionStatus}</strong>
+            </div>
+            <span className={`decision-pill ${drawdownProtection.protectionStatus === 'locked' ? 'danger' : drawdownProtection.protectionStatus === 'caution' ? 'warning' : 'positive'}`}>
+              {drawdownProtection.recommendedAction}
+            </span>
+          </div>
+          <div className="drawdown-grid">
+            <MetricCard label="Current Drawdown" value={formatPercent(drawdownProtection.currentDrawdown)} />
+            <MetricCard label="Max Threshold" value={formatPercent(drawdownProtection.maxDrawdownThreshold)} />
+            <MetricCard label="Daily Loss" value={`${formatCurrency(drawdownProtection.dailyLoss.amount)} / ${formatPercent(drawdownProtection.dailyLoss.pct)}`} />
+            <MetricCard label="Daily Threshold" value={formatPercent(drawdownProtection.dailyLossThreshold)} />
+            <MetricCard label="Weekly Loss" value={`${formatCurrency(drawdownProtection.weeklyLoss.amount)} / ${formatPercent(drawdownProtection.weeklyLoss.pct)}`} />
+            <MetricCard label="Weekly Threshold" value={formatPercent(drawdownProtection.weeklyLossThreshold)} />
+            <MetricCard label="Equity Peak" value={formatCurrency(drawdownProtection.equityPeak)} />
+            <MetricCard label="Current Equity" value={formatCurrency(drawdownProtection.currentEquity)} />
+          </div>
+          {drawdownProtection.warnings.length > 0 ? (
+            <ul className="warning-list">
+              {drawdownProtection.warnings.map((warning) => <li key={warning}>{warning}</li>)}
+            </ul>
+          ) : (
+            <p className="empty-state">Drawdown protection is clear for paper trading review.</p>
+          )}
+          <span className="event-line">{drawdownProtection.eventType}</span>
         </article>
 
         <article className="panel strategy-attribution-panel">

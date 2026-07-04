@@ -143,6 +143,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.drawdown-protection-panel {
+  grid-column: 1 / -1;
+}
+
 .portfolio-analytics-panel {
   grid-column: 1 / -1;
 }
@@ -397,6 +401,24 @@ h1 {
 
 .return-row strong {
   color: var(--text-strong);
+}
+
+.drawdown-protection-panel.clear {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.drawdown-protection-panel.caution {
+  border-color: rgba(234, 179, 8, 0.32);
+}
+
+.drawdown-protection-panel.locked {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.drawdown-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
 }
 
 .analytics-grid {
@@ -709,6 +731,7 @@ tr:last-child td {
   .journal-metrics,
   .performance-grid,
   .risk-adjusted-summary,
+  .drawdown-grid,
   .analytics-grid,
   .analytics-columns,
   .rebalance-summary,
