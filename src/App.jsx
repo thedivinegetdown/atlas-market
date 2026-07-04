@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
+import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
 import { recommendCapitalAllocation } from './core/analytics/capitalAllocationEngine.js'
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
@@ -158,6 +159,25 @@ function App() {
     positionSizing,
     strategyAttribution,
   }), [drawdownProtection, performance, portfolioAnalytics, positionSizing, risk, strategyAttribution])
+  const aiDecision = useMemo(() => orchestrateAIDecision({
+    proposedTrade: demoProposedTrades[0],
+    scannerSignals: [
+      {
+        symbol: 'SPY',
+        direction: 'bullish',
+        score: 74,
+        confidence: 70,
+        source: 'scanner-foundation',
+      },
+    ],
+    portfolioRisk: risk,
+    drawdownProtection,
+    positionSizing,
+    capitalAllocation,
+    guardrailDecision: guardrails[0]?.result,
+    performanceSnapshot: performance,
+    riskAdjustedPerformance,
+  }, { emitEvent: false }), [capitalAllocation, drawdownProtection, guardrails, performance, positionSizing, risk, riskAdjustedPerformance])
   const rebalancing = useMemo(() => recommendPortfolioRebalance(demoPortfolio, {
     emitEvent: false,
     analyticsSnapshot: portfolioAnalytics,
@@ -541,6 +561,39 @@ function App() {
             {capitalAllocation.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}
           </ul>
           <span className="event-line">{capitalAllocation.eventType}</span>
+        </article>
+
+        <article className={`panel ai-decision-panel ${aiDecision.finalDecision}`}>
+          <div className="panel-heading">
+            <h2>AI Decision Orchestrator</h2>
+            <span>Final paper decision from signals, risk, sizing, allocation, protection, and performance.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{aiDecision.decisionInput.symbol}</span>
+              <strong>{aiDecision.finalDecision}</strong>
+            </div>
+            <span className={`decision-pill ${aiDecision.finalDecision === 'approve' ? 'positive' : aiDecision.finalDecision === 'reject' ? 'danger' : 'warning'}`}>
+              {formatPercent(aiDecision.confidenceScore)} confidence
+            </span>
+          </div>
+          <p className="empty-state">{aiDecision.rationale}</p>
+          <div className="ai-decision-grid">
+            <MetricCard label="Signal Quality" value={`${formatNumber(aiDecision.signalQuality.score)} ${aiDecision.signalQuality.label}`} />
+            <MetricCard label="Risk Approval" value={aiDecision.riskApprovalSummary.guardrailDecision} />
+            <MetricCard label="Position Size" value={`${formatNumber(aiDecision.positionSizingSummary.suggestedQuantity)} ${aiDecision.positionSizingSummary.quantityTerm}`} />
+            <MetricCard label="Capital Allocation" value={aiDecision.capitalAllocationSummary.allocationStatus} />
+            <MetricCard label="Drawdown" value={aiDecision.drawdownProtectionSummary.protectionStatus} />
+            <MetricCard label="Performance Score" value={formatNumber(aiDecision.performanceContext.score)} />
+          </div>
+          {aiDecision.blockers.length > 0 || aiDecision.cautions.length > 0 ? (
+            <ul className="warning-list">
+              {[...aiDecision.blockers, ...aiDecision.cautions].map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          ) : (
+            <p className="empty-state">No AI orchestration blockers detected for this paper decision.</p>
+          )}
+          <span className="event-line">{aiDecision.eventType}</span>
         </article>
 
         <article className="panel strategy-attribution-panel">
