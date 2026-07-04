@@ -14,6 +14,7 @@ import { evaluateDrawdownProtection } from './core/risk/drawdownProtectionEngine
 import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { recommendPositionSize } from './core/risk/positionSizingEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
+import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStrategyPortfolioManager.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -178,6 +179,32 @@ function App() {
     performanceSnapshot: performance,
     riskAdjustedPerformance,
   }, { emitEvent: false }), [capitalAllocation, drawdownProtection, guardrails, performance, positionSizing, risk, riskAdjustedPerformance])
+  const strategyPortfolioManager = useMemo(() => evaluateMultiStrategyPortfolioManager({
+    activeStrategies: [
+      {
+        id: 'index-pullback',
+        name: 'Index Pullback',
+        priority: 1,
+        enabled: true,
+        maxExposurePct: 12,
+        riskBudgetPct: 1,
+      },
+      {
+        id: 'volatility-breakout',
+        name: 'Volatility Breakout',
+        priority: 2,
+        enabled: true,
+        maxExposurePct: 8,
+        riskBudgetPct: 0.75,
+      },
+    ],
+    proposedTrades: demoProposedTrades,
+    aiDecision,
+    capitalAllocation,
+    portfolioAnalytics,
+    strategyAttribution,
+    portfolioRisk: risk,
+  }, { emitEvent: false }), [aiDecision, capitalAllocation, portfolioAnalytics, risk, strategyAttribution])
   const rebalancing = useMemo(() => recommendPortfolioRebalance(demoPortfolio, {
     emitEvent: false,
     analyticsSnapshot: portfolioAnalytics,
@@ -594,6 +621,53 @@ function App() {
             <p className="empty-state">No AI orchestration blockers detected for this paper decision.</p>
           )}
           <span className="event-line">{aiDecision.eventType}</span>
+        </article>
+
+        <article className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
+          <div className="panel-heading">
+            <h2>Multi-Strategy Manager</h2>
+            <span>Strategy-level conflict, priority, exposure, and risk budget coordination.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Strategy Approval Status</span>
+              <strong>{strategyPortfolioManager.strategyApprovalStatus}</strong>
+            </div>
+            <span className={`decision-pill ${strategyPortfolioManager.strategyApprovalStatus === 'approved' ? 'positive' : strategyPortfolioManager.strategyApprovalStatus === 'blocked' ? 'danger' : 'warning'}`}>
+              {strategyPortfolioManager.activeStrategyRegistry.length} active strategies
+            </span>
+          </div>
+          <div className="strategy-manager-grid">
+            <MetricCard label="Duplicate Symbols" value={formatNumber(strategyPortfolioManager.duplicateSymbolTrades.length)} />
+            <MetricCard label="Conflicting Signals" value={formatNumber(strategyPortfolioManager.conflictingSignals.length)} />
+            <MetricCard label="Priority Leader" value={strategyPortfolioManager.priorityRanking[0]?.strategy ?? 'N/A'} />
+            <MetricCard label="Evaluated Trades" value={formatNumber(demoProposedTrades.length)} />
+          </div>
+          <div className="strategy-manager-list">
+            {strategyPortfolioManager.strategyEvaluations.map((strategy) => (
+              <section key={strategy.strategyId} className={`strategy-manager-card ${strategy.approvalStatus}`}>
+                <div className="guardrail-card-header">
+                  <div>
+                    <span>Priority {strategy.priority}</span>
+                    <strong>{strategy.strategy}</strong>
+                  </div>
+                  <span className={`decision-pill ${strategy.approvalStatus === 'approved' ? 'positive' : strategy.approvalStatus === 'blocked' ? 'danger' : 'warning'}`}>
+                    {strategy.approvalStatus}
+                  </span>
+                </div>
+                <div className="strategy-manager-metrics">
+                  <MetricCard label="Exposure" value={formatPercent(strategy.proposedExposurePct)} />
+                  <MetricCard label="Exposure Limit" value={formatPercent(strategy.maxExposurePct)} />
+                  <MetricCard label="Risk Budget" value={formatPercent(strategy.riskBudgetPct)} />
+                  <MetricCard label="AI Decision" value={strategy.aiDecision} />
+                </div>
+                <p className="empty-state">
+                  {[...strategy.blockers, ...strategy.cautions].join('; ') || 'No strategy coordination issues detected.'}
+                </p>
+              </section>
+            ))}
+          </div>
+          <span className="event-line">{strategyPortfolioManager.eventType}</span>
         </article>
 
         <article className="panel strategy-attribution-panel">

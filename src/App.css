@@ -159,6 +159,10 @@ h1 {
   grid-column: 1 / -1;
 }
 
+.multi-strategy-panel {
+  grid-column: 1 / -1;
+}
+
 .portfolio-analytics-panel {
   grid-column: 1 / -1;
 }
@@ -504,6 +508,52 @@ h1 {
   gap: 8px;
 }
 
+.multi-strategy-panel.approved {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.multi-strategy-panel.caution {
+  border-color: rgba(234, 179, 8, 0.32);
+}
+
+.multi-strategy-panel.blocked {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
+.strategy-manager-grid,
+.strategy-manager-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.strategy-manager-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.strategy-manager-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.strategy-manager-card.approved {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.strategy-manager-card.caution {
+  border-color: rgba(234, 179, 8, 0.32);
+}
+
+.strategy-manager-card.blocked {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
 .analytics-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -819,6 +869,9 @@ tr:last-child td {
   .capital-grid,
   .capital-columns,
   .ai-decision-grid,
+  .strategy-manager-grid,
+  .strategy-manager-list,
+  .strategy-manager-metrics,
   .analytics-grid,
   .analytics-columns,
   .rebalance-summary,
