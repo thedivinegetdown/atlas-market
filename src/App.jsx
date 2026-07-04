@@ -15,6 +15,12 @@ import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { recommendPositionSize } from './core/risk/positionSizingEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStrategyPortfolioManager.js'
+import {
+  BROKER_ADAPTER_CHECKED_EVENT,
+  createBrokerAdapter,
+  normalizeBrokerAccount,
+  normalizeBrokerPosition,
+} from '../lib/brokers/brokerAdapter.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import { createSignalEngine } from '../lib/signals/signalEngine.js'
 import {
@@ -239,6 +245,24 @@ function App() {
       eventType: MARKET_DATA_ADAPTER_CHECKED_EVENT,
     }
   }, [])
+  const brokerAdapterHealth = useMemo(() => {
+    const adapter = createBrokerAdapter()
+    const account = normalizeBrokerAccount({
+      id: primaryAccounting?.portfolioId ?? accountingDemoPortfolio.id,
+      ...(primaryAccounting?.account ?? accountingDemoPortfolio),
+    }, adapter.metadata.id)
+    const positions = (primaryAccounting?.positions ?? accountingDemoPortfolio.positions)
+      .map((position) => normalizeBrokerPosition(position, adapter.metadata.id))
+
+    return {
+      metadata: adapter.metadata,
+      health: adapter.getProviderHealth(),
+      account,
+      positions,
+      lastSimulatedOrder: adapter.normalizeOrderResponse(executions[0]?.result),
+      eventType: BROKER_ADAPTER_CHECKED_EVENT,
+    }
+  }, [executions, primaryAccounting])
   const scannerSignal = useMemo(() => {
     const quote = {
       symbol: demoProposedTrades[0].symbol,
@@ -284,6 +308,12 @@ function App() {
       timestamp: marketDataAdapterHealth.health.checkedAt,
     },
     {
+      label: 'Broker adapter checked',
+      eventType: brokerAdapterHealth.eventType,
+      status: brokerAdapterHealth.health.status,
+      timestamp: brokerAdapterHealth.health.checkedAt,
+    },
+    {
       label: 'Portfolio risk evaluated',
       eventType: risk.eventType,
       status: risk.summary.riskLevel,
@@ -325,9 +355,10 @@ function App() {
       status: strategyPortfolioManager.strategyApprovalStatus,
       timestamp: strategyPortfolioManager.timestamp,
     },
-  ].filter((event) => event.eventType), [aiDecision, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, risk, strategyPortfolioManager])
+  ].filter((event) => event.eventType), [aiDecision, brokerAdapterHealth, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, risk, strategyPortfolioManager])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
+    { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
     { id: 'ai-decision', label: 'AI Decision', status: aiDecision.finalDecision },
     { id: 'risk', label: 'Risk', status: risk.summary.riskLevel },
@@ -402,6 +433,42 @@ function App() {
           </div>
           <p className="empty-state">No paid data API is required for this adapter foundation.</p>
           <span className="event-line">{marketDataAdapterHealth.eventType}</span>
+        </article>
+
+        <article id="broker-adapter-health" className={`panel broker-adapter-health-panel ${brokerAdapterHealth.health.status}`}>
+          <div className="panel-heading">
+            <h2>Broker Adapter Health</h2>
+            <span>Mock paper broker default. No live orders or real brokerage connection.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{brokerAdapterHealth.metadata.name}</span>
+              <strong>{brokerAdapterHealth.health.status}</strong>
+            </div>
+            <span className={`decision-pill ${brokerAdapterHealth.health.status === 'healthy' ? 'positive' : brokerAdapterHealth.health.status === 'degraded' ? 'warning' : 'danger'}`}>
+              {brokerAdapterHealth.metadata.id}
+            </span>
+          </div>
+          <div className="broker-adapter-grid">
+            <MetricCard label="Account Equity" value={formatCurrency(brokerAdapterHealth.account.equity)} />
+            <MetricCard label="Cash" value={formatCurrency(brokerAdapterHealth.account.cash)} />
+            <MetricCard label="Buying Power" value={formatCurrency(brokerAdapterHealth.account.buyingPower)} />
+            <MetricCard label="Positions" value={formatNumber(brokerAdapterHealth.positions.length)} />
+            <MetricCard label="Last Paper Order" value={brokerAdapterHealth.lastSimulatedOrder.status} />
+            <MetricCard label="Live Orders" value={brokerAdapterHealth.health.liveOrders ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="broker-adapter-summary">
+            <section>
+              <span>Normalized fill</span>
+              <strong>{brokerAdapterHealth.lastSimulatedOrder.fill ? `${brokerAdapterHealth.lastSimulatedOrder.fill.symbol} ${formatNumber(brokerAdapterHealth.lastSimulatedOrder.fill.quantity)} ${brokerAdapterHealth.lastSimulatedOrder.fill.quantityTerm}` : 'No fill'}</strong>
+            </section>
+            <section>
+              <span>Capabilities</span>
+              <strong>{brokerAdapterHealth.metadata.capabilities.join(' / ')}</strong>
+            </section>
+          </div>
+          <p className="empty-state">Broker adapter output is paper-only and fed by simulated execution plus accounting snapshots.</p>
+          <span className="event-line">{brokerAdapterHealth.eventType}</span>
         </article>
 
         <article id="scanner-signal" className="panel scanner-signal-panel">
