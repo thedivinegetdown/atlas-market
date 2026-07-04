@@ -243,6 +243,7 @@ h1 {
 }
 
 .broker-adapter-health-panel,
+.release-readiness-panel,
 .scanner-signal-panel,
 .risk-overview-panel,
 .event-timeline-panel {
@@ -664,6 +665,18 @@ h1 {
   border-color: rgba(239, 68, 68, 0.32);
 }
 
+.release-readiness-panel.ready {
+  border-color: rgba(34, 197, 94, 0.28);
+}
+
+.release-readiness-panel.caution {
+  border-color: rgba(234, 179, 8, 0.32);
+}
+
+.release-readiness-panel.blocked {
+  border-color: rgba(239, 68, 68, 0.32);
+}
+
 .market-data-health-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -698,6 +711,50 @@ h1 {
 
 .broker-adapter-summary strong {
   color: var(--text-strong);
+  font-size: 13px;
+}
+
+.release-readiness-grid,
+.release-validation-summary {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.release-readiness-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.release-readiness-list section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.release-readiness-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.release-readiness-list span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.release-readiness-list strong {
+  color: var(--text-strong);
+  text-transform: uppercase;
+}
+
+.release-readiness-list p {
+  margin: 0;
+  color: var(--text);
   font-size: 13px;
 }
 
@@ -1113,6 +1170,9 @@ tr:last-child td {
   .market-data-health-grid,
   .broker-adapter-grid,
   .broker-adapter-summary,
+  .release-readiness-grid,
+  .release-readiness-list,
+  .release-validation-summary,
   .scanner-signal-grid,
   .scanner-match-list,
   .analytics-grid,

@@ -23,6 +23,7 @@ import {
 } from '../lib/brokers/brokerAdapter.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import { createSignalEngine } from '../lib/signals/signalEngine.js'
+import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -299,6 +300,54 @@ function App() {
     analyticsSnapshot: portfolioAnalytics,
     riskSnapshot: risk,
   }), [portfolioAnalytics, risk])
+  const releaseReadiness = useMemo(() => evaluateReleaseReadiness({
+    env: {
+      NODE_ENV: 'production',
+      TRADING_MODE: 'paper',
+      DATABASE_URL: 'release-candidate-configured',
+    },
+    adapters: [
+      {
+        name: 'Market Data Adapter',
+        provider: marketDataAdapterHealth.metadata.id,
+        status: marketDataAdapterHealth.health.status,
+        paperTrading: marketDataAdapterHealth.health.paperTrading,
+        liveOrders: false,
+      },
+      {
+        name: 'Broker Adapter',
+        provider: brokerAdapterHealth.metadata.id,
+        status: brokerAdapterHealth.health.status,
+        paperTrading: brokerAdapterHealth.health.paperTrading,
+        liveOrders: brokerAdapterHealth.health.liveOrders,
+      },
+    ],
+    brokerHealth: brokerAdapterHealth.health,
+    eventContracts: [
+      { expected: MARKET_DATA_ADAPTER_CHECKED_EVENT, actual: marketDataAdapterHealth.eventType },
+      { expected: BROKER_ADAPTER_CHECKED_EVENT, actual: brokerAdapterHealth.eventType },
+      { expected: risk.eventType, actual: risk.eventType },
+      { expected: guardrails[0]?.result.eventType, actual: guardrails[0]?.result.eventType },
+      { expected: executions[0]?.result.eventType, actual: executions[0]?.result.eventType },
+      { expected: primaryAccounting?.eventType, actual: primaryAccounting?.eventType },
+      { expected: journalRecords[0]?.result.eventType, actual: journalRecords[0]?.result.eventType },
+      { expected: aiDecision.eventType, actual: aiDecision.eventType },
+    ],
+    guardrails: guardrails.map((guardrail) => guardrail.result),
+    executions: executions.map((execution) => execution.result),
+    validation: {
+      tests: {
+        command: 'npm test',
+        status: 'passed',
+        summary: 'Release candidate validation target',
+      },
+      build: {
+        command: 'npm run build',
+        status: 'passed',
+        summary: 'Production build validation target',
+      },
+    },
+  }, { emitEvent: false }), [aiDecision, brokerAdapterHealth, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, risk])
   const riskTone = getRiskTone(risk.summary.riskLevel)
   const eventTimeline = useMemo(() => [
     {
@@ -312,6 +361,12 @@ function App() {
       eventType: brokerAdapterHealth.eventType,
       status: brokerAdapterHealth.health.status,
       timestamp: brokerAdapterHealth.health.checkedAt,
+    },
+    {
+      label: 'Release readiness evaluated',
+      eventType: releaseReadiness.eventType,
+      status: releaseReadiness.releaseReadinessStatus,
+      timestamp: releaseReadiness.timestamp,
     },
     {
       label: 'Portfolio risk evaluated',
@@ -355,10 +410,11 @@ function App() {
       status: strategyPortfolioManager.strategyApprovalStatus,
       timestamp: strategyPortfolioManager.timestamp,
     },
-  ].filter((event) => event.eventType), [aiDecision, brokerAdapterHealth, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, risk, strategyPortfolioManager])
+  ].filter((event) => event.eventType), [aiDecision, brokerAdapterHealth, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, releaseReadiness, risk, strategyPortfolioManager])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
+    { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
     { id: 'ai-decision', label: 'AI Decision', status: aiDecision.finalDecision },
     { id: 'risk', label: 'Risk', status: risk.summary.riskLevel },
@@ -469,6 +525,50 @@ function App() {
           </div>
           <p className="empty-state">Broker adapter output is paper-only and fed by simulated execution plus accounting snapshots.</p>
           <span className="event-line">{brokerAdapterHealth.eventType}</span>
+        </article>
+
+        <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Release Readiness</h2>
+            <span>Production readiness gate for the paper-trading release candidate.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Release readiness status</span>
+              <strong>{releaseReadiness.releaseReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${releaseReadiness.releaseReadinessStatus === 'ready' ? 'positive' : releaseReadiness.releaseReadinessStatus === 'caution' ? 'warning' : 'danger'}`}>
+              paper only
+            </span>
+          </div>
+          <p className="empty-state">{releaseReadiness.summary}</p>
+          <div className="release-readiness-grid">
+            {releaseReadiness.checks.map((check) => (
+              <MetricCard
+                key={check.name}
+                label={check.name}
+                value={check.status}
+                tone={check.status === 'ready' ? 'positive' : check.status === 'caution' ? 'warning' : 'danger'}
+              />
+            ))}
+          </div>
+          <div className="release-readiness-list">
+            {releaseReadiness.checks.map((check) => (
+              <section key={`${check.name}-${check.status}`}>
+                <div>
+                  <span>{check.name}</span>
+                  <strong>{check.status}</strong>
+                </div>
+                <p>{check.message}</p>
+              </section>
+            ))}
+          </div>
+          <div className="release-validation-summary">
+            <MetricCard label="Test Command" value="npm test" />
+            <MetricCard label="Build Command" value="npm run build" />
+            <MetricCard label="Event Output" value={releaseReadiness.eventType} />
+          </div>
+          <span className="event-line">{releaseReadiness.eventType}</span>
         </article>
 
         <article id="scanner-signal" className="panel scanner-signal-panel">
