@@ -28,7 +28,11 @@ function getRealizedPnl(record = {}) {
 }
 
 function getTradeId(record = {}, index) {
-  return record.tradeId ?? record.id ?? `trade-${index + 1}`
+  return record.tradeId
+    ?? record.proposedTradeSnapshot?.id
+    ?? record.proposedTradeSnapshot?.tradeId
+    ?? record.id
+    ?? `trade-${index + 1}`
 }
 
 function buildIncludedRecords(records, performanceSnapshot) {

@@ -102,6 +102,43 @@ describe('riskAdjustedPerformanceEngine', () => {
     expect(result.returnSeries.map((point) => point.tradeId)).toEqual(['filled'])
   })
 
+  it('uses proposed trade snapshot identifiers when paper performance includes them', () => {
+    const result = evaluateRiskAdjustedPerformance([
+      {
+        symbol: 'SPY',
+        paperTrading: true,
+        journalStatus: 'recorded',
+        realizedPnl: 150,
+        fill: { fillPrice: 100 },
+        decisionGate: {
+          guardrail: 'approved',
+          execution: 'filled',
+          accounting: 'updated',
+        },
+        proposedTradeSnapshot: {
+          id: 'snapshot-trade',
+          symbol: 'SPY',
+        },
+      },
+    ], {
+      emitEvent: false,
+      startingEquity: 10000,
+      performanceSnapshot: {
+        includedTradeIds: ['snapshot-trade'],
+        excludedTrades: 0,
+        excludedReason: 'Included for regression coverage',
+        metrics: {
+          totalTrades: 1,
+          netRealizedPnl: 150,
+        },
+      },
+    })
+
+    expect(result.includedTrades).toBe(1)
+    expect(result.returnSeries[0].tradeId).toBe('snapshot-trade')
+    expect(result.metrics.netRealizedPnl).toBe(150)
+  })
+
   it('handles empty journal records safely', () => {
     const result = evaluateRiskAdjustedPerformance([], {
       emitEvent: false,
