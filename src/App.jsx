@@ -22,6 +22,7 @@ import {
   normalizeBrokerPosition,
 } from '../lib/brokers/brokerAdapter.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
+import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
 import { createSignalEngine } from '../lib/signals/signalEngine.js'
 import { evaluateReleaseCandidateStabilization } from '../lib/system/releaseCandidateStabilization.js'
 import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
@@ -456,9 +457,38 @@ function App() {
     guardrails: guardrails.map((guardrail) => guardrail.result),
     executions: executions.map((execution) => execution.result),
   }, { emitEvent: false }), [brokerAdapterHealth, eventTimeline, executions, guardrails, journalRecords, marketDataAdapterHealth, primaryAccounting, releaseReadiness, risk])
+  const marketIntelligence = useMemo(() => evaluateMarketIntelligence({
+    symbol: scannerSignal.quote.symbol,
+    assetType: scannerSignal.quote.assetType,
+    marketData: {
+      ...scannerSignal.quote,
+      changePercent: 0.9,
+    },
+    portfolioAnalytics,
+    riskSnapshot: risk,
+    aiDecision,
+    releaseReadiness,
+    catalysts: [
+      {
+        type: 'macro',
+        title: 'Mock catalyst input: broad risk appetite remains constructive',
+        sentiment: 'positive',
+        confidence: 68,
+        source: 'demo-research-input',
+      },
+      {
+        type: 'event',
+        title: 'Mock catalyst input: no live news provider connected',
+        sentiment: 'neutral',
+        confidence: 55,
+        source: 'demo-research-input',
+      },
+    ],
+  }, { emitEvent: false }), [aiDecision, portfolioAnalytics, releaseReadiness, risk, scannerSignal])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
+    { id: 'research-intelligence', label: 'Research Intel', status: marketIntelligence.riskSentimentSummary.label },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -571,6 +601,44 @@ function App() {
           </div>
           <p className="empty-state">Broker adapter output is paper-only and fed by simulated execution plus accounting snapshots.</p>
           <span className="event-line">{brokerAdapterHealth.eventType}</span>
+        </article>
+
+        <article id="research-intelligence" className="panel research-intelligence-panel">
+          <div className="panel-heading">
+            <h2>Research Intelligence</h2>
+            <span>Mock research context before paper-trading decisions.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{marketIntelligence.symbol} {marketIntelligence.assetType}</span>
+              <strong>{marketIntelligence.marketRegimeSummary.label}</strong>
+            </div>
+            <span className={`decision-pill ${marketIntelligence.riskSentimentSummary.label === 'supportive' ? 'positive' : marketIntelligence.riskSentimentSummary.label === 'mixed' ? 'warning' : 'danger'}`}>
+              {formatPercent(marketIntelligence.confidenceScore)} confidence
+            </span>
+          </div>
+          <p className="empty-state">{marketIntelligence.researchBrief}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Market Regime" value={marketIntelligence.marketRegimeSummary.label} />
+            <MetricCard label="Volatility" value={marketIntelligence.volatilityContext.label} />
+            <MetricCard label="Trend" value={marketIntelligence.trendContext.direction} />
+            <MetricCard label="Risk Sentiment" value={marketIntelligence.riskSentimentSummary.label} />
+            <MetricCard label="Catalysts" value={formatNumber(marketIntelligence.catalysts.length)} />
+            <MetricCard label="Release Gate" value={marketIntelligence.riskSentimentSummary.releaseStatus} />
+          </div>
+          <div className="research-catalyst-list">
+            {marketIntelligence.catalysts.map((catalyst) => (
+              <section key={`${catalyst.type}-${catalyst.title}`}>
+                <div>
+                  <span>{catalyst.type}</span>
+                  <strong>{catalyst.sentiment}</strong>
+                </div>
+                <p>{catalyst.title}</p>
+                <span>{formatPercent(catalyst.confidence)} confidence</span>
+              </section>
+            ))}
+          </div>
+          <span className="event-line">{marketIntelligence.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>

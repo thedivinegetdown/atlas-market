@@ -243,6 +243,7 @@ h1 {
 }
 
 .broker-adapter-health-panel,
+.research-intelligence-panel,
 .release-readiness-panel,
 .rc-stabilization-panel,
 .scanner-signal-panel,
@@ -727,6 +728,49 @@ h1 {
   font-size: 13px;
 }
 
+.research-intelligence-grid {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.research-catalyst-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.research-catalyst-list section {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(56, 189, 248, 0.24);
+  border-radius: 8px;
+  background: #0b1220;
+}
+
+.research-catalyst-list div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.research-catalyst-list span {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.research-catalyst-list strong {
+  color: var(--text-strong);
+  text-transform: uppercase;
+}
+
+.research-catalyst-list p {
+  margin: 0;
+  color: var(--text);
+  font-size: 13px;
+}
+
 .release-readiness-grid,
 .rc-stabilization-grid,
 .release-validation-summary {
@@ -1204,6 +1248,8 @@ tr:last-child td {
   .market-data-health-grid,
   .broker-adapter-grid,
   .broker-adapter-summary,
+  .research-intelligence-grid,
+  .research-catalyst-list,
   .release-readiness-grid,
   .release-readiness-list,
   .rc-stabilization-grid,
