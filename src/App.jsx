@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
+import { recommendCapitalAllocation } from './core/analytics/capitalAllocationEngine.js'
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
 import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
@@ -148,6 +149,15 @@ function App() {
     journalRecords.map((record) => record.result),
     { emitEvent: false },
   ), [journalRecords])
+  const capitalAllocation = useMemo(() => recommendCapitalAllocation(demoPortfolio, {
+    emitEvent: false,
+    portfolioAnalytics,
+    riskSnapshot: risk,
+    performanceSnapshot: performance,
+    drawdownProtection,
+    positionSizing,
+    strategyAttribution,
+  }), [drawdownProtection, performance, portfolioAnalytics, positionSizing, risk, strategyAttribution])
   const rebalancing = useMemo(() => recommendPortfolioRebalance(demoPortfolio, {
     emitEvent: false,
     analyticsSnapshot: portfolioAnalytics,
@@ -476,6 +486,61 @@ function App() {
             </ul>
           ) : null}
           <span className="event-line">{positionSizing.eventType}</span>
+        </article>
+
+        <article className={`panel capital-allocation-panel ${capitalAllocation.allocationStatus}`}>
+          <div className="panel-heading">
+            <h2>Capital Allocation</h2>
+            <span>Paper capital recommendations by strategy, asset class, and symbol.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Allocation Status</span>
+              <strong>{capitalAllocation.allocationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${capitalAllocation.allocationStatus === 'balanced' ? 'positive' : capitalAllocation.allocationStatus === 'caution' ? 'warning' : 'danger'}`}>
+              recommendations only
+            </span>
+          </div>
+          <div className="capital-grid">
+            <MetricCard label="Available Capital" value={formatCurrency(capitalAllocation.capital.availableCapital)} />
+            <MetricCard label="Reserved Cash" value={formatCurrency(capitalAllocation.capital.reservedCashBuffer)} />
+            <MetricCard label="Risk Budget" value={formatCurrency(capitalAllocation.capital.totalRiskBudget)} />
+            <MetricCard label="Remaining Risk Budget" value={formatCurrency(capitalAllocation.capital.remainingRiskBudget)} />
+          </div>
+          <div className="capital-columns">
+            <section>
+              <h3>Strategy Allocation</h3>
+              {capitalAllocation.allocation.byStrategy.map((item) => (
+                <div key={item.strategy} className="mini-row">
+                  <span>{item.strategy}</span>
+                  <strong>{formatCurrency(item.recommendedCapital)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Asset Class Drift</h3>
+              {capitalAllocation.allocation.byAssetClass.slice(0, 4).map((item) => (
+                <div key={item.assetType} className="mini-row">
+                  <span>{item.assetType} {item.allocationState}</span>
+                  <strong>{formatPercent(item.driftPct)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Symbol Allocation</h3>
+              {capitalAllocation.allocation.bySymbol.slice(0, 4).map((item) => (
+                <div key={`${item.symbol}-${item.side}`} className="mini-row">
+                  <span>{item.symbol} {item.allocationState}</span>
+                  <strong>{formatPercent(item.currentWeight)}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <ul className="warning-list">
+            {capitalAllocation.recommendations.map((recommendation) => <li key={recommendation}>{recommendation}</li>)}
+          </ul>
+          <span className="event-line">{capitalAllocation.eventType}</span>
         </article>
 
         <article className="panel strategy-attribution-panel">
