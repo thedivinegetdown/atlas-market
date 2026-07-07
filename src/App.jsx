@@ -22,6 +22,7 @@ import {
   normalizeBrokerPosition,
 } from '../lib/brokers/brokerAdapter.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
+import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
 import { evaluateResearchSignalScore } from '../lib/research/researchSignalScoringEngine.js'
 import { createSignalEngine } from '../lib/signals/signalEngine.js'
@@ -494,11 +495,17 @@ function App() {
     researchIntelligence: marketIntelligence,
     aiDecision,
   }, { emitEvent: false }), [aiDecision, marketIntelligence])
+  const researchDecisionContext = useMemo(() => prepareResearchDecisionContext({
+    researchIntelligence: marketIntelligence,
+    researchSignalScore,
+    aiDecision,
+  }, { emitEvent: false }), [aiDecision, marketIntelligence, researchSignalScore])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
     { id: 'research-intelligence', label: 'Research Intel', status: marketIntelligence.riskSentimentSummary.label },
     { id: 'research-signal-score', label: 'Research Score', status: researchSignalScore.decisionBias },
+    { id: 'research-decision-context', label: 'Research Context', status: researchDecisionContext.decisionBiasSummary.recommendedUse },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -703,6 +710,57 @@ function App() {
             </section>
           </div>
           <span className="event-line">{researchSignalScore.eventType}</span>
+        </article>
+
+        <article id="research-decision-context" className={`panel research-decision-context-panel ${researchDecisionContext.decisionBiasSummary.decisionBias}`}>
+          <div className="panel-heading">
+            <h2>Research Decision Context</h2>
+            <span>AI-compatible research package for paper decisions.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{researchDecisionContext.symbol} {researchDecisionContext.assetType}</span>
+              <strong>{researchDecisionContext.decisionBiasSummary.recommendedUse}</strong>
+            </div>
+            <span className={`decision-pill ${researchDecisionContext.decisionBiasSummary.avoid ? 'danger' : researchDecisionContext.decisionBiasSummary.directional ? 'positive' : 'warning'}`}>
+              {researchDecisionContext.decisionBiasSummary.confidenceBand} confidence
+            </span>
+          </div>
+          <p className="empty-state">{researchDecisionContext.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Final Research Score" value={formatNumber(researchDecisionContext.researchScoreSummary.finalResearchScore)} />
+            <MetricCard label="Decision Bias" value={researchDecisionContext.decisionBiasSummary.decisionBias} />
+            <MetricCard label="Catalyst Context" value={researchDecisionContext.catalystContextSummary.dominantSentiment} />
+            <MetricCard label="Volatility" value={researchDecisionContext.marketContextSummary.volatility.label} />
+            <MetricCard label="Trend" value={researchDecisionContext.marketContextSummary.trend.direction} />
+            <MetricCard label="Risk Sentiment" value={researchDecisionContext.marketContextSummary.riskSentiment.label} />
+            <MetricCard label="AI Compatible" value={researchDecisionContext.aiDecisionCompatibility.compatibleWithAIDecisionOrchestrator ? 'yes' : 'no'} />
+            <MetricCard label="Paper Mode" value={researchDecisionContext.aiDecisionCompatibility.paperTrading ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Scanner Signal</span>
+                <strong>{researchDecisionContext.aiDecisionCompatibility.scannerSignal.direction}</strong>
+              </div>
+              <p>{researchDecisionContext.aiDecisionCompatibility.scannerSignal.source} score {formatNumber(researchDecisionContext.aiDecisionCompatibility.scannerSignal.score)}</p>
+            </section>
+            <section>
+              <div>
+                <span>Catalysts</span>
+                <strong>{formatNumber(researchDecisionContext.catalystContextSummary.count)}</strong>
+              </div>
+              <p>{researchDecisionContext.catalystContextSummary.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Recommended Use</span>
+                <strong>{researchDecisionContext.decisionBiasSummary.recommendedUse}</strong>
+              </div>
+              <p>{researchDecisionContext.decisionBiasSummary.summary}</p>
+            </section>
+          </div>
+          <span className="event-line">{researchDecisionContext.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
