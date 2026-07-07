@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
+import { integrateResearchEnhancedDecision } from './core/ai/researchEnhancedDecisionIntegration.js'
 import { recommendCapitalAllocation } from './core/analytics/capitalAllocationEngine.js'
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
@@ -232,7 +233,7 @@ function App() {
     positionSizing,
     strategyAttribution,
   }), [drawdownProtection, performance, portfolioAnalytics, positionSizing, risk, strategyAttribution])
-  const aiDecision = useMemo(() => orchestrateAIDecision({
+  const aiDecisionInput = useMemo(() => ({
     proposedTrade: demoProposedTrades[0],
     scannerSignals: [
       {
@@ -250,7 +251,8 @@ function App() {
     guardrailDecision: guardrails[0]?.result,
     performanceSnapshot: performance,
     riskAdjustedPerformance,
-  }, { emitEvent: false }), [capitalAllocation, drawdownProtection, guardrails, performance, positionSizing, risk, riskAdjustedPerformance])
+  }), [capitalAllocation, drawdownProtection, guardrails, performance, positionSizing, risk, riskAdjustedPerformance])
+  const aiDecision = useMemo(() => orchestrateAIDecision(aiDecisionInput, { emitEvent: false }), [aiDecisionInput])
   const strategyPortfolioManager = useMemo(() => evaluateMultiStrategyPortfolioManager({
     activeStrategies: [
       {
@@ -565,6 +567,14 @@ function App() {
     researchSignalScore,
     multiTimeframeResearchContext,
   }, { emitEvent: false }), [marketDataAdapterHealth, marketIntelligence, multiTimeframeResearchContext, researchSignalScore, scannerSignal])
+  const researchEnhancedDecision = useMemo(() => integrateResearchEnhancedDecision({
+    baseDecisionInput: aiDecisionInput,
+    marketIntelligence,
+    researchSignalScore,
+    researchDecisionContext,
+    multiTimeframeContext: multiTimeframeResearchContext,
+    marketRegime: marketRegimeClassification,
+  }, { emitEvent: false }), [aiDecisionInput, marketIntelligence, marketRegimeClassification, multiTimeframeResearchContext, researchDecisionContext, researchSignalScore])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -573,6 +583,7 @@ function App() {
     { id: 'research-signal-score', label: 'Research Score', status: researchSignalScore.decisionBias },
     { id: 'research-decision-context', label: 'Research Context', status: researchDecisionContext.decisionBiasSummary.recommendedUse },
     { id: 'multi-timeframe-research', label: 'Timeframes', status: multiTimeframeResearchContext.dominantTimeframeBias.bias },
+    { id: 'research-enhanced-decision', label: 'Research AI', status: researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -918,6 +929,41 @@ function App() {
             ))}
           </div>
           <span className="event-line">{multiTimeframeResearchContext.eventType}</span>
+        </article>
+
+        <article id="research-enhanced-decision" className={`panel research-enhanced-decision-panel ${researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision}`}>
+          <div className="panel-heading">
+            <h2>Research-Enhanced AI Decision</h2>
+            <span>Phase 16 research stack integrated with the AI Decision Orchestrator.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{researchEnhancedDecision.symbol} {researchEnhancedDecision.assetType}</span>
+              <strong>{researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision}</strong>
+            </div>
+            <span className={`decision-pill ${researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision === 'approve' ? 'positive' : researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision === 'reject' ? 'danger' : 'warning'}`}>
+              {formatNumber(researchEnhancedDecision.researchInfluenceScore)} influence
+            </span>
+          </div>
+          <p className="empty-state">{researchEnhancedDecision.decisionAdjustmentRationale}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Base Decision" value={researchEnhancedDecision.finalResearchAwareDecisionSummary.baseDecision} />
+            <MetricCard label="Research Decision" value={researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision} />
+            <MetricCard label="Market Intel" value={researchEnhancedDecision.marketIntelligenceSummary.riskSentiment} />
+            <MetricCard label="Research Score" value={formatNumber(researchEnhancedDecision.researchSignalScoreSummary.finalResearchScore)} />
+            <MetricCard label="Decision Context" value={researchEnhancedDecision.researchDecisionContextSummary.recommendedUse} />
+            <MetricCard label="Timeframe Bias" value={researchEnhancedDecision.multiTimeframeContextSummary.dominantBias} />
+            <MetricCard label="Market Regime" value={researchEnhancedDecision.marketRegimeSummary.riskRegime} />
+            <MetricCard label="Event Output" value={researchEnhancedDecision.eventType} />
+          </div>
+          {researchEnhancedDecision.blockers.length > 0 || researchEnhancedDecision.cautions.length > 0 ? (
+            <ul className="warning-list">
+              {[...researchEnhancedDecision.blockers, ...researchEnhancedDecision.cautions].map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          ) : (
+            <p className="empty-state">Research stack confirms the paper decision context.</p>
+          )}
+          <span className="event-line">{researchEnhancedDecision.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
