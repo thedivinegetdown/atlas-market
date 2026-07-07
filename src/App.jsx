@@ -29,6 +29,7 @@ import {
   normalizeBrokerPosition,
 } from '../lib/brokers/brokerAdapter.js'
 import { classifyMarketRegime } from '../lib/market/marketRegimeClassificationEngine.js'
+import { prepareHistoricalReplayStep } from '../lib/market/historicalMarketReplayEngine.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
@@ -769,6 +770,18 @@ function App() {
     strategyLifecycle,
     strategyRegistry,
   ])
+  const historicalReplay = useMemo(() => prepareHistoricalReplayStep({
+    strategyBacktestInput,
+    marketDataAdapterHealth,
+    cursorIndex: 2,
+    historicalCandles: [
+      { symbol: 'SPY', assetType: 'etf', timestamp: '2025-01-01T00:00:00.000Z', open: 582.1, high: 586.4, low: 580.2, close: 585.2, volume: 66800000 },
+      { symbol: 'SPY', assetType: 'etf', timestamp: '2025-01-02T00:00:00.000Z', open: 585.2, high: 589.1, low: 583.7, close: 587.8, volume: 64200000 },
+      { symbol: 'SPY', assetType: 'etf', timestamp: '2025-01-03T00:00:00.000Z', open: 587.8, high: 591.3, low: 586.5, close: 590.4, volume: 61100000 },
+      { symbol: 'SPY', assetType: 'etf', timestamp: '2025-01-06T00:00:00.000Z', open: 590.4, high: 592.2, low: 588.9, close: 591.6, volume: 60400000 },
+    ],
+    now: '2025-01-07T00:00:00.000Z',
+  }, { emitEvent: false }), [marketDataAdapterHealth, strategyBacktestInput])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -784,6 +797,7 @@ function App() {
     { id: 'strategy-lifecycle', label: 'Lifecycle', status: strategyLifecycle.lifecycleState },
     { id: 'strategy-registry', label: 'Registry', status: strategyRegistry.activeStrategyCount },
     { id: 'strategy-backtest-input', label: 'Backtest Input', status: strategyBacktestInput.readinessStatus },
+    { id: 'historical-replay', label: 'Replay', status: historicalReplay.replayStepOutput.status },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -1993,6 +2007,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyBacktestInput.eventType}</span>
+        </article>
+
+        <article id="historical-replay" className={`panel historical-replay-panel ${historicalReplay.replayStepOutput.status}`}>
+          <div className="panel-heading">
+            <h2>Historical Replay</h2>
+            <span>Paper-only historical market replay foundation for future backtesting.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{historicalReplay.replaySessionConfiguration.sessionId}</span>
+              <strong>{historicalReplay.replayStepOutput.status}</strong>
+            </div>
+            <span className={`decision-pill ${historicalReplay.replayStepOutput.status === 'ready' ? 'positive' : historicalReplay.replayStepOutput.status === 'blocked' ? 'danger' : 'warning'}`}>
+              {historicalReplay.replaySessionConfiguration.symbol} / {historicalReplay.replaySessionConfiguration.interval}
+            </span>
+          </div>
+          <p className="empty-state">{historicalReplay.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Replay Cursor" value={`${formatNumber(historicalReplay.replayCursorState.cursorIndex + 1)} / ${formatNumber(historicalReplay.replayCursorState.totalCandles)}`} />
+            <MetricCard label="Current Candle" value={historicalReplay.replayStepOutput.candle?.timestamp ?? 'none'} />
+            <MetricCard label="Timeframe Compatibility" value={historicalReplay.timeframeCompatibilityValidation.status} />
+            <MetricCard label="Missing Data" value={historicalReplay.missingDataDetection.hasMissingData ? 'detected' : 'clear'} />
+            <MetricCard label="Stale Candles" value={formatNumber(historicalReplay.staleIncompleteCandleDetection.staleCount)} />
+            <MetricCard label="Incomplete Candles" value={formatNumber(historicalReplay.staleIncompleteCandleDetection.incompleteCount)} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Replay Session Configuration</span>
+                <strong>{historicalReplay.replaySessionConfiguration.timeframe}</strong>
+              </div>
+              <p>{historicalReplay.replaySessionConfiguration.dateRange.startDate} to {historicalReplay.replaySessionConfiguration.dateRange.endDate}</p>
+            </section>
+            <section>
+              <div>
+                <span>Replay Step Output</span>
+                <strong>{historicalReplay.replayStepOutput.candle?.close ?? 'none'}</strong>
+              </div>
+              <p>Previous: {historicalReplay.replayStepOutput.previousCandle?.close ?? 'none'} / Next: {historicalReplay.replayStepOutput.nextTimestamp ?? 'complete'}</p>
+            </section>
+            <section>
+              <div>
+                <span>Data Quality</span>
+                <strong>{historicalReplay.missingDataDetection.missingCount}</strong>
+              </div>
+              <p>{historicalReplay.missingDataDetection.gaps.map((gap) => `${gap.after} to ${gap.before}`).join('; ') || 'Historical candles are contiguous for replay preparation.'}</p>
+            </section>
+          </div>
+          <span className="event-line">{historicalReplay.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
