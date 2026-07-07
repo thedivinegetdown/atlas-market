@@ -16,6 +16,7 @@ import { evaluatePortfolioRisk } from './core/risk/portfolioRiskEngine.js'
 import { recommendPositionSize } from './core/risk/positionSizingEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStrategyPortfolioManager.js'
+import { validateStrategyBlueprint } from './core/strategy/strategyBuilderEngine.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -575,6 +576,72 @@ function App() {
     multiTimeframeContext: multiTimeframeResearchContext,
     marketRegime: marketRegimeClassification,
   }, { emitEvent: false }), [aiDecisionInput, marketIntelligence, marketRegimeClassification, multiTimeframeResearchContext, researchDecisionContext, researchSignalScore])
+  const strategyBlueprintValidation = useMemo(() => validateStrategyBlueprint({
+    id: 'index-pullback-research-v1',
+    name: 'Index Pullback Research Blueprint',
+    version: '1.0.0',
+    metadata: {
+      owner: 'Atlas Research Desk',
+      description: 'Paper-only reusable blueprint for research-confirmed index pullbacks.',
+      tags: ['index', 'research', 'paper'],
+    },
+    entryConditions: [
+      {
+        id: 'market-regime-risk-on',
+        type: 'market_regime',
+        operator: 'in',
+        value: ['risk-on', 'neutral'],
+        source: marketRegimeClassification.eventType,
+        description: 'Market regime must not be risk-off.',
+      },
+      {
+        id: 'research-score-threshold',
+        type: 'research_score',
+        operator: 'gte',
+        value: 55,
+        source: researchSignalScore.eventType,
+        description: 'Research score must support paper trade review.',
+      },
+      {
+        id: 'ai-research-decision',
+        type: 'ai_decision',
+        operator: 'in',
+        value: ['approve', 'caution', 'watchlist'],
+        source: researchEnhancedDecision.eventType,
+        description: 'Research-enhanced AI decision must be usable.',
+      },
+    ],
+    exitConditions: [
+      {
+        id: 'research-avoid-exit',
+        type: 'research_bias',
+        operator: 'eq',
+        value: 'avoid',
+        source: researchSignalScore.eventType,
+        description: 'Exit review when research bias moves to avoid.',
+      },
+      {
+        id: 'risk-off-exit',
+        type: 'risk_state',
+        operator: 'eq',
+        value: 'risk-off',
+        source: marketRegimeClassification.eventType,
+        description: 'Exit review when market risk regime turns risk-off.',
+      },
+    ],
+    riskRuleReferences: [
+      { id: 'trade-guardrail', engine: 'tradeGuardrailEngine', reference: guardrails[0]?.result.eventType },
+      { id: 'position-sizing', engine: 'positionSizingEngine', reference: positionSizing.eventType },
+      { id: 'portfolio-risk', engine: 'portfolioRiskEngine', reference: risk.eventType },
+    ],
+    timeframeReferences: ['intraday', 'swing', 'position'],
+    compatibleAssetClasses: ['equity', 'etf', 'futures'],
+    aiDecision: researchEnhancedDecision,
+    researchEnhancedDecision,
+    marketRegime: marketRegimeClassification,
+    portfolioRisk: risk,
+    positionSizing,
+  }, { emitEvent: false }), [guardrails, marketRegimeClassification, positionSizing, researchEnhancedDecision, researchSignalScore, risk])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -584,6 +651,7 @@ function App() {
     { id: 'research-decision-context', label: 'Research Context', status: researchDecisionContext.decisionBiasSummary.recommendedUse },
     { id: 'multi-timeframe-research', label: 'Timeframes', status: multiTimeframeResearchContext.dominantTimeframeBias.bias },
     { id: 'research-enhanced-decision', label: 'Research AI', status: researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision },
+    { id: 'strategy-builder', label: 'Strategy Builder', status: strategyBlueprintValidation.validationStatus },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -1499,6 +1567,55 @@ function App() {
             <p className="empty-state">No AI orchestration blockers detected for this paper decision.</p>
           )}
           <span className="event-line">{aiDecision.eventType}</span>
+        </article>
+
+        <article id="strategy-builder" className={`panel strategy-builder-panel ${strategyBlueprintValidation.validationStatus}`}>
+          <div className="panel-heading">
+            <h2>Strategy Builder</h2>
+            <span>Paper-only reusable strategy blueprint foundation.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyBlueprintValidation.blueprint.version}</span>
+              <strong>{strategyBlueprintValidation.blueprint.name}</strong>
+            </div>
+            <span className={`decision-pill ${strategyBlueprintValidation.validationStatus === 'valid' ? 'positive' : strategyBlueprintValidation.validationStatus === 'caution' ? 'warning' : 'danger'}`}>
+              {strategyBlueprintValidation.validationStatus}
+            </span>
+          </div>
+          <p className="empty-state">{strategyBlueprintValidation.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Entry Conditions" value={formatNumber(strategyBlueprintValidation.blueprint.entryConditions.length)} />
+            <MetricCard label="Exit Conditions" value={formatNumber(strategyBlueprintValidation.blueprint.exitConditions.length)} />
+            <MetricCard label="Risk References" value={formatNumber(strategyBlueprintValidation.blueprint.riskRuleReferences.length)} />
+            <MetricCard label="Timeframes" value={strategyBlueprintValidation.blueprint.timeframeReferences.join(' / ')} />
+            <MetricCard label="Asset Classes" value={strategyBlueprintValidation.blueprint.compatibleAssetClasses.join(' / ')} />
+            <MetricCard label="Paper Mode" value={strategyBlueprintValidation.paperTrading ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Metadata</span>
+                <strong>{strategyBlueprintValidation.blueprint.metadata.owner}</strong>
+              </div>
+              <p>{strategyBlueprintValidation.blueprint.metadata.description}</p>
+            </section>
+            <section>
+              <div>
+                <span>References</span>
+                <strong>{strategyBlueprintValidation.blueprint.references.aiDecisionEvent}</strong>
+              </div>
+              <p>{strategyBlueprintValidation.blueprint.references.marketRegimeEvent} / {strategyBlueprintValidation.blueprint.references.portfolioRiskEvent}</p>
+            </section>
+            <section>
+              <div>
+                <span>Validation</span>
+                <strong>{strategyBlueprintValidation.validationStatus}</strong>
+              </div>
+              <p>{[...strategyBlueprintValidation.blockers, ...strategyBlueprintValidation.cautions].join('; ') || 'Blueprint is ready for paper strategy reuse.'}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyBlueprintValidation.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
