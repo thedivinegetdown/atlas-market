@@ -19,6 +19,7 @@ import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStra
 import { validateStrategyBlueprint } from './core/strategy/strategyBuilderEngine.js'
 import { evaluateStrategyRules } from './core/strategy/strategyRuleEvaluationEngine.js'
 import { composeStrategySignal } from './core/strategy/strategySignalComposer.js'
+import { updateStrategyLifecycle } from './core/strategy/strategyLifecycleManager.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -690,6 +691,28 @@ function App() {
     strategyBlueprintValidation,
     strategyRuleEvaluation,
   ])
+  const strategyLifecycle = useMemo(() => updateStrategyLifecycle({
+    strategyBlueprintValidation,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+    symbol: demoProposedTrades[0].symbol,
+    assetType: demoProposedTrades[0].assetType,
+    previousLifecycleState: 'validated',
+    researchDecisionContext,
+    researchSignalScore,
+    researchEnhancedDecision,
+    marketRegime: marketRegimeClassification,
+    aiDecision,
+  }, { emitEvent: false }), [
+    aiDecision,
+    marketRegimeClassification,
+    researchDecisionContext,
+    researchEnhancedDecision,
+    researchSignalScore,
+    strategyBlueprintValidation,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -702,6 +725,7 @@ function App() {
     { id: 'strategy-builder', label: 'Strategy Builder', status: strategyBlueprintValidation.validationStatus },
     { id: 'strategy-rule-evaluation', label: 'Rule Eval', status: strategyRuleEvaluation.strategyEvaluationStatus },
     { id: 'strategy-signal-composer', label: 'Strategy Signal', status: strategySignalComposition.signalStatus },
+    { id: 'strategy-lifecycle', label: 'Lifecycle', status: strategyLifecycle.lifecycleState },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -1764,6 +1788,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategySignalComposition.eventType}</span>
+        </article>
+
+        <article id="strategy-lifecycle" className={`panel strategy-lifecycle-panel ${strategyLifecycle.lifecycleState}`}>
+          <div className="panel-heading">
+            <h2>Strategy Lifecycle</h2>
+            <span>Paper-only lifecycle state from blueprint validation through active strategy readiness.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyLifecycle.strategyName}</span>
+              <strong>{strategyLifecycle.lifecycleState}</strong>
+            </div>
+            <span className={`decision-pill ${strategyLifecycle.activationEligibility.status === 'eligible' ? 'positive' : strategyLifecycle.activationEligibility.status === 'blocked' ? 'danger' : 'warning'}`}>
+              {strategyLifecycle.activationEligibility.status}
+            </span>
+          </div>
+          <p className="empty-state">{strategyLifecycle.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Lifecycle State" value={strategyLifecycle.lifecycleState} />
+            <MetricCard label="Activation Eligibility" value={strategyLifecycle.activationEligibility.status} />
+            <MetricCard label="Pause Recommendation" value={strategyLifecycle.pauseRecommendation.recommended ? 'recommended' : 'none'} />
+            <MetricCard label="Archive Recommendation" value={strategyLifecycle.archiveRecommendation.recommended ? 'recommended' : 'none'} />
+            <MetricCard label="Validation Snapshot" value={strategyLifecycle.validationSnapshot.validationStatus} />
+            <MetricCard label="Signal Snapshot" value={strategyLifecycle.signalComposerSnapshot.signalStatus} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Lifecycle Audit Event</span>
+                <strong>{strategyLifecycle.lifecycleAuditEvent.transition}</strong>
+              </div>
+              <p>{strategyLifecycle.lifecycleAuditEvent.reasons.join('; ') || 'Lifecycle state unchanged without activation blockers.'}</p>
+            </section>
+            <section>
+              <div>
+                <span>Research And Regime Snapshot</span>
+                <strong>{strategyLifecycle.researchRegimeContextSnapshot.research.decisionBias}</strong>
+              </div>
+              <p>{strategyLifecycle.researchRegimeContextSnapshot.marketRegime.compositeRegimeLabel} / {strategyLifecycle.researchRegimeContextSnapshot.aiDecision.finalDecision}</p>
+            </section>
+            <section>
+              <div>
+                <span>Recommendations</span>
+                <strong>{strategyLifecycle.pauseRecommendation.recommended || strategyLifecycle.archiveRecommendation.recommended ? 'review' : 'clear'}</strong>
+              </div>
+              <p>{[strategyLifecycle.pauseRecommendation.summary, strategyLifecycle.archiveRecommendation.summary].join(' ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyLifecycle.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
