@@ -468,6 +468,10 @@ function App() {
     riskSnapshot: risk,
     aiDecision,
     releaseReadiness,
+    marketDataAdapterHealth: {
+      eventType: marketDataAdapterHealth.eventType,
+      provider: marketDataAdapterHealth.health.provider,
+    },
     catalysts: [
       {
         type: 'macro',
@@ -484,7 +488,7 @@ function App() {
         source: 'demo-research-input',
       },
     ],
-  }, { emitEvent: false }), [aiDecision, portfolioAnalytics, releaseReadiness, risk, scannerSignal])
+  }, { emitEvent: false }), [aiDecision, marketDataAdapterHealth, portfolioAnalytics, releaseReadiness, risk, scannerSignal])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
@@ -623,9 +627,12 @@ function App() {
             <MetricCard label="Volatility" value={marketIntelligence.volatilityContext.label} />
             <MetricCard label="Trend" value={marketIntelligence.trendContext.direction} />
             <MetricCard label="Risk Sentiment" value={marketIntelligence.riskSentimentSummary.label} />
-            <MetricCard label="Catalysts" value={formatNumber(marketIntelligence.catalysts.length)} />
+            <MetricCard label="Catalysts" value={`${formatNumber(marketIntelligence.catalystSummary.count)} ${marketIntelligence.catalystSummary.dominantSentiment}`} />
             <MetricCard label="Release Gate" value={marketIntelligence.riskSentimentSummary.releaseStatus} />
+            <MetricCard label="Input Mode" value={marketIntelligence.researchInputSummary.mode} />
+            <MetricCard label="Paper Readiness" value={marketIntelligence.decisionReadiness.status} />
           </div>
+          <p className="empty-state">{marketIntelligence.researchInputSummary.summary}</p>
           <div className="research-catalyst-list">
             {marketIntelligence.catalysts.map((catalyst) => (
               <section key={`${catalyst.type}-${catalyst.title}`}>
