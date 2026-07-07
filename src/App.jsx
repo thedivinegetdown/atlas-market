@@ -20,6 +20,7 @@ import { validateStrategyBlueprint } from './core/strategy/strategyBuilderEngine
 import { evaluateStrategyRules } from './core/strategy/strategyRuleEvaluationEngine.js'
 import { composeStrategySignal } from './core/strategy/strategySignalComposer.js'
 import { updateStrategyLifecycle } from './core/strategy/strategyLifecycleManager.js'
+import { updateStrategyRegistry } from './core/strategy/strategyRegistryEngine.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -713,6 +714,35 @@ function App() {
     strategyRuleEvaluation,
     strategySignalComposition,
   ])
+  const strategyRegistry = useMemo(() => updateStrategyRegistry({
+    strategyBlueprintValidation,
+    strategyLifecycle,
+    existingRecords: [
+      {
+        strategyId: 'crypto-breakout-paper-v1',
+        strategyName: 'Crypto Breakout Paper',
+        versionReference: '0.4.0',
+        status: 'paused',
+        lifecycleState: 'paused',
+        validationStatus: 'valid',
+        compatibleAssetClasses: ['crypto'],
+        timeframeReferences: ['intraday'],
+        tags: ['crypto', 'momentum'],
+        metadata: {
+          owner: 'Atlas Research Desk',
+          description: 'Paused paper-only crypto breakout strategy.',
+          createdBy: 'strategy-registry',
+        },
+        paperTrading: true,
+      },
+    ],
+    filters: {
+      status: 'active',
+      assetClass: demoProposedTrades[0].assetType,
+      timeframe: 'swing',
+      tag: 'research',
+    },
+  }, { emitEvent: false }), [strategyBlueprintValidation, strategyLifecycle])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -726,6 +756,7 @@ function App() {
     { id: 'strategy-rule-evaluation', label: 'Rule Eval', status: strategyRuleEvaluation.strategyEvaluationStatus },
     { id: 'strategy-signal-composer', label: 'Strategy Signal', status: strategySignalComposition.signalStatus },
     { id: 'strategy-lifecycle', label: 'Lifecycle', status: strategyLifecycle.lifecycleState },
+    { id: 'strategy-registry', label: 'Registry', status: strategyRegistry.activeStrategyCount },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -1837,6 +1868,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyLifecycle.eventType}</span>
+        </article>
+
+        <article id="strategy-registry" className="panel strategy-registry-panel active">
+          <div className="panel-heading">
+            <h2>Strategy Registry</h2>
+            <span>Paper-only strategy library for validated blueprint reuse across Atlas.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyRegistry.registryRecord.strategyName}</span>
+              <strong>{strategyRegistry.registryRecord.status}</strong>
+            </div>
+            <span className="decision-pill positive">
+              {strategyRegistry.registryRecord.versionReference}
+            </span>
+          </div>
+          <p className="empty-state">{strategyRegistry.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Library Strategies" value={formatNumber(strategyRegistry.strategyLibraryCollection.totalStrategies)} />
+            <MetricCard label="Active Strategies" value={formatNumber(strategyRegistry.activeStrategyCount)} />
+            <MetricCard label="Status Filter" value={strategyRegistry.strategyLibraryCollection.filters.status ?? 'all'} />
+            <MetricCard label="Asset-Class Filter" value={strategyRegistry.strategyLibraryCollection.filters.assetClass ?? 'all'} />
+            <MetricCard label="Timeframe Filter" value={strategyRegistry.strategyLibraryCollection.filters.timeframe ?? 'all'} />
+            <MetricCard label="Strategy Tags" value={strategyRegistry.registryRecord.tags.join(' / ') || 'none'} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Normalized Registry Record</span>
+                <strong>{strategyRegistry.registryRecord.strategyId}</strong>
+              </div>
+              <p>{strategyRegistry.registryRecord.strategyName} / {strategyRegistry.registryRecord.versionReference} / {strategyRegistry.registryRecord.lifecycleState}</p>
+            </section>
+            <section>
+              <div>
+                <span>Active Strategy Lookup</span>
+                <strong>{Object.keys(strategyRegistry.activeStrategyLookup).length}</strong>
+              </div>
+              <p>{Object.keys(strategyRegistry.activeStrategyLookup).join('; ') || 'No active paper strategies registered.'}</p>
+            </section>
+            <section>
+              <div>
+                <span>Strategy Library Collection</span>
+                <strong>{Object.entries(strategyRegistry.strategyLibraryCollection.statusCounts).map(([status, count]) => `${status}: ${count}`).join(' / ')}</strong>
+              </div>
+              <p>{strategyRegistry.strategyLibraryCollection.records.map((record) => `${record.strategyName}: ${record.status}`).join('; ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyRegistry.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
