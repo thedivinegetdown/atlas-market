@@ -23,6 +23,7 @@ import {
 } from '../lib/brokers/brokerAdapter.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
+import { evaluateResearchSignalScore } from '../lib/research/researchSignalScoringEngine.js'
 import { createSignalEngine } from '../lib/signals/signalEngine.js'
 import { evaluateReleaseCandidateStabilization } from '../lib/system/releaseCandidateStabilization.js'
 import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
@@ -489,10 +490,15 @@ function App() {
       },
     ],
   }, { emitEvent: false }), [aiDecision, marketDataAdapterHealth, portfolioAnalytics, releaseReadiness, risk, scannerSignal])
+  const researchSignalScore = useMemo(() => evaluateResearchSignalScore({
+    researchIntelligence: marketIntelligence,
+    aiDecision,
+  }, { emitEvent: false }), [aiDecision, marketIntelligence])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
     { id: 'research-intelligence', label: 'Research Intel', status: marketIntelligence.riskSentimentSummary.label },
+    { id: 'research-signal-score', label: 'Research Score', status: researchSignalScore.decisionBias },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -646,6 +652,57 @@ function App() {
             ))}
           </div>
           <span className="event-line">{marketIntelligence.eventType}</span>
+        </article>
+
+        <article id="research-signal-score" className={`panel research-signal-score-panel ${researchSignalScore.decisionBias}`}>
+          <div className="panel-heading">
+            <h2>Research Signal Score</h2>
+            <span>Normalized research context for paper-trading decisions.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{researchSignalScore.symbol} {researchSignalScore.assetType}</span>
+              <strong>{researchSignalScore.decisionBias}</strong>
+            </div>
+            <span className={`decision-pill ${researchSignalScore.decisionBias === 'bullish' ? 'positive' : researchSignalScore.decisionBias === 'avoid' || researchSignalScore.decisionBias === 'bearish' ? 'danger' : 'warning'}`}>
+              {formatNumber(researchSignalScore.finalResearchScore)} final score
+            </span>
+          </div>
+          <p className="empty-state">{researchSignalScore.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Bullish" value={formatNumber(researchSignalScore.bullishScore)} />
+            <MetricCard label="Bearish" value={formatNumber(researchSignalScore.bearishScore)} />
+            <MetricCard label="Neutral" value={formatNumber(researchSignalScore.neutralScore)} />
+            <MetricCard label="Catalyst Strength" value={formatNumber(researchSignalScore.catalystStrengthScore)} />
+            <MetricCard label="Trend Alignment" value={formatNumber(researchSignalScore.trendAlignmentScore)} />
+            <MetricCard label="Risk Adjustment" value={formatNumber(researchSignalScore.riskSentimentAdjustment.adjustment)} />
+            <MetricCard label="Volatility Adjustment" value={formatNumber(researchSignalScore.volatilityAdjustment.adjustment)} />
+            <MetricCard label="Decision Bias" value={researchSignalScore.decisionBias} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Volatility</span>
+                <strong>{researchSignalScore.volatilityAdjustment.label}</strong>
+              </div>
+              <p>{researchSignalScore.volatilityAdjustment.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Trend</span>
+                <strong>{researchSignalScore.components.trendAlignment.direction}</strong>
+              </div>
+              <p>{researchSignalScore.components.trendAlignment.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Risk Sentiment</span>
+                <strong>{researchSignalScore.riskSentimentAdjustment.label}</strong>
+              </div>
+              <p>{researchSignalScore.riskSentimentAdjustment.summary}</p>
+            </section>
+          </div>
+          <span className="event-line">{researchSignalScore.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
