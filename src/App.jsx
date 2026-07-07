@@ -17,6 +17,7 @@ import { recommendPositionSize } from './core/risk/positionSizingEngine.js'
 import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStrategyPortfolioManager.js'
 import { validateStrategyBlueprint } from './core/strategy/strategyBuilderEngine.js'
+import { evaluateStrategyRules } from './core/strategy/strategyRuleEvaluationEngine.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -642,6 +643,30 @@ function App() {
     portfolioRisk: risk,
     positionSizing,
   }, { emitEvent: false }), [guardrails, marketRegimeClassification, positionSizing, researchEnhancedDecision, researchSignalScore, risk])
+  const strategyRuleEvaluation = useMemo(() => evaluateStrategyRules({
+    strategyBlueprintValidation,
+    symbol: demoProposedTrades[0].symbol,
+    assetType: demoProposedTrades[0].assetType,
+    timeframe: 'swing',
+    researchDecisionContext,
+    researchSignalScore,
+    researchEnhancedDecision,
+    marketRegime: marketRegimeClassification,
+    portfolioRisk: risk,
+    positionSizing,
+    tradeGuardrail: guardrails[0]?.result,
+    multiTimeframeContext: multiTimeframeResearchContext,
+  }, { emitEvent: false }), [
+    guardrails,
+    marketRegimeClassification,
+    multiTimeframeResearchContext,
+    positionSizing,
+    researchDecisionContext,
+    researchEnhancedDecision,
+    researchSignalScore,
+    risk,
+    strategyBlueprintValidation,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -652,6 +677,7 @@ function App() {
     { id: 'multi-timeframe-research', label: 'Timeframes', status: multiTimeframeResearchContext.dominantTimeframeBias.bias },
     { id: 'research-enhanced-decision', label: 'Research AI', status: researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision },
     { id: 'strategy-builder', label: 'Strategy Builder', status: strategyBlueprintValidation.validationStatus },
+    { id: 'strategy-rule-evaluation', label: 'Rule Eval', status: strategyRuleEvaluation.strategyEvaluationStatus },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -1616,6 +1642,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyBlueprintValidation.eventType}</span>
+        </article>
+
+        <article id="strategy-rule-evaluation" className={`panel strategy-rule-evaluation-panel ${strategyRuleEvaluation.strategyEvaluationStatus}`}>
+          <div className="panel-heading">
+            <h2>Strategy Rule Evaluation</h2>
+            <span>Paper-only rule checks against normalized market, research, and risk context.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyRuleEvaluation.strategyName}</span>
+              <strong>{strategyRuleEvaluation.strategyEvaluationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${strategyRuleEvaluation.strategyEvaluationStatus === 'eligible' ? 'positive' : strategyRuleEvaluation.strategyEvaluationStatus === 'blocked' ? 'danger' : 'warning'}`}>
+              {strategyRuleEvaluation.symbol} / {strategyRuleEvaluation.timeframe}
+            </span>
+          </div>
+          <p className="empty-state">{strategyRuleEvaluation.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Entry Rules" value={`${strategyRuleEvaluation.entryRuleEvaluation.passed}/${strategyRuleEvaluation.entryRuleEvaluation.total} ${strategyRuleEvaluation.entryRuleEvaluation.status}`} />
+            <MetricCard label="Exit Rules" value={`${strategyRuleEvaluation.exitRuleEvaluation.passed}/${strategyRuleEvaluation.exitRuleEvaluation.total} ${strategyRuleEvaluation.exitRuleEvaluation.status}`} />
+            <MetricCard label="Risk Rules" value={`${strategyRuleEvaluation.riskRuleEvaluation.passed}/${strategyRuleEvaluation.riskRuleEvaluation.total} ${strategyRuleEvaluation.riskRuleEvaluation.status}`} />
+            <MetricCard label="Timeframe Compatibility" value={strategyRuleEvaluation.timeframeCompatibility.status} />
+            <MetricCard label="Asset Compatibility" value={strategyRuleEvaluation.assetClassCompatibility.status} />
+            <MetricCard label="Paper Mode" value={strategyRuleEvaluation.paperTrading ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Entry Rule Detail</span>
+                <strong>{strategyRuleEvaluation.entryRuleEvaluation.status}</strong>
+              </div>
+              <p>{strategyRuleEvaluation.entryRuleEvaluation.rules.map((rule) => `${rule.id}: ${rule.status}`).join('; ')}</p>
+            </section>
+            <section>
+              <div>
+                <span>Exit Rule Detail</span>
+                <strong>{strategyRuleEvaluation.exitRuleEvaluation.status}</strong>
+              </div>
+              <p>{strategyRuleEvaluation.exitRuleEvaluation.rules.map((rule) => `${rule.id}: ${rule.status}`).join('; ')}</p>
+            </section>
+            <section>
+              <div>
+                <span>Evaluation Notes</span>
+                <strong>{strategyRuleEvaluation.blockers.length > 0 ? 'blocked' : strategyRuleEvaluation.cautions.length > 0 ? 'review' : 'clear'}</strong>
+              </div>
+              <p>{[...strategyRuleEvaluation.blockers, ...strategyRuleEvaluation.cautions].join('; ') || 'Strategy rules are eligible for paper-trading review.'}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyRuleEvaluation.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
