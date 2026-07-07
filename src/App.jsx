@@ -22,6 +22,7 @@ import {
   normalizeBrokerPosition,
 } from '../lib/brokers/brokerAdapter.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
+import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
 import { evaluateResearchSignalScore } from '../lib/research/researchSignalScoringEngine.js'
@@ -85,6 +86,39 @@ function ExposureBar({ label, value, tone }) {
       </div>
     </div>
   )
+}
+
+function buildDemoTimeframeContext(baseContext, bucket, overrides = {}) {
+  return {
+    bucket,
+    researchDecisionContext: {
+      ...baseContext,
+      researchScoreSummary: {
+        ...baseContext.researchScoreSummary,
+        finalResearchScore: overrides.finalResearchScore ?? baseContext.researchScoreSummary.finalResearchScore,
+        trendAlignmentScore: overrides.trendAlignmentScore ?? baseContext.researchScoreSummary.trendAlignmentScore,
+      },
+      decisionBiasSummary: {
+        ...baseContext.decisionBiasSummary,
+        decisionBias: overrides.decisionBias ?? baseContext.decisionBiasSummary.decisionBias,
+      },
+      marketContextSummary: {
+        ...baseContext.marketContextSummary,
+        trend: {
+          ...baseContext.marketContextSummary.trend,
+          direction: overrides.trendDirection ?? baseContext.marketContextSummary.trend.direction,
+          alignmentScore: overrides.trendAlignmentScore ?? baseContext.marketContextSummary.trend.alignmentScore,
+          score: overrides.trendAlignmentScore ?? baseContext.marketContextSummary.trend.score,
+        },
+        volatility: {
+          ...baseContext.marketContextSummary.volatility,
+          label: overrides.volatilityLabel ?? baseContext.marketContextSummary.volatility.label,
+          score: overrides.volatilityScore ?? baseContext.marketContextSummary.volatility.score,
+          adjustment: overrides.volatilityAdjustment ?? baseContext.marketContextSummary.volatility.adjustment,
+        },
+      },
+    },
+  }
 }
 
 function WorkspaceLayout({ navigation, children }) {
@@ -500,12 +534,31 @@ function App() {
     researchSignalScore,
     aiDecision,
   }, { emitEvent: false }), [aiDecision, marketIntelligence, researchSignalScore])
+  const multiTimeframeResearchContext = useMemo(() => evaluateMultiTimeframeResearchContext({
+    symbol: researchDecisionContext.symbol,
+    assetType: researchDecisionContext.assetType,
+    timeframes: [
+      buildDemoTimeframeContext(researchDecisionContext, 'intraday', {
+        finalResearchScore: Math.max(0, researchDecisionContext.researchScoreSummary.finalResearchScore - 6),
+        trendAlignmentScore: Math.max(0, researchDecisionContext.researchScoreSummary.trendAlignmentScore - 4),
+        volatilityLabel: 'elevated',
+        volatilityScore: 58,
+        volatilityAdjustment: 0,
+      }),
+      buildDemoTimeframeContext(researchDecisionContext, 'swing'),
+      buildDemoTimeframeContext(researchDecisionContext, 'position', {
+        finalResearchScore: Math.min(100, researchDecisionContext.researchScoreSummary.finalResearchScore + 4),
+        trendAlignmentScore: Math.min(100, researchDecisionContext.researchScoreSummary.trendAlignmentScore + 3),
+      }),
+    ],
+  }, { emitEvent: false }), [researchDecisionContext])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
     { id: 'research-intelligence', label: 'Research Intel', status: marketIntelligence.riskSentimentSummary.label },
     { id: 'research-signal-score', label: 'Research Score', status: researchSignalScore.decisionBias },
     { id: 'research-decision-context', label: 'Research Context', status: researchDecisionContext.decisionBiasSummary.recommendedUse },
+    { id: 'multi-timeframe-research', label: 'Timeframes', status: multiTimeframeResearchContext.dominantTimeframeBias.bias },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -761,6 +814,47 @@ function App() {
             </section>
           </div>
           <span className="event-line">{researchDecisionContext.eventType}</span>
+        </article>
+
+        <article id="multi-timeframe-research" className={`panel multi-timeframe-research-panel ${multiTimeframeResearchContext.dominantTimeframeBias.bias}`}>
+          <div className="panel-heading">
+            <h2>Multi-Timeframe Research</h2>
+            <span>Intraday, swing, and position research context alignment.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{multiTimeframeResearchContext.symbol} {multiTimeframeResearchContext.assetType}</span>
+              <strong>{multiTimeframeResearchContext.dominantTimeframeBias.bias}</strong>
+            </div>
+            <span className={`decision-pill ${multiTimeframeResearchContext.conflictDetection.hasConflicts ? 'warning' : 'positive'}`}>
+              {multiTimeframeResearchContext.conflictDetection.conflictCount} conflicts
+            </span>
+          </div>
+          <p className="empty-state">{multiTimeframeResearchContext.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Dominant Bias" value={multiTimeframeResearchContext.dominantTimeframeBias.bias} />
+            <MetricCard label="Dominant Bucket" value={multiTimeframeResearchContext.dominantTimeframeBias.dominantBucket} />
+            <MetricCard label="Trend Summary" value={multiTimeframeResearchContext.timeframeTrendSummary.dominantDirection} />
+            <MetricCard label="Volatility" value={multiTimeframeResearchContext.timeframeVolatilitySummary.overallLabel} />
+            <MetricCard label="Average Score" value={formatNumber(multiTimeframeResearchContext.timeframeResearchScoreAlignment.averageScore)} />
+            <MetricCard label="Score Alignment" value={multiTimeframeResearchContext.timeframeResearchScoreAlignment.aligned ? 'aligned' : 'conflict'} />
+            <MetricCard label="AI Compatible" value={multiTimeframeResearchContext.aiDecisionCompatibility.compatibleWithAIDecisionOrchestrator ? 'yes' : 'no'} />
+            <MetricCard label="Paper Mode" value={multiTimeframeResearchContext.paperTrading ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="research-catalyst-list">
+            {multiTimeframeResearchContext.timeframeBuckets.map((timeframe) => (
+              <section key={timeframe.bucket}>
+                <div>
+                  <span>{timeframe.bucket}</span>
+                  <strong>{timeframe.decisionBias}</strong>
+                </div>
+                <p>
+                  Trend {timeframe.trend.direction}; volatility {timeframe.volatility.label}; score {formatNumber(timeframe.researchScore)}.
+                </p>
+              </section>
+            ))}
+          </div>
+          <span className="event-line">{multiTimeframeResearchContext.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
