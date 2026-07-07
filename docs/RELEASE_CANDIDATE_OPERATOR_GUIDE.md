@@ -1,6 +1,6 @@
 # Atlas Market Release Candidate Operator Guide
 
-This guide describes how to operate and review the Atlas Market paper-trading release candidate after Parts 14A through 15E.
+This guide describes how to operate and review the Atlas Market paper-trading release candidate after Parts 14A through 15F.
 
 Atlas Market is currently a paper-trading operating system. It does not place live orders, connect to a real brokerage account, or execute real brokerage trades. The release candidate is designed to validate the institutional workspace, event lifecycle, adapter contracts, analytics engines, safety gates, and release readiness flow before future production integrations.
 
@@ -23,6 +23,22 @@ The operator should verify:
 - Dashboard panels render release, adapter, lifecycle, risk, and analytics state.
 - Event outputs are present and consistent.
 - `npm test` and `npm run build` pass before release review.
+
+This guide is authoritative for release-candidate operation. The checklist remains the merge/deploy control, while this guide explains what the operator is validating and why.
+
+## Operator Procedure
+
+Follow this sequence for every release-candidate review:
+
+1. Confirm the branch is `part-10-trading-workspace` and the working tree only contains intentional release-candidate changes.
+2. Review `.env.example` and the active environment for `TRADING_MODE=paper`.
+3. Start the workspace locally only after tests and build have been run for the candidate under review.
+4. Inspect the Market Data Health and Broker Adapter Health panels before reviewing trading panels.
+5. Confirm Release Readiness is `ready` and RC Stabilization is `stable`.
+6. Review the Event Timeline from adapter checks through release stabilization.
+7. Confirm rejected paper trades do not produce filled executions, accounting updates, or performance inclusion.
+8. Record command output for `npm test` and `npm run build` in the release notes or PR.
+9. Treat any live brokerage capability, real order-routing flag, missing paper flag, failed event contract, or failed build/test command as a release blocker.
 
 ## Architecture Overview
 
@@ -107,6 +123,14 @@ The primary release-candidate event flow is:
 
 Older event bus documentation also covers repository and UI refresh events such as `order:created`, `order:updated`, `order:cancelled`, `portfolio:updated`, and `journal:created`.
 
+Operator evidence to capture:
+
+- Event type names are present exactly as emitted by the engines.
+- Timestamps are present and parseable.
+- The release readiness event appears before the stabilization event.
+- The stabilization event includes no `releaseBlockers`.
+- Any caution is documented with a disposition before release review continues.
+
 ## Engine Responsibility Map
 
 | Area | Module | Responsibility |
@@ -147,6 +171,8 @@ The safety model is intentionally layered:
 
 Operators should treat any live order flag, non-paper trading mode, or real broker provider as a release blocker.
 
+Paper-trading-first language is not cosmetic. It is the release boundary. The current candidate validates the operating system, event contracts, risk controls, analytics, adapters, and dashboard workflow without enabling external execution. Future live-trading readiness must be handled as a separate approval track with product, security, compliance, operational, and broker-specific review.
+
 ## Adapter Mock-Mode Behavior
 
 The current adapters are release-candidate foundations:
@@ -164,6 +190,8 @@ Expected behavior:
 - No adapter should expose secrets in UI or logs.
 
 Adapter mock-mode verification is included in `system.releaseCandidate.stabilized`.
+
+Mock mode means adapters may normalize, simulate, and report health, but they must not place orders, mutate a real brokerage account, or require paid provider credentials to operate the release candidate. A future provider may be added behind these contracts, but the default release-candidate path remains mock and paper-only.
 
 ## Dashboard Operation
 
@@ -212,12 +240,19 @@ Expected behavior:
 - The Release Readiness panel summarizes test/build status.
 - The RC Stabilization panel summarizes dashboard smoke and event pipeline status.
 
+Validation evidence:
+
+- Save the command names, pass/fail result, and any warning requiring operator review.
+- A passing workspace panel is not a substitute for command-line validation.
+- Failed tests, failed builds, unresolved TypeScript/Vite errors, or missing release events block release-candidate approval.
+
 ## Release Checklist
 
 Use [Release Checklist](RELEASE_CHECKLIST.md) as the canonical checklist.
 
 For this release candidate, the operator should additionally verify:
 
+- Branch is `part-10-trading-workspace`.
 - `system.releaseReadiness.evaluated` is visible in the dashboard.
 - `system.releaseCandidate.stabilized` is visible in the dashboard.
 - Release blocker list is empty.
@@ -242,6 +277,8 @@ Current limitations are intentional for a paper-trading release candidate:
 - Alerts and scanners are foundations, not real-time automation systems.
 - AI decisioning is deterministic engine orchestration, not external LLM execution.
 - Release readiness panels summarize configured validation targets; operators must still run `npm test` and `npm run build` before release review.
+- The workspace does not provide a live production incident runbook yet.
+- Phase 15F documentation does not change engine behavior, adapter behavior, persistence behavior, or API contracts.
 
 ## Phase 16 Roadmap
 
