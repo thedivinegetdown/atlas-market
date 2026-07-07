@@ -21,6 +21,7 @@ import {
   normalizeBrokerAccount,
   normalizeBrokerPosition,
 } from '../lib/brokers/brokerAdapter.js'
+import { classifyMarketRegime } from '../lib/market/marketRegimeClassificationEngine.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
@@ -552,8 +553,21 @@ function App() {
       }),
     ],
   }, { emitEvent: false }), [researchDecisionContext])
+  const marketRegimeClassification = useMemo(() => classifyMarketRegime({
+    symbol: scannerSignal.quote.symbol,
+    assetType: scannerSignal.quote.assetType,
+    marketData: {
+      ...scannerSignal.quote,
+      changePercent: 0.9,
+    },
+    marketDataAdapterHealth,
+    researchIntelligence: marketIntelligence,
+    researchSignalScore,
+    multiTimeframeResearchContext,
+  }, { emitEvent: false }), [marketDataAdapterHealth, marketIntelligence, multiTimeframeResearchContext, researchSignalScore, scannerSignal])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
+    { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
     { id: 'research-intelligence', label: 'Research Intel', status: marketIntelligence.riskSentimentSummary.label },
     { id: 'research-signal-score', label: 'Research Score', status: researchSignalScore.decisionBias },
@@ -635,6 +649,55 @@ function App() {
           </div>
           <p className="empty-state">No paid data API is required for this adapter foundation.</p>
           <span className="event-line">{marketDataAdapterHealth.eventType}</span>
+        </article>
+
+        <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
+          <div className="panel-heading">
+            <h2>Market Regime</h2>
+            <span>Classified market conditions for AI paper-decision context.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{marketRegimeClassification.symbol} {marketRegimeClassification.assetType}</span>
+              <strong>{marketRegimeClassification.compositeRegimeLabel}</strong>
+            </div>
+            <span className={`decision-pill ${marketRegimeClassification.riskRegime.regime === 'risk-on' ? 'positive' : marketRegimeClassification.riskRegime.regime === 'risk-off' ? 'danger' : 'warning'}`}>
+              {formatNumber(marketRegimeClassification.regimeConfidenceScore)} confidence
+            </span>
+          </div>
+          <p className="empty-state">{marketRegimeClassification.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Trend Regime" value={marketRegimeClassification.trendRegime.regime} />
+            <MetricCard label="Volatility Regime" value={marketRegimeClassification.volatilityRegime.regime} />
+            <MetricCard label="Risk Regime" value={marketRegimeClassification.riskRegime.regime} />
+            <MetricCard label="Liquidity Regime" value={marketRegimeClassification.liquidityRegime.regime} />
+            <MetricCard label="Composite Label" value={marketRegimeClassification.compositeRegimeLabel} />
+            <MetricCard label="AI Compatible" value={marketRegimeClassification.aiDecisionCompatibility.compatibleWithAIDecisionOrchestrator ? 'yes' : 'no'} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Trend</span>
+                <strong>{marketRegimeClassification.trendRegime.direction}</strong>
+              </div>
+              <p>{marketRegimeClassification.trendRegime.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Volatility</span>
+                <strong>{marketRegimeClassification.volatilityRegime.sourceLabel}</strong>
+              </div>
+              <p>{marketRegimeClassification.volatilityRegime.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Liquidity</span>
+                <strong>{marketRegimeClassification.liquidityRegime.regime}</strong>
+              </div>
+              <p>{marketRegimeClassification.liquidityRegime.summary}</p>
+            </section>
+          </div>
+          <span className="event-line">{marketRegimeClassification.eventType}</span>
         </article>
 
         <article id="broker-adapter-health" className={`panel broker-adapter-health-panel ${brokerAdapterHealth.health.status}`}>
