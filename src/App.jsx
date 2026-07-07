@@ -21,6 +21,7 @@ import { evaluateStrategyRules } from './core/strategy/strategyRuleEvaluationEng
 import { composeStrategySignal } from './core/strategy/strategySignalComposer.js'
 import { updateStrategyLifecycle } from './core/strategy/strategyLifecycleManager.js'
 import { updateStrategyRegistry } from './core/strategy/strategyRegistryEngine.js'
+import { prepareStrategyBacktestInput } from './core/strategy/strategyBacktestInputBuilder.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -743,6 +744,31 @@ function App() {
       tag: 'research',
     },
   }, { emitEvent: false }), [strategyBlueprintValidation, strategyLifecycle])
+  const strategyBacktestInput = useMemo(() => prepareStrategyBacktestInput({
+    strategyBlueprintValidation,
+    strategyLifecycle,
+    strategyRegistry,
+    assetUniverse: [
+      { symbol: demoProposedTrades[0].symbol, assetType: demoProposedTrades[0].assetType },
+    ],
+    timeframe: 'swing',
+    dateRange: {
+      startDate: '2025-01-01',
+      endDate: '2025-06-30',
+    },
+    marketDataAdapterHealth,
+    portfolioRisk: risk,
+    positionSizing,
+    capitalAllocation,
+  }, { emitEvent: false }), [
+    capitalAllocation,
+    marketDataAdapterHealth,
+    positionSizing,
+    risk,
+    strategyBlueprintValidation,
+    strategyLifecycle,
+    strategyRegistry,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -757,6 +783,7 @@ function App() {
     { id: 'strategy-signal-composer', label: 'Strategy Signal', status: strategySignalComposition.signalStatus },
     { id: 'strategy-lifecycle', label: 'Lifecycle', status: strategyLifecycle.lifecycleState },
     { id: 'strategy-registry', label: 'Registry', status: strategyRegistry.activeStrategyCount },
+    { id: 'strategy-backtest-input', label: 'Backtest Input', status: strategyBacktestInput.readinessStatus },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -1917,6 +1944,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyRegistry.eventType}</span>
+        </article>
+
+        <article id="strategy-backtest-input" className={`panel strategy-backtest-input-panel ${strategyBacktestInput.readinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Backtest Input Builder</h2>
+            <span>Paper-only input preparation for future backtesting. No backtest execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyBacktestInput.selectedStrategySnapshot.strategyName}</span>
+              <strong>{strategyBacktestInput.readinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${strategyBacktestInput.readinessStatus === 'ready' ? 'positive' : strategyBacktestInput.readinessStatus === 'blocked' ? 'danger' : 'warning'}`}>
+              {strategyBacktestInput.selectedStrategySnapshot.versionReference}
+            </span>
+          </div>
+          <p className="empty-state">{strategyBacktestInput.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Readiness Status" value={strategyBacktestInput.readinessStatus} />
+            <MetricCard label="Selected Strategy" value={strategyBacktestInput.selectedStrategySnapshot.strategyId} />
+            <MetricCard label="Selected Asset Universe" value={strategyBacktestInput.selectedAssetUniverse.map((asset) => `${asset.symbol} ${asset.assetType}`).join(' / ')} />
+            <MetricCard label="Timeframe Selection" value={strategyBacktestInput.timeframeSelection.timeframe} />
+            <MetricCard label="Initial Capital" value={formatCurrency(strategyBacktestInput.initialCapitalConfiguration.initialCapital)} />
+            <MetricCard label="Adapter Compatibility" value={strategyBacktestInput.marketDataAdapterCompatibilityCheck.compatible ? 'compatible' : 'blocked'} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Normalized Backtest Request</span>
+                <strong>{strategyBacktestInput.normalizedBacktestRequest.requestId}</strong>
+              </div>
+              <p>{strategyBacktestInput.dateRangeValidation.startDate} to {strategyBacktestInput.dateRangeValidation.endDate} / {formatNumber(strategyBacktestInput.dateRangeValidation.lookbackDays)} days</p>
+            </section>
+            <section>
+              <div>
+                <span>Risk Configuration Snapshot</span>
+                <strong>{strategyBacktestInput.riskConfigurationSnapshot.portfolioRisk.riskLevel}</strong>
+              </div>
+              <p>{strategyBacktestInput.riskConfigurationSnapshot.positionSizing.status} sizing / {strategyBacktestInput.riskConfigurationSnapshot.capitalAllocation.allocationStatus} allocation</p>
+            </section>
+            <section>
+              <div>
+                <span>Readiness Notes</span>
+                <strong>{strategyBacktestInput.blockers.length > 0 ? 'blocked' : strategyBacktestInput.cautions.length > 0 ? 'review' : 'clear'}</strong>
+              </div>
+              <p>{[...strategyBacktestInput.blockers, ...strategyBacktestInput.cautions].join('; ') || 'Backtest input is ready for future paper backtest engine intake.'}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyBacktestInput.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
