@@ -18,6 +18,7 @@ import { evaluateTradeGuardrail } from './core/risk/tradeGuardrailEngine.js'
 import { evaluateMultiStrategyPortfolioManager } from './core/strategy/multiStrategyPortfolioManager.js'
 import { validateStrategyBlueprint } from './core/strategy/strategyBuilderEngine.js'
 import { evaluateStrategyRules } from './core/strategy/strategyRuleEvaluationEngine.js'
+import { composeStrategySignal } from './core/strategy/strategySignalComposer.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -667,6 +668,28 @@ function App() {
     risk,
     strategyBlueprintValidation,
   ])
+  const strategySignalComposition = useMemo(() => composeStrategySignal({
+    strategyBlueprintValidation,
+    strategyRuleEvaluation,
+    symbol: demoProposedTrades[0].symbol,
+    assetType: demoProposedTrades[0].assetType,
+    timeframe: 'swing',
+    researchDecisionContext,
+    researchSignalScore,
+    researchEnhancedDecision,
+    marketRegime: marketRegimeClassification,
+    portfolioRisk: risk,
+    positionSizing,
+  }, { emitEvent: false }), [
+    marketRegimeClassification,
+    positionSizing,
+    researchDecisionContext,
+    researchEnhancedDecision,
+    researchSignalScore,
+    risk,
+    strategyBlueprintValidation,
+    strategyRuleEvaluation,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -678,6 +701,7 @@ function App() {
     { id: 'research-enhanced-decision', label: 'Research AI', status: researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision },
     { id: 'strategy-builder', label: 'Strategy Builder', status: strategyBlueprintValidation.validationStatus },
     { id: 'strategy-rule-evaluation', label: 'Rule Eval', status: strategyRuleEvaluation.strategyEvaluationStatus },
+    { id: 'strategy-signal-composer', label: 'Strategy Signal', status: strategySignalComposition.signalStatus },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -1691,6 +1715,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyRuleEvaluation.eventType}</span>
+        </article>
+
+        <article id="strategy-signal-composer" className={`panel strategy-signal-composer-panel ${strategySignalComposition.signalStatus}`}>
+          <div className="panel-heading">
+            <h2>Strategy Signal Composer</h2>
+            <span>Paper-only normalized strategy signal for downstream AI and trade lifecycle context.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategySignalComposition.normalizedStrategySignal.strategyName}</span>
+              <strong>{strategySignalComposition.normalizedStrategySignal.signalAction} / {strategySignalComposition.normalizedStrategySignal.signalDirection}</strong>
+            </div>
+            <span className={`decision-pill ${strategySignalComposition.signalStatus === 'composed' ? 'positive' : 'warning'}`}>
+              {strategySignalComposition.signalStatus}
+            </span>
+          </div>
+          <p className="empty-state">{strategySignalComposition.rationaleSummary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Signal Direction" value={strategySignalComposition.signalDirection} />
+            <MetricCard label="Signal Strength" value={formatNumber(strategySignalComposition.signalStrengthScore)} />
+            <MetricCard label="Confidence Score" value={formatNumber(strategySignalComposition.confidenceScore)} />
+            <MetricCard label="Entry Signal" value={strategySignalComposition.entrySignalComposition.active ? 'active' : 'inactive'} />
+            <MetricCard label="Exit Signal" value={strategySignalComposition.exitSignalComposition.active ? 'active' : 'inactive'} />
+            <MetricCard label="Source Rules" value={formatNumber(strategySignalComposition.sourceRuleReferences.length)} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Normalized Signal</span>
+                <strong>{strategySignalComposition.normalizedStrategySignal.symbol} / {strategySignalComposition.normalizedStrategySignal.assetType}</strong>
+              </div>
+              <p>{strategySignalComposition.normalizedStrategySignal.rationaleSummary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Source Rule References</span>
+                <strong>{strategySignalComposition.sourceRuleReferences.length}</strong>
+              </div>
+              <p>{strategySignalComposition.sourceRuleReferences.map((rule) => `${rule.id}: ${rule.status}`).join('; ') || 'No active source rules because strategy signal is suppressed.'}</p>
+            </section>
+            <section>
+              <div>
+                <span>AI Decision Compatibility</span>
+                <strong>{strategySignalComposition.normalizedStrategySignal.compatibleWithAIDecisionOrchestrator ? 'compatible' : 'suppressed'}</strong>
+              </div>
+              <p>{strategySignalComposition.summary}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategySignalComposition.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
