@@ -49,6 +49,7 @@ import { observeSystemEvents } from '../lib/system/eventObservabilityEngine.js'
 import { evaluateReleaseCandidateStabilization } from '../lib/system/releaseCandidateStabilization.js'
 import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
 import { evaluateSystemHealthCommandCenter } from '../lib/system/systemHealthCommandCenterEngine.js'
+import { generateOperatorActions } from '../lib/system/operatorActionCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1107,6 +1108,25 @@ function App() {
     strategySignalComposition,
     strategyWalkForward,
   ])
+  const operatorActionCenter = useMemo(() => generateOperatorActions({
+    systemHealthCommandCenter,
+    eventObservability,
+    portfolioOptimizationGovernance,
+    drawdownProtection,
+    portfolioRisk: risk,
+    marketDataAdapterHealth,
+    brokerAdapterHealth,
+    releaseReadiness,
+  }, { emitEvent: false }), [
+    brokerAdapterHealth,
+    drawdownProtection,
+    eventObservability,
+    marketDataAdapterHealth,
+    portfolioOptimizationGovernance,
+    releaseReadiness,
+    risk,
+    systemHealthCommandCenter,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -1146,6 +1166,7 @@ function App() {
     { id: 'portfolio-optimization-governance', label: 'Governance', status: portfolioOptimizationGovernance.governanceStatus },
     { id: 'event-observability', label: 'Observability', status: eventObservability.observabilityStatus },
     { id: 'system-health-command-center', label: 'System Health', status: systemHealthCommandCenter.finalPlatformHealthStatus },
+    { id: 'operator-action-center', label: 'Operator Actions', status: operatorActionCenter.platformActionSummary.topSeverity },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -3358,6 +3379,81 @@ function App() {
             </section>
           </div>
           <span className="event-line">{systemHealthCommandCenter.eventType}</span>
+        </article>
+
+        <article id="operator-action-center" className={`panel operator-action-center-panel ${operatorActionCenter.platformActionSummary.topSeverity}`}>
+          <div className="panel-heading">
+            <h2>Operator Action Center</h2>
+            <span>Human review actions only. Paper trading, no live orders, no brokerage execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Platform Action Summary</span>
+              <strong>{operatorActionCenter.platformActionSummary.topSeverity}</strong>
+            </div>
+            <span className={`decision-pill ${operatorActionCenter.platformActionSummary.topSeverity === 'critical' ? 'danger' : operatorActionCenter.platformActionSummary.topSeverity === 'high' ? 'warning' : 'positive'}`}>
+              {formatNumber(operatorActionCenter.platformActionSummary.openActions)} open
+            </span>
+          </div>
+          <p className="empty-state">{operatorActionCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Total Actions" value={formatNumber(operatorActionCenter.platformActionSummary.totalActions)} />
+            <MetricCard label="Critical" value={formatNumber(operatorActionCenter.platformActionSummary.bySeverity.critical)} />
+            <MetricCard label="High" value={formatNumber(operatorActionCenter.platformActionSummary.bySeverity.high)} />
+            <MetricCard label="Review" value={formatNumber(operatorActionCenter.platformActionSummary.byCategory.review)} />
+            <MetricCard label="Reduce Risk" value={formatNumber(operatorActionCenter.platformActionSummary.byCategory['reduce risk'])} />
+            <MetricCard label="Investigate" value={formatNumber(operatorActionCenter.platformActionSummary.byCategory.investigate)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Prioritized Operator Action List</h3>
+              {operatorActionCenter.prioritizedOperatorActions.slice(0, 5).map((action) => (
+                <div key={action.id} className="mini-row">
+                  <span>{action.title}</span>
+                  <strong>{action.severity}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Action Categories</h3>
+              {Object.entries(operatorActionCenter.platformActionSummary.byCategory).map(([category, count]) => (
+                <div key={category} className="mini-row">
+                  <span>{category}</span>
+                  <strong>{formatNumber(count)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Action Severity</h3>
+              {Object.entries(operatorActionCenter.platformActionSummary.bySeverity).map(([severity, count]) => (
+                <div key={severity} className="mini-row">
+                  <span>{severity}</span>
+                  <strong>{formatNumber(count)}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Action Source References</h3>
+              <p className="empty-state">
+                {Object.values(operatorActionCenter.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+            <section>
+              <h3>Action Rationale</h3>
+              <p className="empty-state">
+                {operatorActionCenter.prioritizedOperatorActions[0]?.rationale ?? 'No operator action rationale available.'}
+              </p>
+            </section>
+            <section>
+              <h3>Action Status</h3>
+              <p className="empty-state">
+                {formatNumber(operatorActionCenter.platformActionSummary.openActions)} open / human review only / no execution automation.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{operatorActionCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
