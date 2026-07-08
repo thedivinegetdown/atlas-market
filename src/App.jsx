@@ -6,6 +6,7 @@ import { integrateResearchEnhancedDecision } from './core/ai/researchEnhancedDec
 import { recommendCapitalAllocation } from './core/analytics/capitalAllocationEngine.js'
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
+import { evaluatePortfolioCorrelation } from './core/analytics/portfolioCorrelationEngine.js'
 import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
 import { evaluateRiskAdjustedPerformance } from './core/analytics/riskAdjustedPerformanceEngine.js'
 import { evaluateStrategyAttribution } from './core/analytics/strategyAttributionEngine.js'
@@ -70,6 +71,39 @@ function formatPercent(value) {
 function formatDate(value) {
   return new Date(value).toLocaleString()
 }
+
+const demoCorrelationPriceSeries = Object.freeze({
+  SPY: Object.freeze([
+    Object.freeze({ timestamp: '2025-01-01T00:00:00.000Z', close: 582.1 }),
+    Object.freeze({ timestamp: '2025-01-02T00:00:00.000Z', close: 585.7 }),
+    Object.freeze({ timestamp: '2025-01-03T00:00:00.000Z', close: 589.2 }),
+    Object.freeze({ timestamp: '2025-01-06T00:00:00.000Z', close: 591.6 }),
+  ]),
+  AAPL: Object.freeze([
+    Object.freeze({ timestamp: '2025-01-01T00:00:00.000Z', close: 186.2 }),
+    Object.freeze({ timestamp: '2025-01-02T00:00:00.000Z', close: 188.4 }),
+    Object.freeze({ timestamp: '2025-01-03T00:00:00.000Z', close: 190.1 }),
+    Object.freeze({ timestamp: '2025-01-06T00:00:00.000Z', close: 192.44 }),
+  ]),
+  'BTC-USD': Object.freeze([
+    Object.freeze({ timestamp: '2025-01-01T00:00:00.000Z', close: 62800 }),
+    Object.freeze({ timestamp: '2025-01-02T00:00:00.000Z', close: 64250 }),
+    Object.freeze({ timestamp: '2025-01-03T00:00:00.000Z', close: 66100 }),
+    Object.freeze({ timestamp: '2025-01-06T00:00:00.000Z', close: 67150 }),
+  ]),
+  EURUSD: Object.freeze([
+    Object.freeze({ timestamp: '2025-01-01T00:00:00.000Z', close: 1.0825 }),
+    Object.freeze({ timestamp: '2025-01-02T00:00:00.000Z', close: 1.0851 }),
+    Object.freeze({ timestamp: '2025-01-03T00:00:00.000Z', close: 1.0882 }),
+    Object.freeze({ timestamp: '2025-01-06T00:00:00.000Z', close: 1.0912 }),
+  ]),
+  ES: Object.freeze([
+    Object.freeze({ timestamp: '2025-01-01T00:00:00.000Z', close: 5480 }),
+    Object.freeze({ timestamp: '2025-01-02T00:00:00.000Z', close: 5472 }),
+    Object.freeze({ timestamp: '2025-01-03T00:00:00.000Z', close: 5468 }),
+    Object.freeze({ timestamp: '2025-01-06T00:00:00.000Z', close: 5462.5 }),
+  ]),
+})
 
 function getRiskTone(level) {
   if (level === 'critical' || level === 'high') return 'danger'
@@ -837,6 +871,13 @@ function App() {
     strategyWalkForward,
     strategyMonteCarlo,
   }, { emitEvent: false }), [strategyBacktestExecution, strategyBacktestPerformance, strategyMonteCarlo, strategyWalkForward])
+  const portfolioCorrelation = useMemo(() => evaluatePortfolioCorrelation({
+    portfolioAnalytics,
+    strategyAttribution,
+    strategyBacktestPerformance,
+    historicalReplay,
+    historicalPriceSeries: demoCorrelationPriceSeries,
+  }, { emitEvent: false }), [historicalReplay, portfolioAnalytics, strategyAttribution, strategyBacktestPerformance])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -870,6 +911,7 @@ function App() {
     { id: 'journal', label: 'Journal', status: journalRecords[0]?.result.journalStatus ?? 'ready' },
     { id: 'performance', label: 'Performance', status: performance.metrics.totalTrades },
     { id: 'portfolio-analytics', label: 'Analytics', status: portfolioAnalytics.diversification.label },
+    { id: 'portfolio-correlation', label: 'Correlation', status: portfolioCorrelation.correlationRiskStatus },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -2531,6 +2573,81 @@ function App() {
             </section>
           </div>
           <span className="event-line">{portfolioAnalytics.eventType}</span>
+        </article>
+
+        <article id="portfolio-correlation" className={`panel portfolio-correlation-panel ${portfolioCorrelation.correlationRiskStatus}`}>
+          <div className="panel-heading">
+            <h2>Portfolio Correlation</h2>
+            <span>Paper-only relationship risk across assets, strategies, sectors, and exposures.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Correlation Risk Status</span>
+              <strong>{portfolioCorrelation.correlationRiskStatus}</strong>
+            </div>
+            <span className={`decision-pill ${portfolioCorrelation.correlationRiskStatus === 'clear' ? 'positive' : portfolioCorrelation.correlationRiskStatus === 'elevated' ? 'danger' : 'warning'}`}>
+              {formatPercent(portfolioCorrelation.concentrationRiskFromCorrelatedAssets.correlatedWeight)} correlated
+            </span>
+          </div>
+          <p className="empty-state">{portfolioCorrelation.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Assets Evaluated" value={formatNumber(portfolioCorrelation.assetCorrelationMatrix.length)} />
+            <MetricCard label="Correlated Symbols" value={formatNumber(portfolioCorrelation.concentrationRiskFromCorrelatedAssets.correlatedSymbolCount)} />
+            <MetricCard label="Concentration Score" value={formatNumber(portfolioCorrelation.concentrationRiskFromCorrelatedAssets.concentrationScore)} />
+            <MetricCard label="Adjusted Diversification" value={formatNumber(portfolioCorrelation.diversificationImpactSummary.correlationAdjustedDiversificationScore)} />
+            <MetricCard label="Average Pair Correlation" value={formatNumber(portfolioCorrelation.diversificationImpactSummary.averagePairCorrelation)} />
+            <MetricCard label="Strategy Quality" value={formatNumber(portfolioCorrelation.strategyCorrelationSummary.averageQualityScore)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Asset Correlation Matrix</h3>
+              {portfolioCorrelation.assetCorrelationMatrix.slice(0, 5).map((row) => (
+                <div key={row.symbol} className="mini-row">
+                  <span>{row.symbol}</span>
+                  <strong>{row.correlations.filter((item) => item.symbol !== row.symbol && item.correlation !== null).map((item) => `${item.symbol} ${formatNumber(item.correlation)}`).join(' / ') || 'insufficient history'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Strategy Correlation Summary</h3>
+              {portfolioCorrelation.strategyCorrelationSummary.strategies.slice(0, 3).map((strategy) => (
+                <div key={strategy.strategy} className="mini-row">
+                  <span>{strategy.strategy}</span>
+                  <strong>{strategy.pnlAlignment}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Sector Correlation Summary</h3>
+              {portfolioCorrelation.sectorCorrelationSummary.slice(0, 4).map((sector) => (
+                <div key={sector.sector} className="mini-row">
+                  <span>{sector.sector}</span>
+                  <strong>{sector.averageInternalCorrelation === null ? 'limited' : formatNumber(sector.averageInternalCorrelation)}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Correlated Concentration</h3>
+              <p className="empty-state">
+                Largest position: {portfolioCorrelation.concentrationRiskFromCorrelatedAssets.largestPosition?.symbol ?? 'N/A'} / high-correlation pairs: {formatNumber(portfolioCorrelation.concentrationRiskFromCorrelatedAssets.highCorrelationPairs.length)}
+              </p>
+            </section>
+            <section>
+              <h3>Diversification Impact Summary</h3>
+              <p className="empty-state">
+                {portfolioCorrelation.diversificationImpactSummary.diversificationLabel} base diversification shifted to {portfolioCorrelation.diversificationImpactSummary.impact} correlation-adjusted impact.
+              </p>
+            </section>
+            <section>
+              <h3>Source Events</h3>
+              <p className="empty-state">
+                {[portfolioCorrelation.sourceEvents.portfolioAnalytics, portfolioCorrelation.sourceEvents.strategyAttribution, portfolioCorrelation.sourceEvents.strategyBacktestPerformance, portfolioCorrelation.sourceEvents.historicalReplay].filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{portfolioCorrelation.eventType}</span>
         </article>
 
         <article className="panel rebalance-panel">
