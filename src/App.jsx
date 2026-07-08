@@ -64,6 +64,7 @@ import { evaluateOrganizationWorkspaceReadiness } from '../lib/system/organizati
 import { evaluateEnterpriseSaasReadiness } from '../lib/system/enterpriseSaasReadinessSummaryEngine.js'
 import { evaluateProductionDeploymentReadiness } from '../lib/system/productionDeploymentReadinessEngine.js'
 import { evaluateProductionSecurityReadiness } from '../lib/system/productionSecurityReadinessEngine.js'
+import { planProductionEnvironmentConfiguration } from '../lib/system/productionEnvironmentConfigurationPlanner.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1555,6 +1556,21 @@ function App() {
     permissionPlanning,
     productionDeploymentReadiness,
   ])
+  const productionEnvironmentConfiguration = useMemo(() => planProductionEnvironmentConfiguration({
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    enterpriseSaasReadiness,
+    marketDataAdapterHealth,
+    brokerAdapterHealth,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    brokerAdapterHealth,
+    enterpriseReleaseControl,
+    enterpriseSaasReadiness,
+    marketDataAdapterHealth,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1569,6 +1585,7 @@ function App() {
     { id: 'saas-readiness', label: 'SaaS Ready', status: enterpriseSaasReadiness.saasReadinessStatus },
     { id: 'deployment-readiness', label: 'Deployment', status: productionDeploymentReadiness.deploymentReadinessStatus },
     { id: 'security-readiness', label: 'Security', status: productionSecurityReadiness.securityReadinessStatus },
+    { id: 'environment-configuration', label: 'Environment', status: productionEnvironmentConfiguration.configurationReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -5181,6 +5198,90 @@ function App() {
             </section>
           </div>
           <span className="event-line">{productionSecurityReadiness.eventType}</span>
+        </article>
+
+        <article id="environment-configuration" className={`panel environment-configuration-panel ${productionEnvironmentConfiguration.configurationReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Environment Configuration</h2>
+            <span>Future production environment planning only. Variable descriptors are shown without secret values.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Configuration Readiness Status</span>
+              <strong>{productionEnvironmentConfiguration.configurationReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${productionEnvironmentConfiguration.configurationReadinessStatus === 'blocked' ? 'danger' : productionEnvironmentConfiguration.configurationReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              no values stored
+            </span>
+          </div>
+          <p className="empty-state">{productionEnvironmentConfiguration.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Required Environment Variable Catalog" value={formatNumber(productionEnvironmentConfiguration.requiredEnvironmentVariableCatalog.length)} />
+            <MetricCard label="Optional Environment Variable Catalog" value={formatNumber(productionEnvironmentConfiguration.optionalEnvironmentVariableCatalog.length)} />
+            <MetricCard label="Netlify Environment Grouping" value={productionEnvironmentConfiguration.netlifyEnvironmentGrouping.configurationStatus} />
+            <MetricCard label="PostgreSQL Environment Grouping" value={productionEnvironmentConfiguration.postgresqlEnvironmentGrouping.interfaceStatus} />
+            <MetricCard label="Missing Configuration Summary" value={formatNumber(productionEnvironmentConfiguration.missingConfigurationSummary.missingRequired.length)} />
+            <MetricCard label="Configuration Readiness Status" value={productionEnvironmentConfiguration.configurationReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Required Environment Variable Catalog</h3>
+              {productionEnvironmentConfiguration.requiredEnvironmentVariableCatalog.map((item) => (
+                <div key={item.name} className="mini-row">
+                  <span>{item.name}</span>
+                  <strong>{item.configured ? 'configured' : 'missing'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Optional Environment Variable Catalog</h3>
+              {productionEnvironmentConfiguration.optionalEnvironmentVariableCatalog.map((item) => (
+                <div key={item.name} className="mini-row">
+                  <span>{item.name}</span>
+                  <strong>{item.configured ? 'configured' : 'optional'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Netlify Environment Grouping</h3>
+              <p className="empty-state">
+                Build, publish, and functions paths defined / {formatNumber(productionEnvironmentConfiguration.netlifyEnvironmentGrouping.variables.length)} environment descriptors / no deployment changes.
+              </p>
+            </section>
+            <section>
+              <h3>PostgreSQL Environment Grouping</h3>
+              <p className="empty-state">
+                Interface {productionEnvironmentConfiguration.postgresqlEnvironmentGrouping.interfaceStatus} / implementation {productionEnvironmentConfiguration.postgresqlEnvironmentGrouping.implementationReady ? 'ready' : 'pending'} / values excluded.
+              </p>
+            </section>
+            <section>
+              <h3>API Provider Environment Grouping</h3>
+              <p className="empty-state">
+                Market provider {productionEnvironmentConfiguration.apiProviderEnvironmentGrouping.marketProvider} / paid provider not required / credentials excluded.
+              </p>
+            </section>
+            <section>
+              <h3>Paper-Trading Safety Environment Grouping</h3>
+              <p className="empty-state">
+                Mode {productionEnvironmentConfiguration.paperTradingSafetyEnvironmentGrouping.tradingMode} / live orders disabled / brokerage integration disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Missing Configuration Summary</h3>
+              <p className="empty-state">
+                Required: {productionEnvironmentConfiguration.missingConfigurationSummary.missingRequired.join(' / ') || 'none'} / optional: {productionEnvironmentConfiguration.missingConfigurationSummary.missingOptional.join(' / ') || 'none'}.
+              </p>
+            </section>
+            <section>
+              <h3>Configuration Planning Boundaries</h3>
+              <p className="empty-state">No secret values / no deployment changes / no live broker execution / paper trading only.</p>
+            </section>
+            <section>
+              <h3>Configuration Source Events</h3>
+              <p className="empty-state">{Object.values(productionEnvironmentConfiguration.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{productionEnvironmentConfiguration.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
