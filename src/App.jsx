@@ -66,6 +66,9 @@ import { evaluateProductionDeploymentReadiness } from '../lib/system/productionD
 import { evaluateProductionSecurityReadiness } from '../lib/system/productionSecurityReadinessEngine.js'
 import { planProductionEnvironmentConfiguration } from '../lib/system/productionEnvironmentConfigurationPlanner.js'
 import { generateProductionOperationsRunbook } from '../lib/system/productionOperationsRunbookEngine.js'
+import { planProductionIncidentResponse } from '../lib/system/productionIncidentResponsePlanner.js'
+import { evaluateProductionRollbackReadiness } from '../lib/system/productionRollbackReadinessEngine.js'
+import { generateProductionMonitoringPlan } from '../lib/system/productionMonitoringPlanEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -266,6 +269,13 @@ function getWorkspaceFamily(panelId) {
     'enterprise-release-control',
     'release-readiness',
     'rc-stabilization',
+    'deployment-readiness',
+    'security-readiness',
+    'environment-configuration',
+    'operations-runbook',
+    'incident-response',
+    'rollback-readiness',
+    'monitoring-plan',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1587,6 +1597,71 @@ function App() {
     productionSecurityReadiness,
     systemHealthCommandCenter,
   ])
+  const productionIncidentResponse = useMemo(() => planProductionIncidentResponse({
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    productionEnvironmentConfiguration,
+    productionOperationsRunbook,
+    enterpriseReleaseControl,
+    enterpriseAuditTrail,
+    eventObservability,
+    systemHealthCommandCenter,
+    operatorActionCenter,
+  }, { emitEvent: false }), [
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    eventObservability,
+    operatorActionCenter,
+    productionDeploymentReadiness,
+    productionEnvironmentConfiguration,
+    productionOperationsRunbook,
+    productionSecurityReadiness,
+    systemHealthCommandCenter,
+  ])
+  const productionRollbackReadiness = useMemo(() => evaluateProductionRollbackReadiness({
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    productionEnvironmentConfiguration,
+    productionOperationsRunbook,
+    productionIncidentResponse,
+    enterpriseReleaseControl,
+    enterpriseAuditTrail,
+    systemHealthCommandCenter,
+  }, { emitEvent: false }), [
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    productionDeploymentReadiness,
+    productionEnvironmentConfiguration,
+    productionIncidentResponse,
+    productionOperationsRunbook,
+    productionSecurityReadiness,
+    systemHealthCommandCenter,
+  ])
+  const productionMonitoringPlan = useMemo(() => generateProductionMonitoringPlan({
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    productionEnvironmentConfiguration,
+    productionOperationsRunbook,
+    productionIncidentResponse,
+    productionRollbackReadiness,
+    enterpriseReleaseControl,
+    enterpriseAuditTrail,
+    eventObservability,
+    systemHealthCommandCenter,
+    operatorActionCenter,
+  }, { emitEvent: false }), [
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    eventObservability,
+    operatorActionCenter,
+    productionDeploymentReadiness,
+    productionEnvironmentConfiguration,
+    productionIncidentResponse,
+    productionOperationsRunbook,
+    productionRollbackReadiness,
+    productionSecurityReadiness,
+    systemHealthCommandCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1603,6 +1678,9 @@ function App() {
     { id: 'security-readiness', label: 'Security', status: productionSecurityReadiness.securityReadinessStatus },
     { id: 'environment-configuration', label: 'Environment', status: productionEnvironmentConfiguration.configurationReadinessStatus },
     { id: 'operations-runbook', label: 'Runbook', status: productionOperationsRunbook.operatorHandoffSummary.handoffStatus },
+    { id: 'incident-response', label: 'Incidents', status: productionIncidentResponse.incidentReadinessStatus },
+    { id: 'rollback-readiness', label: 'Rollback', status: productionRollbackReadiness.rollbackReadinessStatus },
+    { id: 'monitoring-plan', label: 'Monitoring', status: productionMonitoringPlan.monitoringReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -5356,6 +5434,165 @@ function App() {
             </section>
           </div>
           <span className="event-line">{productionOperationsRunbook.eventType}</span>
+        </article>
+
+        <article id="incident-response" className={`panel incident-response-panel ${productionIncidentResponse.incidentReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Incident Response</h2>
+            <span>Production incident planning only. No deployment, secrets, live orders, or broker execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Incident Readiness Status</span>
+              <strong>{productionIncidentResponse.incidentReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${productionIncidentResponse.incidentReadinessStatus === 'blocked' ? 'danger' : productionIncidentResponse.incidentReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              response plan
+            </span>
+          </div>
+          <p className="empty-state">{productionIncidentResponse.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Incident Category Model" value={formatNumber(productionIncidentResponse.incidentCategoryModel.length)} />
+            <MetricCard label="Severity Model" value={`${formatNumber(productionIncidentResponse.severityModel.critical)} critical`} />
+            <MetricCard label="Detection Source References" value={formatNumber(productionIncidentResponse.detectionSourceReferences.length)} />
+            <MetricCard label="Operator Response Steps" value={formatNumber(productionIncidentResponse.operatorResponseSteps.length)} />
+            <MetricCard label="Escalation Planning" value={productionIncidentResponse.escalationPlanning.primaryEscalationPath} />
+            <MetricCard label="Incident Readiness Status" value={productionIncidentResponse.incidentReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Incident Category Model</h3>
+              {productionIncidentResponse.incidentCategoryModel.map((category) => (
+                <div key={category.id} className="mini-row">
+                  <span>{category.label}</span>
+                  <strong>{category.readinessStatus}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Operator Response Steps</h3>
+              {productionIncidentResponse.operatorResponseSteps.map((step) => (
+                <div key={step.id} className="mini-row">
+                  <span>{step.label}</span>
+                  <strong>{step.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Rollback Recommendation Summary</h3>
+              <p className="empty-state">{productionIncidentResponse.rollbackRecommendationSummary.recommendation}: {productionIncidentResponse.rollbackRecommendationSummary.rationale}</p>
+            </section>
+            <section>
+              <h3>Incident Source Events</h3>
+              <p className="empty-state">{Object.values(productionIncidentResponse.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{productionIncidentResponse.eventType}</span>
+        </article>
+
+        <article id="rollback-readiness" className={`panel rollback-readiness-panel ${productionRollbackReadiness.rollbackReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Rollback Readiness</h2>
+            <span>Rollback planning readiness only. No rollback is executed from the dashboard.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Rollback Readiness Status</span>
+              <strong>{productionRollbackReadiness.rollbackReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${productionRollbackReadiness.rollbackReadinessStatus === 'blocked' ? 'danger' : productionRollbackReadiness.rollbackReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              execution disabled
+            </span>
+          </div>
+          <p className="empty-state">{productionRollbackReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Rollback Criteria Summary" value={formatNumber(productionRollbackReadiness.rollbackCriteriaSummary.criteria.length)} />
+            <MetricCard label="Deployment Rollback Checklist" value={formatNumber(productionRollbackReadiness.deploymentRollbackChecklist.length)} />
+            <MetricCard label="Configuration Rollback Checklist" value={formatNumber(productionRollbackReadiness.configurationRollbackChecklist.length)} />
+            <MetricCard label="Data Safety Rollback Notes" value={productionRollbackReadiness.dataSafetyRollbackNotes.status} />
+            <MetricCard label="Paper-Trading Safety Rollback Notes" value={productionRollbackReadiness.paperTradingSafetyRollbackNotes.status} />
+            <MetricCard label="Rollback Blocker Summary" value={formatNumber(productionRollbackReadiness.rollbackBlockerSummary.blockerCount)} />
+          </div>
+          <div className="analytics-columns">
+            {[
+              ['Rollback Criteria Summary', productionRollbackReadiness.rollbackCriteriaSummary.criteria],
+              ['Deployment Rollback Checklist', productionRollbackReadiness.deploymentRollbackChecklist],
+              ['Configuration Rollback Checklist', productionRollbackReadiness.configurationRollbackChecklist],
+            ].map(([title, checklist]) => (
+              <section key={title}>
+                <h3>{title}</h3>
+                {checklist.map((entry) => (
+                  <div key={entry.id} className="mini-row">
+                    <span>{entry.label}</span>
+                    <strong>{entry.status}</strong>
+                  </div>
+                ))}
+              </section>
+            ))}
+            <section>
+              <h3>Rollback Blocker Summary</h3>
+              <p className="empty-state">
+                {formatNumber(productionRollbackReadiness.rollbackBlockerSummary.blockerCount)} blockers / {formatNumber(productionRollbackReadiness.rollbackBlockerSummary.cautionCount)} cautions / rollback execution disabled.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{productionRollbackReadiness.eventType}</span>
+        </article>
+
+        <article id="monitoring-plan" className={`panel monitoring-plan-panel ${productionMonitoringPlan.monitoringReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Monitoring Plan</h2>
+            <span>Operator monitoring plan for paper-only production readiness signals.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Monitoring Readiness Status</span>
+              <strong>{productionMonitoringPlan.monitoringReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${productionMonitoringPlan.monitoringReadinessStatus === 'blocked' ? 'danger' : productionMonitoringPlan.monitoringReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planned signals
+            </span>
+          </div>
+          <p className="empty-state">{productionMonitoringPlan.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Monitoring Signal Catalog" value={formatNumber(productionMonitoringPlan.monitoringSignalCatalog.length)} />
+            <MetricCard label="Health Monitoring Summary" value={productionMonitoringPlan.healthMonitoringSummary.status} />
+            <MetricCard label="Event Observability Monitoring Summary" value={productionMonitoringPlan.eventObservabilityMonitoringSummary.status} />
+            <MetricCard label="Security Monitoring Summary" value={productionMonitoringPlan.securityMonitoringSummary.status} />
+            <MetricCard label="Deployment Monitoring Summary" value={productionMonitoringPlan.deploymentMonitoringSummary.status} />
+            <MetricCard label="Operator Action Monitoring Summary" value={productionMonitoringPlan.operatorActionMonitoringSummary.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Monitoring Signal Catalog</h3>
+              {productionMonitoringPlan.monitoringSignalCatalog.map((signal) => (
+                <div key={signal.id} className="mini-row">
+                  <span>{signal.label}</span>
+                  <strong>{signal.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Monitoring Family Summary</h3>
+              {[
+                productionMonitoringPlan.healthMonitoringSummary,
+                productionMonitoringPlan.eventObservabilityMonitoringSummary,
+                productionMonitoringPlan.securityMonitoringSummary,
+                productionMonitoringPlan.deploymentMonitoringSummary,
+                productionMonitoringPlan.operatorActionMonitoringSummary,
+              ].map((summary) => (
+                <div key={summary.family} className="mini-row">
+                  <span>{summary.family}</span>
+                  <strong>{summary.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Monitoring Source Events</h3>
+              <p className="empty-state">{Object.values(productionMonitoringPlan.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{productionMonitoringPlan.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
