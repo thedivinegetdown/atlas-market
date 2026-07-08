@@ -62,6 +62,7 @@ import { evaluateRoleBasedPermissionPlanning } from '../lib/system/roleBasedPerm
 import { evaluateMultiUserWorkspacePlanning } from '../lib/system/multiUserWorkspacePlanningEngine.js'
 import { evaluateOrganizationWorkspaceReadiness } from '../lib/system/organizationWorkspaceReadinessEngine.js'
 import { evaluateEnterpriseSaasReadiness } from '../lib/system/enterpriseSaasReadinessSummaryEngine.js'
+import { evaluateProductionDeploymentReadiness } from '../lib/system/productionDeploymentReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1501,6 +1502,37 @@ function App() {
     systemHealthCommandCenter,
     workspacePersistence,
   ])
+  const productionDeploymentReadiness = useMemo(() => evaluateProductionDeploymentReadiness({
+    releaseReadiness,
+    enterpriseReleaseControl,
+    enterpriseSaasReadiness,
+    systemHealthCommandCenter,
+    eventObservability,
+    enterpriseAuditTrail,
+    workspacePersistence,
+    organizationWorkspaceReadiness,
+    netlifyConfiguration: {
+      configured: true,
+      buildCommand: 'npm run build',
+      publishDirectory: 'dist',
+      functionsDirectory: 'netlify/functions',
+    },
+    apiSecurityConfiguration: {
+      status: 'caution',
+      authenticationEnabled: false,
+      authorizationEnforced: false,
+      secretsConfigured: false,
+    },
+  }, { emitEvent: false }), [
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    enterpriseSaasReadiness,
+    eventObservability,
+    organizationWorkspaceReadiness,
+    releaseReadiness,
+    systemHealthCommandCenter,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1513,6 +1545,7 @@ function App() {
     { id: 'multi-user-workspace-planning', label: 'Multi-User', status: multiUserWorkspacePlanning.multiUserReadinessStatus },
     { id: 'organization-workspace-readiness', label: 'Organization', status: organizationWorkspaceReadiness.organizationReadinessStatus },
     { id: 'saas-readiness', label: 'SaaS Ready', status: enterpriseSaasReadiness.saasReadinessStatus },
+    { id: 'deployment-readiness', label: 'Deployment', status: productionDeploymentReadiness.deploymentReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4969,6 +5002,84 @@ function App() {
             </section>
           </div>
           <span className="event-line">{enterpriseSaasReadiness.eventType}</span>
+        </article>
+
+        <article id="deployment-readiness" className={`panel deployment-readiness-panel ${productionDeploymentReadiness.deploymentReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Deployment Readiness</h2>
+            <span>Future production deployment planning only. No deployment, billing, or live execution is enabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Deployment Readiness Status</span>
+              <strong>{productionDeploymentReadiness.deploymentReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${productionDeploymentReadiness.deploymentReadinessStatus === 'blocked' ? 'danger' : productionDeploymentReadiness.deploymentReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planning only
+            </span>
+          </div>
+          <p className="empty-state">{productionDeploymentReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Environment Readiness Summary" value={productionDeploymentReadiness.environmentReadinessSummary.status} />
+            <MetricCard label="Netlify Deployment Readiness Summary" value={productionDeploymentReadiness.netlifyDeploymentReadinessSummary.status} />
+            <MetricCard label="PostgreSQL Readiness Summary" value={productionDeploymentReadiness.postgresqlReadinessSummary.status} />
+            <MetricCard label="API / Security Readiness Summary" value={productionDeploymentReadiness.apiSecurityReadinessSummary.status} />
+            <MetricCard label="Observability Readiness Summary" value={productionDeploymentReadiness.observabilityReadinessSummary.status} />
+            <MetricCard label="Deployment Readiness Status" value={productionDeploymentReadiness.deploymentReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Environment Readiness Summary</h3>
+              <p className="empty-state">
+                Mode {productionDeploymentReadiness.environmentReadinessSummary.tradingMode} / Node {productionDeploymentReadiness.environmentReadinessSummary.nodeEnv} / database {productionDeploymentReadiness.environmentReadinessSummary.databaseConfigured ? 'configured' : 'pending'}.
+              </p>
+            </section>
+            <section>
+              <h3>Netlify Deployment Readiness Summary</h3>
+              <p className="empty-state">
+                {productionDeploymentReadiness.netlifyDeploymentReadinessSummary.buildCommand} / {productionDeploymentReadiness.netlifyDeploymentReadinessSummary.publishDirectory} / deployment not triggered.
+              </p>
+            </section>
+            <section>
+              <h3>PostgreSQL Readiness Summary</h3>
+              <p className="empty-state">
+                Interface {productionDeploymentReadiness.postgresqlReadinessSummary.interfaceStatus} / implementation {productionDeploymentReadiness.postgresqlReadinessSummary.implemented ? 'ready' : 'pending'}.
+              </p>
+            </section>
+            <section>
+              <h3>API / Security Readiness Summary</h3>
+              <p className="empty-state">
+                Auth {productionDeploymentReadiness.apiSecurityReadinessSummary.authenticationStatus} / production exposure disabled / secrets pending.
+              </p>
+            </section>
+            <section>
+              <h3>Observability Readiness Summary</h3>
+              <p className="empty-state">
+                Events {productionDeploymentReadiness.observabilityReadinessSummary.status} / platform {productionDeploymentReadiness.observabilityReadinessSummary.platformHealthStatus}.
+              </p>
+            </section>
+            <section>
+              <h3>SaaS Readiness Dependency Summary</h3>
+              <p className="empty-state">
+                SaaS {productionDeploymentReadiness.saasReadinessDependencySummary.status} / organization {productionDeploymentReadiness.saasReadinessDependencySummary.organizationWorkspaceStatus} / billing disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Paper-Trading Safety Deployment Summary</h3>
+              <p className="empty-state">
+                Paper mode {productionDeploymentReadiness.paperTradingSafetyDeploymentSummary.status} / live orders disabled / brokerage integration disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Deployment Planning Boundaries</h3>
+              <p className="empty-state">No deployment / no billing / no live broker execution / no live orders / paper trading only.</p>
+            </section>
+            <section>
+              <h3>Deployment Source Events</h3>
+              <p className="empty-state">{Object.values(productionDeploymentReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{productionDeploymentReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
