@@ -8,6 +8,7 @@ import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnaly
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
 import { evaluatePortfolioCorrelation } from './core/analytics/portfolioCorrelationEngine.js'
 import { evaluatePortfolioFactorExposure } from './core/analytics/portfolioFactorExposureEngine.js'
+import { recommendPortfolioOptimization } from './core/analytics/portfolioOptimizationRecommendationEngine.js'
 import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
 import { evaluateRiskAdjustedPerformance } from './core/analytics/riskAdjustedPerformanceEngine.js'
 import { evaluateStrategyAttribution } from './core/analytics/strategyAttributionEngine.js'
@@ -894,6 +895,15 @@ function App() {
       { symbol: 'ES', momentumScore: 44 },
     ],
   }, { emitEvent: false }), [marketRegimeClassification, portfolioAnalytics, portfolioCorrelation, strategyAttribution, strategyBacktestPerformance])
+  const portfolioOptimization = useMemo(() => recommendPortfolioOptimization({
+    portfolioAnalytics,
+    portfolioCorrelation,
+    portfolioFactorExposure,
+    capitalAllocation,
+    portfolioRisk: risk,
+    performance,
+    strategyAttribution,
+  }, { emitEvent: false }), [capitalAllocation, performance, portfolioAnalytics, portfolioCorrelation, portfolioFactorExposure, risk, strategyAttribution])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -929,6 +939,7 @@ function App() {
     { id: 'portfolio-analytics', label: 'Analytics', status: portfolioAnalytics.diversification.label },
     { id: 'portfolio-correlation', label: 'Correlation', status: portfolioCorrelation.correlationRiskStatus },
     { id: 'portfolio-factor-exposure', label: 'Factors', status: portfolioFactorExposure.factorRiskStatus },
+    { id: 'portfolio-optimization', label: 'Optimization', status: portfolioOptimization.recommendationPriority },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -2763,6 +2774,106 @@ function App() {
             </section>
           </div>
           <span className="event-line">{portfolioFactorExposure.eventType}</span>
+        </article>
+
+        <article id="portfolio-optimization" className={`panel portfolio-optimization-panel ${portfolioOptimization.recommendationPriority}`}>
+          <div className="panel-heading">
+            <h2>Portfolio Optimization</h2>
+            <span>Paper-only optimization recommendations. No live orders or brokerage execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Recommendation Priority</span>
+              <strong>{portfolioOptimization.recommendationPriority}</strong>
+            </div>
+            <span className={`decision-pill ${portfolioOptimization.recommendationPriority === 'low' ? 'positive' : portfolioOptimization.recommendationPriority === 'high' ? 'danger' : 'warning'}`}>
+              {formatNumber(portfolioOptimization.optimizationConfidenceScore)} confidence
+            </span>
+          </div>
+          <p className="empty-state">{portfolioOptimization.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Total Recommendations" value={formatNumber(portfolioOptimization.recommendationSummary.totalRecommendations)} />
+            <MetricCard label="High Priority" value={formatNumber(portfolioOptimization.recommendationSummary.highPriority)} />
+            <MetricCard label="Medium Priority" value={formatNumber(portfolioOptimization.recommendationSummary.mediumPriority)} />
+            <MetricCard label="Risk Reduction" value={formatNumber(portfolioOptimization.riskReductionRecommendations.length)} />
+            <MetricCard label="Factor Adjustments" value={formatNumber(portfolioOptimization.factorExposureAdjustmentRecommendations.length)} />
+            <MetricCard label="Strategy Allocation" value={formatNumber(portfolioOptimization.strategyAllocationRecommendations.length)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Risk Reduction Recommendations</h3>
+              {portfolioOptimization.riskReductionRecommendations.slice(0, 3).map((item) => (
+                <div key={item.id} className="mini-row">
+                  <span>{item.action}</span>
+                  <strong>{item.priority}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Diversification Recommendations</h3>
+              {portfolioOptimization.diversificationRecommendations.slice(0, 3).map((item) => (
+                <div key={item.id} className="mini-row">
+                  <span>{item.action}</span>
+                  <strong>{item.priority}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Factor Exposure Adjustments</h3>
+              {portfolioOptimization.factorExposureAdjustmentRecommendations.slice(0, 3).map((item) => (
+                <div key={item.id} className="mini-row">
+                  <span>{item.action}</span>
+                  <strong>{item.priority}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Correlation Reduction Recommendations</h3>
+              {portfolioOptimization.correlationReductionRecommendations.slice(0, 3).map((item) => (
+                <div key={item.id} className="mini-row">
+                  <span>{item.action}</span>
+                  <strong>{item.priority}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Capital Allocation Adjustments</h3>
+              {portfolioOptimization.capitalAllocationAdjustmentRecommendations.slice(0, 3).map((item) => (
+                <div key={item.id} className="mini-row">
+                  <span>{item.action}</span>
+                  <strong>{item.priority}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Strategy Allocation Recommendations</h3>
+              {portfolioOptimization.strategyAllocationRecommendations.slice(0, 3).map((item) => (
+                <div key={item.id} className="mini-row">
+                  <span>{item.action}</span>
+                  <strong>{item.priority}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Optimization Confidence Score</h3>
+              <p className="empty-state">{formatNumber(portfolioOptimization.optimizationConfidenceScore)} confidence from reused risk, allocation, performance, factor, and correlation outputs.</p>
+            </section>
+            <section>
+              <h3>Recommendation Guardrails</h3>
+              <p className="empty-state">Recommendations only / paper trading only / no brokerage execution.</p>
+            </section>
+            <section>
+              <h3>Source Events</h3>
+              <p className="empty-state">
+                {[portfolioOptimization.sourceEvents.portfolioAnalytics, portfolioOptimization.sourceEvents.portfolioCorrelation, portfolioOptimization.sourceEvents.portfolioFactorExposure, portfolioOptimization.sourceEvents.capitalAllocation, portfolioOptimization.sourceEvents.portfolioRisk, portfolioOptimization.sourceEvents.performance, portfolioOptimization.sourceEvents.strategyAttribution].filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{portfolioOptimization.eventType}</span>
         </article>
 
         <article className="panel rebalance-panel">
