@@ -22,6 +22,7 @@ import { composeStrategySignal } from './core/strategy/strategySignalComposer.js
 import { updateStrategyLifecycle } from './core/strategy/strategyLifecycleManager.js'
 import { updateStrategyRegistry } from './core/strategy/strategyRegistryEngine.js'
 import { prepareStrategyBacktestInput } from './core/strategy/strategyBacktestInputBuilder.js'
+import { executeStrategyBacktest } from './core/strategy/strategyBacktestExecutionEngine.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -782,6 +783,30 @@ function App() {
     ],
     now: '2025-01-07T00:00:00.000Z',
   }, { emitEvent: false }), [marketDataAdapterHealth, strategyBacktestInput])
+  const strategyBacktestExecution = useMemo(() => executeStrategyBacktest({
+    strategyBlueprintValidation,
+    strategyBacktestInput,
+    historicalReplay,
+    researchDecisionContext,
+    researchSignalScore,
+    researchEnhancedDecision,
+    marketRegime: marketRegimeClassification,
+    portfolioRisk: risk,
+    positionSizing,
+    tradeGuardrail: guardrails[0]?.result,
+    paperPortfolio: accountingDemoPortfolio,
+  }, { emitEvent: false }), [
+    guardrails,
+    historicalReplay,
+    marketRegimeClassification,
+    positionSizing,
+    researchDecisionContext,
+    researchEnhancedDecision,
+    researchSignalScore,
+    risk,
+    strategyBacktestInput,
+    strategyBlueprintValidation,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -798,6 +823,7 @@ function App() {
     { id: 'strategy-registry', label: 'Registry', status: strategyRegistry.activeStrategyCount },
     { id: 'strategy-backtest-input', label: 'Backtest Input', status: strategyBacktestInput.readinessStatus },
     { id: 'historical-replay', label: 'Replay', status: historicalReplay.replayStepOutput.status },
+    { id: 'strategy-backtest-execution', label: 'Backtest Run', status: strategyBacktestExecution.backtestExecutionStatus },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -2056,6 +2082,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{historicalReplay.eventType}</span>
+        </article>
+
+        <article id="strategy-backtest-execution" className={`panel strategy-backtest-execution-panel ${strategyBacktestExecution.backtestExecutionStatus}`}>
+          <div className="panel-heading">
+            <h2>Backtest Execution</h2>
+            <span>Paper-only strategy signal replay through historical candles. No live orders.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyBacktestExecution.session.sessionId}</span>
+              <strong>{strategyBacktestExecution.backtestExecutionStatus}</strong>
+            </div>
+            <span className={`decision-pill ${strategyBacktestExecution.backtestExecutionStatus === 'completed' ? 'positive' : strategyBacktestExecution.backtestExecutionStatus === 'blocked' ? 'danger' : 'warning'}`}>
+              {strategyBacktestExecution.session.symbol} / {strategyBacktestExecution.session.timeframe}
+            </span>
+          </div>
+          <p className="empty-state">{strategyBacktestExecution.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Replay Steps Consumed" value={`${formatNumber(strategyBacktestExecution.session.consumedCandles ?? 0)} / ${formatNumber(strategyBacktestExecution.session.totalCandles ?? 0)}`} />
+            <MetricCard label="Rule Evaluations" value={formatNumber(strategyBacktestExecution.strategyRuleEvaluations.length)} />
+            <MetricCard label="Signal Compositions" value={formatNumber(strategyBacktestExecution.strategySignalCompositions.length)} />
+            <MetricCard label="Simulated Paper Trades" value={formatNumber(strategyBacktestExecution.executionSummary?.generatedTrades ?? 0)} />
+            <MetricCard label="Filled Trades" value={formatNumber(strategyBacktestExecution.executionSummary?.filledTrades ?? 0)} />
+            <MetricCard label="Final Equity" value={formatCurrency(strategyBacktestExecution.executionSummary?.finalEquity ?? 0)} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Replay Step Consumption</span>
+                <strong>{strategyBacktestExecution.replayStepConsumption.length}</strong>
+              </div>
+              <p>{strategyBacktestExecution.replayStepConsumption.map((step) => `${step.timestamp}: ${step.action}`).join('; ') || strategyBacktestExecution.reason}</p>
+            </section>
+            <section>
+              <div>
+                <span>Simulated Trade Lifecycle</span>
+                <strong>{strategyBacktestExecution.simulatedPaperTrades.length}</strong>
+              </div>
+              <p>{strategyBacktestExecution.simulatedPaperTrades.map((trade) => `${trade.proposedTrade.id}: ${trade.executionSimulation.finalStatus}`).join('; ') || 'No paper trades generated from replay signals.'}</p>
+            </section>
+            <section>
+              <div>
+                <span>Guardrail And Sizing References</span>
+                <strong>{strategyBacktestExecution.guardrailAndPositionSizingSnapshotReferences?.positionSizing ?? 'none'}</strong>
+              </div>
+              <p>{strategyBacktestExecution.guardrailAndPositionSizingSnapshotReferences?.guardrail ?? 'No guardrail reference'} / {strategyBacktestExecution.guardrailAndPositionSizingSnapshotReferences?.portfolioRisk ?? 'No risk reference'}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyBacktestExecution.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
