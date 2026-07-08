@@ -48,6 +48,7 @@ import { createSignalEngine } from '../lib/signals/signalEngine.js'
 import { observeSystemEvents } from '../lib/system/eventObservabilityEngine.js'
 import { evaluateReleaseCandidateStabilization } from '../lib/system/releaseCandidateStabilization.js'
 import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
+import { evaluateSystemHealthCommandCenter } from '../lib/system/systemHealthCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1029,6 +1030,83 @@ function App() {
     strategySignalComposition,
     strategyWalkForward,
   ])
+  const systemHealthCommandCenter = useMemo(() => evaluateSystemHealthCommandCenter({
+    portfolioRisk: risk,
+    tradeGuardrail: guardrails[0]?.result,
+    executionSimulation: executions[0]?.result,
+    accounting: primaryAccounting,
+    journal: journalRecords[0]?.result,
+    aiDecision,
+    marketIntelligence,
+    researchSignalScore,
+    researchDecisionContext,
+    multiTimeframeResearch: multiTimeframeResearchContext,
+    marketRegime: marketRegimeClassification,
+    researchEnhancedDecision,
+    strategyBlueprint: strategyBlueprintValidation,
+    strategyRuleEvaluation,
+    strategySignal: strategySignalComposition,
+    strategyLifecycle,
+    strategyRegistry,
+    strategyPortfolioManager,
+    strategyBacktestInput,
+    historicalReplay,
+    strategyBacktestExecution,
+    strategyBacktestPerformance,
+    strategyWalkForward,
+    strategyMonteCarlo,
+    strategyBacktestReport,
+    portfolioAnalytics,
+    portfolioCorrelation,
+    portfolioFactorExposure,
+    portfolioOptimization,
+    portfolioOptimizationGovernance,
+    rebalancing,
+    strategyAttribution,
+    marketDataAdapterHealth,
+    brokerAdapterHealth,
+    releaseReadiness,
+    releaseCandidateStabilization,
+    eventObservability,
+  }, { emitEvent: false }), [
+    aiDecision,
+    brokerAdapterHealth,
+    eventObservability,
+    executions,
+    guardrails,
+    historicalReplay,
+    journalRecords,
+    marketDataAdapterHealth,
+    marketIntelligence,
+    marketRegimeClassification,
+    multiTimeframeResearchContext,
+    portfolioAnalytics,
+    portfolioCorrelation,
+    portfolioFactorExposure,
+    portfolioOptimization,
+    portfolioOptimizationGovernance,
+    primaryAccounting,
+    rebalancing,
+    releaseCandidateStabilization,
+    releaseReadiness,
+    researchDecisionContext,
+    researchEnhancedDecision,
+    researchSignalScore,
+    risk,
+    strategyAttribution,
+    strategyBacktestExecution,
+    strategyBacktestInput,
+    strategyBacktestPerformance,
+    strategyBacktestReport,
+    strategyBlueprintValidation,
+    strategyLifecycle,
+    strategyMonteCarlo,
+    strategyPortfolioManager,
+    strategyRegistry,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+    strategyWalkForward,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -1067,6 +1145,7 @@ function App() {
     { id: 'portfolio-optimization', label: 'Optimization', status: portfolioOptimization.recommendationPriority },
     { id: 'portfolio-optimization-governance', label: 'Governance', status: portfolioOptimizationGovernance.governanceStatus },
     { id: 'event-observability', label: 'Observability', status: eventObservability.observabilityStatus },
+    { id: 'system-health-command-center', label: 'System Health', status: systemHealthCommandCenter.finalPlatformHealthStatus },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -3190,6 +3269,95 @@ function App() {
             </section>
           </div>
           <span className="event-line">{eventObservability.eventType}</span>
+        </article>
+
+        <article id="system-health-command-center" className={`panel system-health-command-center-panel ${systemHealthCommandCenter.finalPlatformHealthStatus}`}>
+          <div className="panel-heading">
+            <h2>System Health Command Center</h2>
+            <span>Enterprise operational readiness across all major Atlas paper-trading modules.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Final Platform Health Status</span>
+              <strong>{systemHealthCommandCenter.finalPlatformHealthStatus}</strong>
+            </div>
+            <span className={`decision-pill ${systemHealthCommandCenter.finalPlatformHealthStatus === 'operational' ? 'positive' : systemHealthCommandCenter.finalPlatformHealthStatus === 'degraded' ? 'danger' : 'warning'}`}>
+              {formatNumber(systemHealthCommandCenter.moduleHealthRegistry.length)} modules
+            </span>
+          </div>
+          <p className="empty-state">{systemHealthCommandCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Trading Lifecycle" value={systemHealthCommandCenter.tradingLifecycleHealthSummary.status} />
+            <MetricCard label="Research Stack" value={systemHealthCommandCenter.researchStackHealthSummary.status} />
+            <MetricCard label="Strategy Stack" value={systemHealthCommandCenter.strategyStackHealthSummary.status} />
+            <MetricCard label="Backtesting Stack" value={systemHealthCommandCenter.backtestingStackHealthSummary.status} />
+            <MetricCard label="Portfolio Analytics" value={systemHealthCommandCenter.portfolioAnalyticsHealthSummary.status} />
+            <MetricCard label="Event Observability" value={systemHealthCommandCenter.eventObservabilityHealthSummary.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Module Health Registry</h3>
+              {systemHealthCommandCenter.moduleHealthRegistry.slice(0, 6).map((module) => (
+                <div key={module.id} className="mini-row">
+                  <span>{module.name}</span>
+                  <strong>{module.healthStatus}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Trading Lifecycle Health Summary</h3>
+              <p className="empty-state">
+                {formatNumber(systemHealthCommandCenter.tradingLifecycleHealthSummary.operationalCount)} operational / {formatNumber(systemHealthCommandCenter.tradingLifecycleHealthSummary.cautionCount)} caution / {formatNumber(systemHealthCommandCenter.tradingLifecycleHealthSummary.degradedCount)} degraded.
+              </p>
+            </section>
+            <section>
+              <h3>Research Stack Health Summary</h3>
+              <p className="empty-state">
+                {formatNumber(systemHealthCommandCenter.researchStackHealthSummary.operationalCount)} operational modules across research intelligence, scoring, context, regime, and AI integration.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Strategy Stack Health Summary</h3>
+              <p className="empty-state">
+                {systemHealthCommandCenter.strategyStackHealthSummary.status} / {formatNumber(systemHealthCommandCenter.strategyStackHealthSummary.moduleCount)} modules reviewed.
+              </p>
+            </section>
+            <section>
+              <h3>Backtesting Stack Health Summary</h3>
+              <p className="empty-state">
+                {systemHealthCommandCenter.backtestingStackHealthSummary.status} / {formatNumber(systemHealthCommandCenter.backtestingStackHealthSummary.moduleCount)} modules reviewed.
+              </p>
+            </section>
+            <section>
+              <h3>Portfolio Analytics Health Summary</h3>
+              <p className="empty-state">
+                {systemHealthCommandCenter.portfolioAnalyticsHealthSummary.status} / optimization, governance, factor, correlation, analytics, attribution, and rebalance outputs reviewed.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Adapter Mock-Mode Health Summary</h3>
+              <p className="empty-state">
+                {systemHealthCommandCenter.adapterMockModeHealthSummary.status} / market data and broker adapters remain paper-mode only.
+              </p>
+            </section>
+            <section>
+              <h3>Event Observability Health Summary</h3>
+              <p className="empty-state">
+                {systemHealthCommandCenter.eventObservabilityHealthSummary.status} / source event {systemHealthCommandCenter.sourceEvents.eventObservability ?? 'none'}.
+              </p>
+            </section>
+            <section>
+              <h3>Release Readiness Inputs</h3>
+              <p className="empty-state">
+                {[systemHealthCommandCenter.sourceEvents.releaseReadiness, systemHealthCommandCenter.sourceEvents.releaseCandidateStabilization].filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{systemHealthCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
