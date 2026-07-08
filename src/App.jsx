@@ -60,6 +60,7 @@ import { executeWorkspaceCommandPalette } from '../lib/system/workspaceCommandPa
 import { evaluateAuthenticationReadiness } from '../lib/system/authenticationReadinessEngine.js'
 import { evaluateRoleBasedPermissionPlanning } from '../lib/system/roleBasedPermissionPlanningEngine.js'
 import { evaluateMultiUserWorkspacePlanning } from '../lib/system/multiUserWorkspacePlanningEngine.js'
+import { evaluateOrganizationWorkspaceReadiness } from '../lib/system/organizationWorkspaceReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1463,6 +1464,23 @@ function App() {
     systemHealthCommandCenter,
     workspacePersistence,
   ])
+  const organizationWorkspaceReadiness = useMemo(() => evaluateOrganizationWorkspaceReadiness({
+    authReadiness: authenticationReadiness,
+    permissionPlanning,
+    multiUserWorkspacePlanning,
+    workspacePersistence,
+    enterpriseAuditTrail,
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    authenticationReadiness,
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    multiUserWorkspacePlanning,
+    permissionPlanning,
+    systemHealthCommandCenter,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1473,6 +1491,7 @@ function App() {
     { id: 'authentication-readiness', label: 'Auth Ready', status: authenticationReadiness.authReadinessStatus },
     { id: 'permission-planning', label: 'Permissions', status: permissionPlanning.permissionReadinessStatus },
     { id: 'multi-user-workspace-planning', label: 'Multi-User', status: multiUserWorkspacePlanning.multiUserReadinessStatus },
+    { id: 'organization-workspace-readiness', label: 'Organization', status: organizationWorkspaceReadiness.organizationReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4769,6 +4788,88 @@ function App() {
             </section>
           </div>
           <span className="event-line">{multiUserWorkspacePlanning.eventType}</span>
+        </article>
+
+        <article id="organization-workspace-readiness" className={`panel organization-workspace-readiness-panel ${organizationWorkspaceReadiness.organizationReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Organization Workspace Readiness</h2>
+            <span>Future organization-level workspace planning only. No organizations, accounts, or permissions are enabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Organization Readiness Status</span>
+              <strong>{organizationWorkspaceReadiness.organizationReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${organizationWorkspaceReadiness.organizationReadinessStatus === 'blocked' ? 'danger' : organizationWorkspaceReadiness.organizationReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              placeholder only
+            </span>
+          </div>
+          <p className="empty-state">{organizationWorkspaceReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Organization Profile Placeholder" value={organizationWorkspaceReadiness.organizationProfilePlaceholder.modelStatus} />
+            <MetricCard label="Workspace Ownership Readiness" value={organizationWorkspaceReadiness.workspaceOwnershipReadiness.status} />
+            <MetricCard label="Team Workspace Readiness" value={organizationWorkspaceReadiness.teamWorkspaceReadiness.status} />
+            <MetricCard label="Role and Permission Dependency Summary" value={organizationWorkspaceReadiness.roleAndPermissionDependencySummary.permissionReadinessStatus} />
+            <MetricCard label="Audit Dependency Summary" value={organizationWorkspaceReadiness.auditDependencySummary.auditIntegrityStatus} />
+            <MetricCard label="Organization Readiness Status" value={organizationWorkspaceReadiness.organizationReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Organization Profile Placeholder</h3>
+              <div className="mini-row">
+                <span>{organizationWorkspaceReadiness.organizationProfilePlaceholder.organizationName}</span>
+                <strong>{organizationWorkspaceReadiness.organizationProfilePlaceholder.organizationId}</strong>
+              </div>
+              <p className="empty-state">Persisted: no / real organization: disabled / paper trading only.</p>
+            </section>
+            <section>
+              <h3>Workspace Ownership Readiness</h3>
+              <p className="empty-state">
+                Owner role {organizationWorkspaceReadiness.workspaceOwnershipReadiness.plannedOwnerRole} / transfer disabled / enforcement disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Team Workspace Readiness</h3>
+              <p className="empty-state">
+                {organizationWorkspaceReadiness.teamWorkspaceReadiness.teamWorkspaceId} / roles {organizationWorkspaceReadiness.teamWorkspaceReadiness.plannedSharedRoles.join(' / ')} / sharing disabled.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Role and Permission Dependency Summary</h3>
+              <p className="empty-state">
+                Auth {organizationWorkspaceReadiness.roleAndPermissionDependencySummary.authReadinessStatus} / permissions {organizationWorkspaceReadiness.roleAndPermissionDependencySummary.permissionReadinessStatus} / multi-user {organizationWorkspaceReadiness.roleAndPermissionDependencySummary.multiUserReadinessStatus}.
+              </p>
+            </section>
+            <section>
+              <h3>Audit Dependency Summary</h3>
+              <p className="empty-state">
+                Integrity {organizationWorkspaceReadiness.auditDependencySummary.auditIntegrityStatus} / {formatNumber(organizationWorkspaceReadiness.auditDependencySummary.auditRecordCount)} records.
+              </p>
+            </section>
+            <section>
+              <h3>Persistence Dependency Summary</h3>
+              <p className="empty-state">
+                {organizationWorkspaceReadiness.persistenceDependencySummary.persistenceStatus} / {organizationWorkspaceReadiness.persistenceDependencySummary.adapterType} / multi-user persistence disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Release Control Dependency Summary</h3>
+              <p className="empty-state">
+                Health {organizationWorkspaceReadiness.releaseControlDependencySummary.platformHealthStatus} / release {organizationWorkspaceReadiness.releaseControlDependencySummary.releaseControlStatus}.
+              </p>
+            </section>
+            <section>
+              <h3>Organization Boundaries</h3>
+              <p className="empty-state">No authentication / no real organizations / no accounts / no permission enforcement / no sign-in UI.</p>
+            </section>
+            <section>
+              <h3>Organization Source Events</h3>
+              <p className="empty-state">{Object.values(organizationWorkspaceReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{organizationWorkspaceReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
