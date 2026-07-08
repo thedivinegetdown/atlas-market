@@ -56,6 +56,7 @@ import { prepareWorkspacePersistence } from '../lib/system/workspacePersistenceE
 import { recoverWorkspaceSession } from '../lib/system/workspaceSessionRecoveryEngine.js'
 import { transferWorkspaceConfiguration } from '../lib/system/workspaceConfigurationTransferEngine.js'
 import { applyWorkspaceTemplate } from '../lib/system/workspaceTemplateEngine.js'
+import { executeWorkspaceCommandPalette } from '../lib/system/workspaceCommandPaletteEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1266,12 +1267,39 @@ function App() {
     workspacePersistence,
     workspaceSessionRecovery,
   ])
+  const workspaceCommandPalette = useMemo(() => executeWorkspaceCommandPalette({
+    dashboardNavigation: [
+      ...workspaceNavigationBase,
+      { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
+      { id: 'workspace-session-recovery', label: 'Recovery', status: workspaceSessionRecovery.recoveryValidationStatus },
+      { id: 'workspace-configuration-transfer', label: 'Config Transfer', status: workspaceConfigurationTransfer.importStatus },
+      { id: 'workspace-template', label: 'Templates', status: workspaceTemplate.templateValidationStatus },
+    ],
+    workspacePersistence,
+    workspaceSessionRecovery,
+    workspaceConfigurationTransfer,
+    workspaceTemplate,
+    systemHealthCommandCenter,
+    operatorActionCenter,
+    enterpriseReleaseControl,
+    commandId: 'open-enterprise-release-control',
+  }, { emitEvent: false }), [
+    enterpriseReleaseControl,
+    operatorActionCenter,
+    systemHealthCommandCenter,
+    workspaceConfigurationTransfer,
+    workspaceNavigationBase,
+    workspacePersistence,
+    workspaceSessionRecovery,
+    workspaceTemplate,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
     { id: 'workspace-session-recovery', label: 'Recovery', status: workspaceSessionRecovery.recoveryValidationStatus },
     { id: 'workspace-configuration-transfer', label: 'Config Transfer', status: workspaceConfigurationTransfer.importStatus },
     { id: 'workspace-template', label: 'Templates', status: workspaceTemplate.templateValidationStatus },
+    { id: 'workspace-command-palette', label: 'Commands', status: workspaceCommandPalette.commandExecutionResult.status },
   ]
 
   return (
@@ -4180,6 +4208,113 @@ function App() {
             </section>
           </div>
           <span className="event-line">{workspaceTemplate.eventType}</span>
+        </article>
+
+        <article id="workspace-command-palette" className={`panel workspace-command-palette-panel ${workspaceCommandPalette.commandExecutionResult.status}`}>
+          <div className="panel-heading">
+            <h2>Workspace Command Palette</h2>
+            <span>Safe workspace-level command catalog for navigation, templates, visibility, and review surfaces.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Command Execution Result</span>
+              <strong>{workspaceCommandPalette.commandExecutionResult.status}</strong>
+            </div>
+            <span className={`decision-pill ${workspaceCommandPalette.commandExecutionResult.status === 'blocked' || workspaceCommandPalette.commandExecutionResult.status === 'not-found' ? 'warning' : 'positive'}`}>
+              {formatNumber(workspaceCommandPalette.filteredCommands.length)} matches
+            </span>
+          </div>
+          <p className="empty-state">{workspaceCommandPalette.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Normalized Command Model" value={formatNumber(workspaceCommandPalette.normalizedCommandCatalog.length)} />
+            <MetricCard label="Command Categories" value={formatNumber(workspaceCommandPalette.commandCategories.length)} />
+            <MetricCard label="Command Search / Filtering" value={workspaceCommandPalette.commandSearch.category} />
+            <MetricCard label="Command Availability Checks" value={formatNumber(workspaceCommandPalette.commandAvailabilityChecks.availableCount)} />
+            <MetricCard label="Command Safety Classification" value={workspaceCommandPalette.commandSafetyClassification.workspaceActionsOnly ? 'workspace only' : 'review'} />
+            <MetricCard label="Command Execution Result" value={workspaceCommandPalette.commandExecutionResult.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Command Categories</h3>
+              {workspaceCommandPalette.commandCategories.map((category) => (
+                <div key={category} className="mini-row">
+                  <span>{category}</span>
+                  <strong>{formatNumber(workspaceCommandPalette.normalizedCommandCatalog.filter((command) => command.category === category).length)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Command Search / Filtering</h3>
+              {workspaceCommandPalette.filteredCommands.slice(0, 6).map((command) => (
+                <div key={command.id} className="mini-row">
+                  <span>{command.label}</span>
+                  <strong>{command.category}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Command Availability Checks</h3>
+              <div className="mini-row">
+                <span>available</span>
+                <strong>{formatNumber(workspaceCommandPalette.commandAvailabilityChecks.availableCount)}</strong>
+              </div>
+              <div className="mini-row">
+                <span>unavailable</span>
+                <strong>{formatNumber(workspaceCommandPalette.commandAvailabilityChecks.unavailableCount)}</strong>
+              </div>
+              <div className="mini-row">
+                <span>high priority</span>
+                <strong>{formatNumber(workspaceCommandPalette.commandAvailabilityChecks.highPriorityCount)}</strong>
+              </div>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Command Safety Classification</h3>
+              <p className="empty-state">
+                {formatNumber(workspaceCommandPalette.commandSafetyClassification.safeWorkspaceCommands)} safe workspace commands / {formatNumber(workspaceCommandPalette.commandSafetyClassification.blockedTradingCommands)} trading commands / no live orders.
+              </p>
+            </section>
+            <section>
+              <h3>Command Execution Result Model</h3>
+              <p className="empty-state">
+                {workspaceCommandPalette.commandExecutionResult.commandId ?? 'no command'} / {workspaceCommandPalette.commandExecutionResult.message}
+              </p>
+            </section>
+            <section>
+              <h3>Workspace Actions Only</h3>
+              <p className="empty-state">
+                Navigation, workspace template, panel visibility, operator review, system health, and release review commands only.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Navigation Commands</h3>
+              {workspaceCommandPalette.normalizedCommandCatalog.filter((command) => command.category === 'navigation').slice(0, 4).map((command) => (
+                <div key={command.id} className="mini-row">
+                  <span>{command.label}</span>
+                  <strong>{command.availability.available ? 'available' : 'blocked'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Release Review Commands</h3>
+              {workspaceCommandPalette.normalizedCommandCatalog.filter((command) => command.category === 'release review').slice(0, 4).map((command) => (
+                <div key={command.id} className="mini-row">
+                  <span>{command.label}</span>
+                  <strong>{command.priority}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Command Source Events</h3>
+              <p className="empty-state">
+                {Object.values(workspaceCommandPalette.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{workspaceCommandPalette.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
