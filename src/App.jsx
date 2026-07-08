@@ -23,6 +23,7 @@ import { updateStrategyLifecycle } from './core/strategy/strategyLifecycleManage
 import { updateStrategyRegistry } from './core/strategy/strategyRegistryEngine.js'
 import { prepareStrategyBacktestInput } from './core/strategy/strategyBacktestInputBuilder.js'
 import { executeStrategyBacktest } from './core/strategy/strategyBacktestExecutionEngine.js'
+import { evaluateBacktestPerformance } from './core/strategy/strategyBacktestPerformanceAnalyticsEngine.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -807,6 +808,11 @@ function App() {
     strategyBacktestInput,
     strategyBlueprintValidation,
   ])
+  const strategyBacktestPerformance = useMemo(() => evaluateBacktestPerformance({
+    strategyBacktestExecution,
+    strategyBacktestInput,
+    startingEquity: strategyBacktestInput.initialCapitalConfiguration.initialCapital,
+  }, { emitEvent: false }), [strategyBacktestExecution, strategyBacktestInput])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -824,6 +830,7 @@ function App() {
     { id: 'strategy-backtest-input', label: 'Backtest Input', status: strategyBacktestInput.readinessStatus },
     { id: 'historical-replay', label: 'Replay', status: historicalReplay.replayStepOutput.status },
     { id: 'strategy-backtest-execution', label: 'Backtest Run', status: strategyBacktestExecution.backtestExecutionStatus },
+    { id: 'strategy-backtest-performance', label: 'Backtest Perf', status: strategyBacktestPerformance.analyticsStatus },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -2131,6 +2138,57 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyBacktestExecution.eventType}</span>
+        </article>
+
+        <article id="strategy-backtest-performance" className={`panel strategy-backtest-performance-panel ${strategyBacktestPerformance.analyticsStatus}`}>
+          <div className="panel-heading">
+            <h2>Backtest Performance</h2>
+            <span>Paper-only analytics over completed strategy backtest results.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyBacktestExecution.session.sessionId}</span>
+              <strong>{strategyBacktestPerformance.analyticsStatus}</strong>
+            </div>
+            <span className={`decision-pill ${strategyBacktestPerformance.analyticsStatus === 'evaluated' ? 'positive' : strategyBacktestPerformance.analyticsStatus === 'blocked' ? 'danger' : 'warning'}`}>
+              {strategyBacktestPerformance.backtestExecutionStatus}
+            </span>
+          </div>
+          <p className="empty-state">{strategyBacktestPerformance.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Total Simulated Trades" value={formatNumber(strategyBacktestPerformance.metrics.totalSimulatedTrades)} />
+            <MetricCard label="Win Rate" value={formatPercent(strategyBacktestPerformance.metrics.winRate)} />
+            <MetricCard label="Net Realized P&L" value={formatCurrency(strategyBacktestPerformance.metrics.netRealizedPnl)} />
+            <MetricCard label="Average Win" value={formatCurrency(strategyBacktestPerformance.metrics.averageWin)} />
+            <MetricCard label="Average Loss" value={formatCurrency(strategyBacktestPerformance.metrics.averageLoss)} />
+            <MetricCard label="Profit Factor" value={formatNumber(strategyBacktestPerformance.metrics.profitFactor)} />
+            <MetricCard label="Expectancy" value={formatCurrency(strategyBacktestPerformance.metrics.expectancy)} />
+            <MetricCard label="Max Drawdown" value={formatPercent(strategyBacktestPerformance.metrics.maxDrawdown)} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Return Curve Summary</span>
+                <strong>{formatCurrency(strategyBacktestPerformance.returnCurveSummary.endingEquity)}</strong>
+              </div>
+              <p>{formatPercent(strategyBacktestPerformance.returnCurveSummary.totalReturnPct)} total return across {formatNumber(strategyBacktestPerformance.returnCurveSummary.points.length)} included trades.</p>
+            </section>
+            <section>
+              <div>
+                <span>Rejected / Non-Filled Exclusion</span>
+                <strong>{formatNumber(strategyBacktestPerformance.excludedTrades)}</strong>
+              </div>
+              <p>{strategyBacktestPerformance.excludedReason ?? 'Rejected and non-filled paper trades are excluded from performance metrics.'}</p>
+            </section>
+            <section>
+              <div>
+                <span>Included Trade IDs</span>
+                <strong>{formatNumber(strategyBacktestPerformance.includedTrades)}</strong>
+              </div>
+              <p>{strategyBacktestPerformance.paperPerformanceSnapshot?.includedTradeIds?.join('; ') || 'No included completed paper trades yet.'}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyBacktestPerformance.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
