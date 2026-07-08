@@ -26,6 +26,7 @@ import { executeStrategyBacktest } from './core/strategy/strategyBacktestExecuti
 import { evaluateBacktestPerformance } from './core/strategy/strategyBacktestPerformanceAnalyticsEngine.js'
 import { evaluateWalkForwardTesting } from './core/strategy/strategyWalkForwardTestingEngine.js'
 import { simulateMonteCarloStrategy } from './core/strategy/strategyMonteCarloSimulationEngine.js'
+import { generateBacktestReport } from './core/strategy/strategyBacktestReportGenerator.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -830,6 +831,12 @@ function App() {
     simulationCount: 50,
     seed: 18,
   }, { emitEvent: false }), [drawdownProtection, riskAdjustedPerformance, strategyBacktestPerformance, strategyWalkForward])
+  const strategyBacktestReport = useMemo(() => generateBacktestReport({
+    strategyBacktestExecution,
+    strategyBacktestPerformance,
+    strategyWalkForward,
+    strategyMonteCarlo,
+  }, { emitEvent: false }), [strategyBacktestExecution, strategyBacktestPerformance, strategyMonteCarlo, strategyWalkForward])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -850,6 +857,7 @@ function App() {
     { id: 'strategy-backtest-performance', label: 'Backtest Perf', status: strategyBacktestPerformance.analyticsStatus },
     { id: 'strategy-walk-forward', label: 'Walk Forward', status: strategyWalkForward.finalWalkForwardStatus },
     { id: 'strategy-monte-carlo', label: 'Monte Carlo', status: strategyMonteCarlo.robustnessClassification },
+    { id: 'strategy-backtest-report', label: 'Backtest Report', status: strategyBacktestReport.releaseResearchRecommendation },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -2306,6 +2314,76 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyMonteCarlo.eventType}</span>
+        </article>
+
+        <article id="strategy-backtest-report" className={`panel strategy-backtest-report-panel ${strategyBacktestReport.releaseResearchRecommendation}`}>
+          <div className="panel-heading">
+            <h2>Backtest Report</h2>
+            <span>Paper-only strategy research report generated from backtest, walk-forward, and Monte Carlo outputs.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyBacktestReport.strategySummary.strategyId}</span>
+              <strong>{strategyBacktestReport.releaseResearchRecommendation}</strong>
+            </div>
+            <span className={`decision-pill ${strategyBacktestReport.releaseResearchRecommendation === 'approve' ? 'positive' : strategyBacktestReport.releaseResearchRecommendation === 'reject' ? 'danger' : 'warning'}`}>
+              release/research recommendation
+            </span>
+          </div>
+          <p className="empty-state">{strategyBacktestReport.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Backtest Status" value={strategyBacktestReport.strategySummary.backtestExecutionStatus} />
+            <MetricCard label="Net Paper P&L" value={formatCurrency(strategyBacktestReport.backtestPerformanceSummary.netRealizedPnl)} />
+            <MetricCard label="Profit Factor" value={formatNumber(strategyBacktestReport.backtestPerformanceSummary.profitFactor)} />
+            <MetricCard label="Walk-Forward Status" value={strategyBacktestReport.walkForwardRobustnessSummary.status} />
+            <MetricCard label="Monte Carlo Risk" value={strategyBacktestReport.monteCarloRiskSummary.robustnessClassification} />
+            <MetricCard label="Drawdown Breach" value={formatPercent(strategyBacktestReport.monteCarloRiskSummary.probabilityOfDrawdownBreach)} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Strategy Summary</span>
+                <strong>{strategyBacktestReport.strategySummary.symbol}</strong>
+              </div>
+              <p>{strategyBacktestReport.strategySummary.timeframe} timeframe / {formatNumber(strategyBacktestReport.strategySummary.filledTrades)} filled paper trades / {formatNumber(strategyBacktestReport.strategySummary.consumedCandles)} candles</p>
+            </section>
+            <section>
+              <div>
+                <span>Backtest Performance Summary</span>
+                <strong>{formatPercent(strategyBacktestReport.backtestPerformanceSummary.winRate)}</strong>
+              </div>
+              <p>{strategyBacktestReport.backtestPerformanceSummary.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Walk-Forward Robustness Summary</span>
+                <strong>{formatNumber(strategyBacktestReport.walkForwardRobustnessSummary.robustnessScore)}</strong>
+              </div>
+              <p>{strategyBacktestReport.walkForwardRobustnessSummary.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Monte Carlo Risk Summary</span>
+                <strong>{formatPercent(strategyBacktestReport.monteCarloRiskSummary.probabilityOfProfitability)}</strong>
+              </div>
+              <p>{strategyBacktestReport.monteCarloRiskSummary.summary}</p>
+            </section>
+            <section>
+              <div>
+                <span>Key Strengths</span>
+                <strong>{formatNumber(strategyBacktestReport.keyStrengths.length)}</strong>
+              </div>
+              <p>{strategyBacktestReport.keyStrengths.join('; ')}</p>
+            </section>
+            <section>
+              <div>
+                <span>Key Weaknesses</span>
+                <strong>{formatNumber(strategyBacktestReport.keyWeaknesses.length)}</strong>
+              </div>
+              <p>{strategyBacktestReport.keyWeaknesses.join('; ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyBacktestReport.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
