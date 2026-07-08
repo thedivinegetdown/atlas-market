@@ -7,6 +7,7 @@ import { recommendCapitalAllocation } from './core/analytics/capitalAllocationEn
 import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnalyticsEngine.js'
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
 import { evaluatePortfolioCorrelation } from './core/analytics/portfolioCorrelationEngine.js'
+import { evaluatePortfolioFactorExposure } from './core/analytics/portfolioFactorExposureEngine.js'
 import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
 import { evaluateRiskAdjustedPerformance } from './core/analytics/riskAdjustedPerformanceEngine.js'
 import { evaluateStrategyAttribution } from './core/analytics/strategyAttributionEngine.js'
@@ -878,6 +879,21 @@ function App() {
     historicalReplay,
     historicalPriceSeries: demoCorrelationPriceSeries,
   }, { emitEvent: false }), [historicalReplay, portfolioAnalytics, strategyAttribution, strategyBacktestPerformance])
+  const portfolioFactorExposure = useMemo(() => evaluatePortfolioFactorExposure({
+    portfolioAnalytics,
+    portfolioCorrelation,
+    strategyAttribution,
+    marketRegime: marketRegimeClassification,
+    strategyBacktestPerformance,
+    positions: demoPortfolio.positions,
+    factorInputs: [
+      { symbol: 'SPY', momentumScore: 68 },
+      { symbol: 'AAPL', momentumScore: 72 },
+      { symbol: 'BTC-USD', momentumScore: 82 },
+      { symbol: 'EURUSD', momentumScore: 58 },
+      { symbol: 'ES', momentumScore: 44 },
+    ],
+  }, { emitEvent: false }), [marketRegimeClassification, portfolioAnalytics, portfolioCorrelation, strategyAttribution, strategyBacktestPerformance])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -912,6 +928,7 @@ function App() {
     { id: 'performance', label: 'Performance', status: performance.metrics.totalTrades },
     { id: 'portfolio-analytics', label: 'Analytics', status: portfolioAnalytics.diversification.label },
     { id: 'portfolio-correlation', label: 'Correlation', status: portfolioCorrelation.correlationRiskStatus },
+    { id: 'portfolio-factor-exposure', label: 'Factors', status: portfolioFactorExposure.factorRiskStatus },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -2648,6 +2665,104 @@ function App() {
             </section>
           </div>
           <span className="event-line">{portfolioCorrelation.eventType}</span>
+        </article>
+
+        <article id="portfolio-factor-exposure" className={`panel portfolio-factor-exposure-panel ${portfolioFactorExposure.factorRiskStatus}`}>
+          <div className="panel-heading">
+            <h2>Factor Exposure</h2>
+            <span>Paper-only common risk factor evaluation across portfolio, strategy, regime, and backtest context.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Factor Risk Status</span>
+              <strong>{portfolioFactorExposure.factorRiskStatus}</strong>
+            </div>
+            <span className={`decision-pill ${portfolioFactorExposure.factorRiskStatus === 'clear' ? 'positive' : portfolioFactorExposure.factorRiskStatus === 'elevated' ? 'danger' : 'warning'}`}>
+              {portfolioFactorExposure.factorConcentrationSummary.dominantFactor.factor}
+            </span>
+          </div>
+          <p className="empty-state">{portfolioFactorExposure.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Market Beta Exposure" value={formatNumber(portfolioFactorExposure.marketBetaExposure.weightedBeta)} />
+            <MetricCard label="Momentum Exposure" value={formatNumber(portfolioFactorExposure.momentumFactorExposure.weightedMomentumScore)} />
+            <MetricCard label="Volatility Exposure" value={formatNumber(portfolioFactorExposure.volatilityFactorExposure.weightedVolatility)} />
+            <MetricCard label="Sector Factor" value={portfolioFactorExposure.sectorFactorExposure.dominantSector?.sector ?? 'N/A'} />
+            <MetricCard label="Asset-Class Factor" value={portfolioFactorExposure.assetClassFactorExposure.dominantFactor?.assetType ?? 'N/A'} />
+            <MetricCard label="Strategy Factor Risk" value={formatNumber(portfolioFactorExposure.strategyFactorExposure.averageRiskContribution)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Market Beta Exposure</h3>
+              <p className="empty-state">
+                {formatNumber(portfolioFactorExposure.marketBetaExposure.exposureScore)} score / {formatPercent(portfolioFactorExposure.marketBetaExposure.highBetaWeight)} high beta weight / {portfolioFactorExposure.marketBetaExposure.status}
+              </p>
+            </section>
+            <section>
+              <h3>Momentum Factor Exposure</h3>
+              <p className="empty-state">
+                {portfolioFactorExposure.momentumFactorExposure.trendAlignment} with {portfolioFactorExposure.momentumFactorExposure.trendRegime} / {formatPercent(portfolioFactorExposure.momentumFactorExposure.proMomentumWeight)} pro-momentum weight.
+              </p>
+            </section>
+            <section>
+              <h3>Volatility Factor Exposure</h3>
+              <p className="empty-state">
+                {portfolioFactorExposure.volatilityFactorExposure.volatilityRegime} regime / {formatPercent(portfolioFactorExposure.volatilityFactorExposure.highVolatilityWeight)} high volatility weight / {portfolioFactorExposure.volatilityFactorExposure.status}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Sector Factor Exposure</h3>
+              {portfolioFactorExposure.sectorFactorExposure.sectors.slice(0, 4).map((sector) => (
+                <div key={sector.sector} className="mini-row">
+                  <span>{sector.sector}</span>
+                  <strong>{formatNumber(sector.factorScore)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Asset-Class Factor Exposure</h3>
+              {portfolioFactorExposure.assetClassFactorExposure.factors.slice(0, 4).map((factor) => (
+                <div key={factor.assetType} className="mini-row">
+                  <span>{factor.assetType}</span>
+                  <strong>{formatPercent(factor.weight)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Strategy Factor Exposure</h3>
+              {portfolioFactorExposure.strategyFactorExposure.strategies.slice(0, 3).map((strategy) => (
+                <div key={strategy.strategy} className="mini-row">
+                  <span>{strategy.strategy}</span>
+                  <strong>{strategy.pnlAlignment}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Factor Concentration Summary</h3>
+              {portfolioFactorExposure.factorConcentrationSummary.factorScores.map((factor) => (
+                <div key={factor.factor} className="mini-row">
+                  <span>{factor.factor}</span>
+                  <strong>{formatNumber(factor.score)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Elevated Factors</h3>
+              <p className="empty-state">
+                {portfolioFactorExposure.factorConcentrationSummary.elevatedFactors.map((factor) => factor.factor).join(', ') || 'No elevated factor concentrations detected.'}
+              </p>
+            </section>
+            <section>
+              <h3>Source Events</h3>
+              <p className="empty-state">
+                {[portfolioFactorExposure.sourceEvents.portfolioAnalytics, portfolioFactorExposure.sourceEvents.portfolioCorrelation, portfolioFactorExposure.sourceEvents.strategyAttribution, portfolioFactorExposure.sourceEvents.marketRegime, portfolioFactorExposure.sourceEvents.strategyBacktestPerformance].filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{portfolioFactorExposure.eventType}</span>
         </article>
 
         <article className="panel rebalance-panel">
