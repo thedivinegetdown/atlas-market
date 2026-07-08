@@ -65,6 +65,7 @@ import { evaluateEnterpriseSaasReadiness } from '../lib/system/enterpriseSaasRea
 import { evaluateProductionDeploymentReadiness } from '../lib/system/productionDeploymentReadinessEngine.js'
 import { evaluateProductionSecurityReadiness } from '../lib/system/productionSecurityReadinessEngine.js'
 import { planProductionEnvironmentConfiguration } from '../lib/system/productionEnvironmentConfigurationPlanner.js'
+import { generateProductionOperationsRunbook } from '../lib/system/productionOperationsRunbookEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1571,6 +1572,21 @@ function App() {
     productionDeploymentReadiness,
     productionSecurityReadiness,
   ])
+  const productionOperationsRunbook = useMemo(() => generateProductionOperationsRunbook({
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    productionEnvironmentConfiguration,
+    enterpriseReleaseControl,
+    enterpriseAuditTrail,
+    systemHealthCommandCenter,
+  }, { emitEvent: false }), [
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    productionDeploymentReadiness,
+    productionEnvironmentConfiguration,
+    productionSecurityReadiness,
+    systemHealthCommandCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1586,6 +1602,7 @@ function App() {
     { id: 'deployment-readiness', label: 'Deployment', status: productionDeploymentReadiness.deploymentReadinessStatus },
     { id: 'security-readiness', label: 'Security', status: productionSecurityReadiness.securityReadinessStatus },
     { id: 'environment-configuration', label: 'Environment', status: productionEnvironmentConfiguration.configurationReadinessStatus },
+    { id: 'operations-runbook', label: 'Runbook', status: productionOperationsRunbook.operatorHandoffSummary.handoffStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -5282,6 +5299,63 @@ function App() {
             </section>
           </div>
           <span className="event-line">{productionEnvironmentConfiguration.eventType}</span>
+        </article>
+
+        <article id="operations-runbook" className={`panel operations-runbook-panel ${productionOperationsRunbook.operatorHandoffSummary.handoffStatus}`}>
+          <div className="panel-heading">
+            <h2>Operations Runbook</h2>
+            <span>Future production operator guidance only. Checklist actions do not deploy, roll back, expose secrets, or execute orders.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Operator Handoff Status</span>
+              <strong>{productionOperationsRunbook.operatorHandoffSummary.handoffStatus}</strong>
+            </div>
+            <span className={`decision-pill ${productionOperationsRunbook.operatorHandoffSummary.handoffStatus === 'blocked' ? 'danger' : productionOperationsRunbook.operatorHandoffSummary.handoffStatus === 'caution' ? 'warning' : 'positive'}`}>
+              review only
+            </span>
+          </div>
+          <p className="empty-state">{productionOperationsRunbook.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Startup Checklist Summary" value={formatNumber(productionOperationsRunbook.startupChecklistSummary.length)} />
+            <MetricCard label="Deployment Validation Checklist" value={formatNumber(productionOperationsRunbook.deploymentValidationChecklist.length)} />
+            <MetricCard label="Security Validation Checklist" value={formatNumber(productionOperationsRunbook.securityValidationChecklist.length)} />
+            <MetricCard label="Environment Configuration Checklist" value={formatNumber(productionOperationsRunbook.environmentConfigurationChecklist.length)} />
+            <MetricCard label="Paper-Trading Safety Checklist" value={formatNumber(productionOperationsRunbook.paperTradingSafetyChecklist.length)} />
+            <MetricCard label="Operator Handoff Summary" value={productionOperationsRunbook.operatorHandoffSummary.handoffStatus} />
+          </div>
+          <div className="analytics-columns">
+            {[
+              ['Startup Checklist Summary', productionOperationsRunbook.startupChecklistSummary],
+              ['Deployment Validation Checklist', productionOperationsRunbook.deploymentValidationChecklist],
+              ['Security Validation Checklist', productionOperationsRunbook.securityValidationChecklist],
+              ['Environment Configuration Checklist', productionOperationsRunbook.environmentConfigurationChecklist],
+              ['Paper-Trading Safety Checklist', productionOperationsRunbook.paperTradingSafetyChecklist],
+              ['Incident Response Checklist', productionOperationsRunbook.incidentResponseChecklist],
+              ['Rollback Readiness Checklist', productionOperationsRunbook.rollbackReadinessChecklist],
+            ].map(([title, checklist]) => (
+              <section key={title}>
+                <h3>{title}</h3>
+                {checklist.map((entry) => (
+                  <div key={entry.id} className="mini-row">
+                    <span>{entry.label}</span>
+                    <strong>{entry.status}</strong>
+                  </div>
+                ))}
+              </section>
+            ))}
+            <section>
+              <h3>Operator Handoff Summary</h3>
+              <p className="empty-state">
+                {formatNumber(productionOperationsRunbook.operatorHandoffSummary.readyCount)} ready / {formatNumber(productionOperationsRunbook.operatorHandoffSummary.reviewCount)} review / {formatNumber(productionOperationsRunbook.operatorHandoffSummary.blockedCount)} blocked / deployment unauthorized.
+              </p>
+            </section>
+            <section>
+              <h3>Runbook Source Events</h3>
+              <p className="empty-state">{Object.values(productionOperationsRunbook.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{productionOperationsRunbook.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
