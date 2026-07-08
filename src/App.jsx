@@ -25,6 +25,7 @@ import { prepareStrategyBacktestInput } from './core/strategy/strategyBacktestIn
 import { executeStrategyBacktest } from './core/strategy/strategyBacktestExecutionEngine.js'
 import { evaluateBacktestPerformance } from './core/strategy/strategyBacktestPerformanceAnalyticsEngine.js'
 import { evaluateWalkForwardTesting } from './core/strategy/strategyWalkForwardTestingEngine.js'
+import { simulateMonteCarloStrategy } from './core/strategy/strategyMonteCarloSimulationEngine.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -821,6 +822,14 @@ function App() {
     inSampleWindowConfiguration: { size: 2, label: '2 candle calibration' },
     outOfSampleWindowConfiguration: { size: 1, label: '1 candle validation' },
   }, { emitEvent: false }), [historicalReplay, strategyBacktestExecution, strategyBacktestPerformance])
+  const strategyMonteCarlo = useMemo(() => simulateMonteCarloStrategy({
+    strategyBacktestPerformance,
+    strategyWalkForward,
+    drawdownProtection,
+    riskAdjustedPerformance,
+    simulationCount: 50,
+    seed: 18,
+  }, { emitEvent: false }), [drawdownProtection, riskAdjustedPerformance, strategyBacktestPerformance, strategyWalkForward])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -840,6 +849,7 @@ function App() {
     { id: 'strategy-backtest-execution', label: 'Backtest Run', status: strategyBacktestExecution.backtestExecutionStatus },
     { id: 'strategy-backtest-performance', label: 'Backtest Perf', status: strategyBacktestPerformance.analyticsStatus },
     { id: 'strategy-walk-forward', label: 'Walk Forward', status: strategyWalkForward.finalWalkForwardStatus },
+    { id: 'strategy-monte-carlo', label: 'Monte Carlo', status: strategyMonteCarlo.robustnessClassification },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -2247,6 +2257,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyWalkForward.eventType}</span>
+        </article>
+
+        <article id="strategy-monte-carlo" className={`panel strategy-monte-carlo-panel ${strategyMonteCarlo.robustnessClassification}`}>
+          <div className="panel-heading">
+            <h2>Monte Carlo Simulation</h2>
+            <span>Paper-only randomized stress test over completed backtest outcomes.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{formatNumber(strategyMonteCarlo.simulationCount)} simulations</span>
+              <strong>{strategyMonteCarlo.robustnessClassification}</strong>
+            </div>
+            <span className={`decision-pill ${strategyMonteCarlo.robustnessClassification === 'robust' ? 'positive' : strategyMonteCarlo.robustnessClassification === 'fragile' ? 'danger' : 'warning'}`}>
+              {formatPercent(strategyMonteCarlo.probabilityOfProfitability)} profitable
+            </span>
+          </div>
+          <p className="empty-state">{strategyMonteCarlo.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Simulation Count" value={formatNumber(strategyMonteCarlo.simulationCount)} />
+            <MetricCard label="Sampled Outcomes" value={formatNumber(strategyMonteCarlo.tradeOutcomeSampling.sourceTradeCount)} />
+            <MetricCard label="Drawdown Breach Probability" value={formatPercent(strategyMonteCarlo.probabilityOfDrawdownBreach)} />
+            <MetricCard label="Profitability Probability" value={formatPercent(strategyMonteCarlo.probabilityOfProfitability)} />
+            <MetricCard label="Median Final Equity" value={formatCurrency(strategyMonteCarlo.confidenceIntervalSummary.finalEquityP50)} />
+            <MetricCard label="Worst Path P&L" value={formatCurrency(strategyMonteCarlo.worstCasePathSummary?.totalPnl ?? 0)} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Confidence Interval Summary</span>
+                <strong>{formatCurrency(strategyMonteCarlo.confidenceIntervalSummary.pnlP50)}</strong>
+              </div>
+              <p>P05 {formatCurrency(strategyMonteCarlo.confidenceIntervalSummary.pnlP05)} / P95 {formatCurrency(strategyMonteCarlo.confidenceIntervalSummary.pnlP95)}</p>
+            </section>
+            <section>
+              <div>
+                <span>Worst-Case Path Summary</span>
+                <strong>{strategyMonteCarlo.worstCasePathSummary?.id ?? 'none'}</strong>
+              </div>
+              <p>{formatCurrency(strategyMonteCarlo.worstCasePathSummary?.finalEquity ?? 0)} final equity / {formatPercent(strategyMonteCarlo.worstCasePathSummary?.maxDrawdown ?? 0)} max drawdown</p>
+            </section>
+            <section>
+              <div>
+                <span>Median Path Summary</span>
+                <strong>{strategyMonteCarlo.medianPathSummary?.id ?? 'none'}</strong>
+              </div>
+              <p>{formatCurrency(strategyMonteCarlo.medianPathSummary?.finalEquity ?? 0)} final equity / {formatPercent(strategyMonteCarlo.medianPathSummary?.maxDrawdown ?? 0)} max drawdown</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyMonteCarlo.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
