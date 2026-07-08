@@ -58,6 +58,7 @@ import { transferWorkspaceConfiguration } from '../lib/system/workspaceConfigura
 import { applyWorkspaceTemplate } from '../lib/system/workspaceTemplateEngine.js'
 import { executeWorkspaceCommandPalette } from '../lib/system/workspaceCommandPaletteEngine.js'
 import { evaluateAuthenticationReadiness } from '../lib/system/authenticationReadinessEngine.js'
+import { evaluateRoleBasedPermissionPlanning } from '../lib/system/roleBasedPermissionPlanningEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1433,6 +1434,19 @@ function App() {
     workspacePersistence,
     workspaceSessionRecovery,
   ])
+  const permissionPlanning = useMemo(() => evaluateRoleBasedPermissionPlanning({
+    authReadiness: authenticationReadiness,
+    workspacePersistence,
+    workspaceCommandPalette,
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    authenticationReadiness,
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+    workspaceCommandPalette,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1441,6 +1455,7 @@ function App() {
     { id: 'workspace-template', label: 'Templates', status: workspaceTemplate.templateValidationStatus },
     { id: 'workspace-command-palette', label: 'Commands', status: workspaceCommandPalette.commandExecutionResult.status },
     { id: 'authentication-readiness', label: 'Auth Ready', status: authenticationReadiness.authReadinessStatus },
+    { id: 'permission-planning', label: 'Permissions', status: permissionPlanning.permissionReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4552,6 +4567,98 @@ function App() {
             </section>
           </div>
           <span className="event-line">{authenticationReadiness.eventType}</span>
+        </article>
+
+        <article id="permission-planning" className={`panel permission-planning-panel ${permissionPlanning.permissionReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Permission Planning</h2>
+            <span>Future role-based access planning only. Permissions are not enforced and no sign-in UI is enabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Permission Readiness Status</span>
+              <strong>{permissionPlanning.permissionReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${permissionPlanning.permissionReadinessStatus === 'blocked' ? 'danger' : permissionPlanning.permissionReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planning only
+            </span>
+          </div>
+          <p className="empty-state">{permissionPlanning.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Permission Matrix Placeholder" value={formatNumber(permissionPlanning.permissionMatrixPlaceholder.length)} />
+            <MetricCard label="Role Capability Map" value={formatNumber(permissionPlanning.roleCapabilityMap.length)} />
+            <MetricCard label="Workspace Access Planning" value={formatNumber(permissionPlanning.workspaceAccessPlanning.plannedRoles.length)} />
+            <MetricCard label="Strategy Access Planning" value={formatNumber(permissionPlanning.strategyAccessPlanning.plannedRoles.length)} />
+            <MetricCard label="Portfolio Analytics Access Planning" value={formatNumber(permissionPlanning.portfolioAnalyticsAccessPlanning.plannedRoles.length)} />
+            <MetricCard label="Release Control Access Planning" value={formatNumber(permissionPlanning.releaseControlAccessPlanning.plannedRoles.length)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Role Capability Map</h3>
+              {permissionPlanning.roleCapabilityMap.map((role) => (
+                <div key={role.role} className="mini-row">
+                  <span>{role.role}</span>
+                  <strong>{role.enforcementEnabled ? 'enforced' : 'planned'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Permission Matrix Placeholder</h3>
+              {permissionPlanning.permissionMatrixPlaceholder.map((row) => (
+                <div key={row.role} className="mini-row">
+                  <span>{row.role}</span>
+                  <strong>{row.releaseControl.review ? 'release review' : 'limited'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Restricted Action Summary</h3>
+              <p className="empty-state">
+                {permissionPlanning.restrictedActionSummary.restrictedActions.slice(0, 6).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Workspace Access Planning</h3>
+              <p className="empty-state">
+                {permissionPlanning.workspaceAccessPlanning.plannedRoles.join(' / ')} / enforcement disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Strategy Access Planning</h3>
+              <p className="empty-state">
+                {permissionPlanning.strategyAccessPlanning.plannedRoles.join(' / ')} / planning only.
+              </p>
+            </section>
+            <section>
+              <h3>Portfolio Analytics Access Planning</h3>
+              <p className="empty-state">
+                {permissionPlanning.portfolioAnalyticsAccessPlanning.plannedRoles.join(' / ')} / planning only.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Release Control Access Planning</h3>
+              <p className="empty-state">
+                {permissionPlanning.releaseControlAccessPlanning.plannedRoles.join(' / ')} / no approval enforcement.
+              </p>
+            </section>
+            <section>
+              <h3>Permission Boundaries</h3>
+              <p className="empty-state">
+                Do not enforce permissions yet / no authentication / no sign-in UI / no broker actions.
+              </p>
+            </section>
+            <section>
+              <h3>Permission Source Events</h3>
+              <p className="empty-state">
+                {Object.values(permissionPlanning.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{permissionPlanning.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
