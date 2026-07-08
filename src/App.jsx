@@ -24,6 +24,7 @@ import { updateStrategyRegistry } from './core/strategy/strategyRegistryEngine.j
 import { prepareStrategyBacktestInput } from './core/strategy/strategyBacktestInputBuilder.js'
 import { executeStrategyBacktest } from './core/strategy/strategyBacktestExecutionEngine.js'
 import { evaluateBacktestPerformance } from './core/strategy/strategyBacktestPerformanceAnalyticsEngine.js'
+import { evaluateWalkForwardTesting } from './core/strategy/strategyWalkForwardTestingEngine.js'
 import {
   BROKER_ADAPTER_CHECKED_EVENT,
   createBrokerAdapter,
@@ -813,6 +814,13 @@ function App() {
     strategyBacktestInput,
     startingEquity: strategyBacktestInput.initialCapitalConfiguration.initialCapital,
   }, { emitEvent: false }), [strategyBacktestExecution, strategyBacktestInput])
+  const strategyWalkForward = useMemo(() => evaluateWalkForwardTesting({
+    historicalReplay,
+    strategyBacktestExecution,
+    strategyBacktestPerformance,
+    inSampleWindowConfiguration: { size: 2, label: '2 candle calibration' },
+    outOfSampleWindowConfiguration: { size: 1, label: '1 candle validation' },
+  }, { emitEvent: false }), [historicalReplay, strategyBacktestExecution, strategyBacktestPerformance])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -831,6 +839,7 @@ function App() {
     { id: 'historical-replay', label: 'Replay', status: historicalReplay.replayStepOutput.status },
     { id: 'strategy-backtest-execution', label: 'Backtest Run', status: strategyBacktestExecution.backtestExecutionStatus },
     { id: 'strategy-backtest-performance', label: 'Backtest Perf', status: strategyBacktestPerformance.analyticsStatus },
+    { id: 'strategy-walk-forward', label: 'Walk Forward', status: strategyWalkForward.finalWalkForwardStatus },
     { id: 'release-readiness', label: 'Release RC', status: releaseReadiness.releaseReadinessStatus },
     { id: 'rc-stabilization', label: 'RC Stability', status: releaseCandidateStabilization.finalStatus },
     { id: 'scanner-signal', label: 'Scanner / Signal', status: scannerSignal.signal.action },
@@ -2189,6 +2198,55 @@ function App() {
             </section>
           </div>
           <span className="event-line">{strategyBacktestPerformance.eventType}</span>
+        </article>
+
+        <article id="strategy-walk-forward" className={`panel strategy-walk-forward-panel ${strategyWalkForward.finalWalkForwardStatus}`}>
+          <div className="panel-heading">
+            <h2>Walk-Forward Testing</h2>
+            <span>Paper-only robustness evaluation across sequential historical windows.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>{strategyBacktestExecution.session.sessionId}</span>
+              <strong>{strategyWalkForward.finalWalkForwardStatus}</strong>
+            </div>
+            <span className={`decision-pill ${strategyWalkForward.finalWalkForwardStatus === 'robust' ? 'positive' : strategyWalkForward.finalWalkForwardStatus === 'failed' ? 'danger' : 'warning'}`}>
+              {formatNumber(strategyWalkForward.robustnessScore)} robustness
+            </span>
+          </div>
+          <p className="empty-state">{strategyWalkForward.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="In-Sample Window" value={`${formatNumber(strategyWalkForward.inSampleWindowConfiguration.size)} candles`} />
+            <MetricCard label="Out-of-Sample Window" value={`${formatNumber(strategyWalkForward.outOfSampleWindowConfiguration.size)} candles`} />
+            <MetricCard label="Rolling Windows" value={formatNumber(strategyWalkForward.rollingWindows.length)} />
+            <MetricCard label="Robustness Score" value={formatNumber(strategyWalkForward.robustnessScore)} />
+            <MetricCard label="Degradation Detection" value={strategyWalkForward.degradationDetection.degraded ? 'detected' : 'clear'} />
+            <MetricCard label="Walk-Forward Status" value={strategyWalkForward.finalWalkForwardStatus} />
+          </div>
+          <div className="research-catalyst-list">
+            <section>
+              <div>
+                <span>Per-Window Backtest Execution</span>
+                <strong>{formatNumber(strategyWalkForward.perWindowBacktestExecutionReferences.length)}</strong>
+              </div>
+              <p>{strategyWalkForward.perWindowBacktestExecutionReferences.map((item) => `${item.windowId}: ${item.status}`).join('; ') || 'No walk-forward execution windows generated.'}</p>
+            </section>
+            <section>
+              <div>
+                <span>Per-Window Performance Summary</span>
+                <strong>{formatNumber(strategyWalkForward.perWindowPerformanceSummary.length)}</strong>
+              </div>
+              <p>{strategyWalkForward.perWindowPerformanceSummary.map((item) => `${item.windowId}: ${formatCurrency(item.netRealizedPnl)}`).join('; ') || 'No performance summaries available.'}</p>
+            </section>
+            <section>
+              <div>
+                <span>Degradation Notes</span>
+                <strong>{formatNumber(strategyWalkForward.degradationDetection.degradationPct)}</strong>
+              </div>
+              <p>{strategyWalkForward.degradationDetection.notes.join('; ') || 'No degradation detected across walk-forward windows.'}</p>
+            </section>
+          </div>
+          <span className="event-line">{strategyWalkForward.eventType}</span>
         </article>
 
         <article id="multi-strategy" className={`panel multi-strategy-panel ${strategyPortfolioManager.strategyApprovalStatus}`}>
