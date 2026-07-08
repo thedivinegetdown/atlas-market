@@ -45,6 +45,7 @@ import { prepareResearchDecisionContext } from '../lib/research/researchDecision
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
 import { evaluateResearchSignalScore } from '../lib/research/researchSignalScoringEngine.js'
 import { createSignalEngine } from '../lib/signals/signalEngine.js'
+import { observeSystemEvents } from '../lib/system/eventObservabilityEngine.js'
 import { evaluateReleaseCandidateStabilization } from '../lib/system/releaseCandidateStabilization.js'
 import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
 import {
@@ -924,6 +925,110 @@ function App() {
     capitalAllocation,
     aiDecision,
   }, { emitEvent: false }), [aiDecision, capitalAllocation, portfolioCorrelation, portfolioFactorExposure, portfolioOptimization, risk])
+  const eventObservability = useMemo(() => observeSystemEvents({
+    eventOutputs: {
+      marketDataAdapterHealth,
+      brokerAdapterHealth,
+      releaseReadiness,
+      releaseCandidateStabilization,
+      risk,
+      tradeGuardrail: guardrails[0]?.result,
+      execution: executions[0]?.result,
+      accounting: primaryAccounting,
+      journal: journalRecords[0]?.result,
+      performance,
+      riskAdjustedPerformance,
+      drawdownProtection,
+      positionSizing,
+      capitalAllocation,
+      aiDecision,
+      marketIntelligence,
+      researchSignalScore,
+      researchDecisionContext,
+      multiTimeframeResearchContext,
+      marketRegimeClassification,
+      researchEnhancedDecision,
+      strategyBlueprintValidation,
+      strategyRuleEvaluation,
+      strategySignalComposition,
+      strategyLifecycle,
+      strategyRegistry,
+      strategyBacktestInput,
+      historicalReplay,
+      strategyBacktestExecution,
+      strategyBacktestPerformance,
+      strategyWalkForward,
+      strategyMonteCarlo,
+      strategyBacktestReport,
+      strategyPortfolioManager,
+      strategyAttribution,
+      portfolioAnalytics,
+      portfolioCorrelation,
+      portfolioFactorExposure,
+      portfolioOptimization,
+      portfolioOptimizationGovernance,
+      rebalancing,
+    },
+    releaseReadiness,
+    releaseCandidateStabilization,
+    requiredEventTypes: [
+      'marketData.adapter.checked',
+      'broker.adapter.checked',
+      'portfolio.risk.evaluated',
+      'trade.guardrail.evaluated',
+      'trade.execution.simulated',
+      'ai.decision.orchestrated',
+      'research.marketIntelligence.evaluated',
+      'strategy.signal.composed',
+      'strategy.backtestPerformance.evaluated',
+      'portfolio.optimizationGovernance.reviewed',
+      'system.releaseReadiness.evaluated',
+      'system.releaseCandidate.stabilized',
+    ],
+  }, { emitEvent: false }), [
+    aiDecision,
+    brokerAdapterHealth,
+    capitalAllocation,
+    drawdownProtection,
+    eventTimeline,
+    executions,
+    guardrails,
+    historicalReplay,
+    journalRecords,
+    marketDataAdapterHealth,
+    marketIntelligence,
+    marketRegimeClassification,
+    multiTimeframeResearchContext,
+    performance,
+    portfolioAnalytics,
+    portfolioCorrelation,
+    portfolioFactorExposure,
+    portfolioOptimization,
+    portfolioOptimizationGovernance,
+    positionSizing,
+    primaryAccounting,
+    rebalancing,
+    releaseCandidateStabilization,
+    releaseReadiness,
+    researchDecisionContext,
+    researchEnhancedDecision,
+    researchSignalScore,
+    risk,
+    riskAdjustedPerformance,
+    strategyAttribution,
+    strategyBacktestExecution,
+    strategyBacktestInput,
+    strategyBacktestPerformance,
+    strategyBacktestReport,
+    strategyBlueprintValidation,
+    strategyLifecycle,
+    strategyMonteCarlo,
+    strategyPortfolioManager,
+    strategyRegistry,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+    strategyWalkForward,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -961,6 +1066,7 @@ function App() {
     { id: 'portfolio-factor-exposure', label: 'Factors', status: portfolioFactorExposure.factorRiskStatus },
     { id: 'portfolio-optimization', label: 'Optimization', status: portfolioOptimization.recommendationPriority },
     { id: 'portfolio-optimization-governance', label: 'Governance', status: portfolioOptimizationGovernance.governanceStatus },
+    { id: 'event-observability', label: 'Observability', status: eventObservability.observabilityStatus },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -3015,6 +3121,75 @@ function App() {
             ))}
           </div>
           <span className="event-line">{rebalancing.eventType}</span>
+        </article>
+
+        <article id="event-observability" className={`panel event-observability-panel ${eventObservability.observabilityStatus}`}>
+          <div className="panel-heading">
+            <h2>Event Observability</h2>
+            <span>Enterprise event health across trading, research, strategy, backtesting, optimization, and release readiness.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Observability Status</span>
+              <strong>{eventObservability.observabilityStatus}</strong>
+            </div>
+            <span className={`decision-pill ${eventObservability.observabilityStatus === 'healthy' ? 'positive' : eventObservability.observabilityStatus === 'degraded' ? 'danger' : 'warning'}`}>
+              {formatNumber(eventObservability.eventCatalogSummary.uniqueEventTypes)} contracts
+            </span>
+          </div>
+          <p className="empty-state">{eventObservability.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Catalog Events" value={formatNumber(eventObservability.eventCatalogSummary.totalEvents)} />
+            <MetricCard label="Event Families" value={formatNumber(eventObservability.eventFamilyGrouping.length)} />
+            <MetricCard label="Fresh Events" value={formatNumber(eventObservability.eventFreshnessCheck.freshCount)} />
+            <MetricCard label="Missing Events" value={formatNumber(eventObservability.missingEventDetection.missingCount)} />
+            <MetricCard label="Duplicate Events" value={formatNumber(eventObservability.duplicateEventDetection.duplicateCount)} />
+            <MetricCard label="Critical Health" value={eventObservability.criticalEventHealthStatus.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Event Catalog Summary</h3>
+              <p className="empty-state">
+                {formatNumber(eventObservability.eventCatalogSummary.paperTradingEvents)} paper events / {formatNumber(eventObservability.eventCatalogSummary.cautionEvents)} caution / {formatNumber(eventObservability.eventCatalogSummary.degradedEvents)} degraded.
+              </p>
+            </section>
+            <section>
+              <h3>Event Family Grouping</h3>
+              {eventObservability.eventFamilyGrouping.slice(0, 6).map((family) => (
+                <div key={family.family} className="mini-row">
+                  <span>{family.family}</span>
+                  <strong>{formatNumber(family.uniqueEventTypes)}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Event Freshness Check</h3>
+              <p className="empty-state">
+                {formatNumber(eventObservability.eventFreshnessCheck.staleCount)} stale events from {formatNumber(eventObservability.eventFreshnessCheck.checkedCount)} checked observations.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Missing Event Detection</h3>
+              <p className="empty-state">
+                {eventObservability.missingEventDetection.missingEventTypes.join(', ') || 'Required event contracts are present.'}
+              </p>
+            </section>
+            <section>
+              <h3>Duplicate Event Detection</h3>
+              <p className="empty-state">
+                {eventObservability.duplicateEventDetection.duplicates.map((item) => `${item.eventType} x${item.count}`).join('; ') || 'No duplicate event contracts detected.'}
+              </p>
+            </section>
+            <section>
+              <h3>Critical Event Health Status</h3>
+              <p className="empty-state">
+                {eventObservability.criticalEventHealthStatus.status} / missing critical: {eventObservability.criticalEventHealthStatus.missingCritical.join(', ') || 'none'}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{eventObservability.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
