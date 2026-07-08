@@ -8,6 +8,7 @@ import { evaluatePaperPerformance } from './core/analytics/paperPerformanceAnaly
 import { evaluatePortfolioAnalytics } from './core/analytics/portfolioAnalyticsEngine.js'
 import { evaluatePortfolioCorrelation } from './core/analytics/portfolioCorrelationEngine.js'
 import { evaluatePortfolioFactorExposure } from './core/analytics/portfolioFactorExposureEngine.js'
+import { reviewPortfolioOptimizationGovernance } from './core/analytics/portfolioOptimizationGovernanceEngine.js'
 import { recommendPortfolioOptimization } from './core/analytics/portfolioOptimizationRecommendationEngine.js'
 import { recommendPortfolioRebalance } from './core/analytics/portfolioRebalanceRecommendationEngine.js'
 import { evaluateRiskAdjustedPerformance } from './core/analytics/riskAdjustedPerformanceEngine.js'
@@ -904,6 +905,14 @@ function App() {
     performance,
     strategyAttribution,
   }, { emitEvent: false }), [capitalAllocation, performance, portfolioAnalytics, portfolioCorrelation, portfolioFactorExposure, risk, strategyAttribution])
+  const portfolioOptimizationGovernance = useMemo(() => reviewPortfolioOptimizationGovernance({
+    portfolioOptimization,
+    portfolioRisk: risk,
+    portfolioCorrelation,
+    portfolioFactorExposure,
+    capitalAllocation,
+    aiDecision,
+  }, { emitEvent: false }), [aiDecision, capitalAllocation, portfolioCorrelation, portfolioFactorExposure, portfolioOptimization, risk])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -940,6 +949,7 @@ function App() {
     { id: 'portfolio-correlation', label: 'Correlation', status: portfolioCorrelation.correlationRiskStatus },
     { id: 'portfolio-factor-exposure', label: 'Factors', status: portfolioFactorExposure.factorRiskStatus },
     { id: 'portfolio-optimization', label: 'Optimization', status: portfolioOptimization.recommendationPriority },
+    { id: 'portfolio-optimization-governance', label: 'Governance', status: portfolioOptimizationGovernance.governanceStatus },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -2874,6 +2884,90 @@ function App() {
             </section>
           </div>
           <span className="event-line">{portfolioOptimization.eventType}</span>
+        </article>
+
+        <article id="portfolio-optimization-governance" className={`panel portfolio-optimization-governance-panel ${portfolioOptimizationGovernance.governanceStatus}`}>
+          <div className="panel-heading">
+            <h2>Optimization Governance</h2>
+            <span>Governance and review only before recommendations influence AI decisions or operator actions.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Governance Status</span>
+              <strong>{portfolioOptimizationGovernance.governanceStatus}</strong>
+            </div>
+            <span className={`decision-pill ${portfolioOptimizationGovernance.governanceStatus === 'approved' ? 'positive' : portfolioOptimizationGovernance.governanceStatus === 'rejected' ? 'danger' : 'warning'}`}>
+              {portfolioOptimizationGovernance.operatorActionClassification.classification}
+            </span>
+          </div>
+          <p className="empty-state">{portfolioOptimizationGovernance.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Approval Review" value={portfolioOptimizationGovernance.recommendationApprovalReview.status} />
+            <MetricCard label="Risk Impact" value={portfolioOptimizationGovernance.riskImpactReview.status} />
+            <MetricCard label="Correlation Impact" value={portfolioOptimizationGovernance.correlationImpactReview.status} />
+            <MetricCard label="Factor Impact" value={portfolioOptimizationGovernance.factorExposureImpactReview.status} />
+            <MetricCard label="Capital Impact" value={portfolioOptimizationGovernance.capitalAllocationImpactReview.status} />
+            <MetricCard label="AI Influence" value={portfolioOptimizationGovernance.operatorActionClassification.allowedToInfluenceAiDecision ? 'allowed' : 'blocked'} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Recommendation Approval Review</h3>
+              <p className="empty-state">
+                {formatNumber(portfolioOptimizationGovernance.recommendationApprovalReview.approvedRecommendations)} approved / {formatNumber(portfolioOptimizationGovernance.recommendationApprovalReview.rejectedRecommendations)} rejected / {formatNumber(portfolioOptimizationGovernance.recommendationApprovalReview.highPriority)} high priority.
+              </p>
+            </section>
+            <section>
+              <h3>Risk Impact Review</h3>
+              <p className="empty-state">
+                {portfolioOptimizationGovernance.riskImpactReview.riskLevel} risk / {formatNumber(portfolioOptimizationGovernance.riskImpactReview.riskScore)} score / {formatPercent(portfolioOptimizationGovernance.riskImpactReview.openRiskPct)} open risk.
+              </p>
+            </section>
+            <section>
+              <h3>Correlation Impact Review</h3>
+              <p className="empty-state">
+                {portfolioOptimizationGovernance.correlationImpactReview.correlationRiskStatus} correlation / {formatPercent(portfolioOptimizationGovernance.correlationImpactReview.correlatedWeight)} correlated / {formatNumber(portfolioOptimizationGovernance.correlationImpactReview.highCorrelationPairCount)} high pairs.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Factor Exposure Impact Review</h3>
+              <p className="empty-state">
+                {portfolioOptimizationGovernance.factorExposureImpactReview.factorRiskStatus} factor risk / elevated: {portfolioOptimizationGovernance.factorExposureImpactReview.elevatedFactors.join(', ') || 'none'}
+              </p>
+            </section>
+            <section>
+              <h3>Capital Allocation Impact Review</h3>
+              <p className="empty-state">
+                {portfolioOptimizationGovernance.capitalAllocationImpactReview.allocationStatus} allocation / available paper capital {formatCurrency(portfolioOptimizationGovernance.capitalAllocationImpactReview.availableCapital)}
+              </p>
+            </section>
+            <section>
+              <h3>Operator Action Classification</h3>
+              <p className="empty-state">
+                {portfolioOptimizationGovernance.operatorActionClassification.rationale}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>AI Decision Review</h3>
+              <p className="empty-state">
+                {portfolioOptimizationGovernance.aiDecisionReview.finalDecision} / {formatNumber(portfolioOptimizationGovernance.aiDecisionReview.blockerCount)} blockers / {formatNumber(portfolioOptimizationGovernance.aiDecisionReview.cautionCount)} cautions.
+              </p>
+            </section>
+            <section>
+              <h3>Governance Guardrails</h3>
+              <p className="empty-state">Paper trading only / no live orders / no brokerage integration / governance and review only.</p>
+            </section>
+            <section>
+              <h3>Source Events</h3>
+              <p className="empty-state">
+                {[portfolioOptimizationGovernance.sourceEvents.portfolioOptimization, portfolioOptimizationGovernance.sourceEvents.portfolioRisk, portfolioOptimizationGovernance.sourceEvents.portfolioCorrelation, portfolioOptimizationGovernance.sourceEvents.portfolioFactorExposure, portfolioOptimizationGovernance.sourceEvents.capitalAllocation, portfolioOptimizationGovernance.sourceEvents.aiDecision].filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{portfolioOptimizationGovernance.eventType}</span>
         </article>
 
         <article className="panel rebalance-panel">
