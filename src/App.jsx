@@ -61,6 +61,7 @@ import { evaluateAuthenticationReadiness } from '../lib/system/authenticationRea
 import { evaluateRoleBasedPermissionPlanning } from '../lib/system/roleBasedPermissionPlanningEngine.js'
 import { evaluateMultiUserWorkspacePlanning } from '../lib/system/multiUserWorkspacePlanningEngine.js'
 import { evaluateOrganizationWorkspaceReadiness } from '../lib/system/organizationWorkspaceReadinessEngine.js'
+import { evaluateEnterpriseSaasReadiness } from '../lib/system/enterpriseSaasReadinessSummaryEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1481,6 +1482,25 @@ function App() {
     systemHealthCommandCenter,
     workspacePersistence,
   ])
+  const enterpriseSaasReadiness = useMemo(() => evaluateEnterpriseSaasReadiness({
+    authReadiness: authenticationReadiness,
+    permissionPlanning,
+    multiUserWorkspacePlanning,
+    organizationWorkspaceReadiness,
+    workspacePersistence,
+    enterpriseAuditTrail,
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    authenticationReadiness,
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    multiUserWorkspacePlanning,
+    organizationWorkspaceReadiness,
+    permissionPlanning,
+    systemHealthCommandCenter,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1492,6 +1512,7 @@ function App() {
     { id: 'permission-planning', label: 'Permissions', status: permissionPlanning.permissionReadinessStatus },
     { id: 'multi-user-workspace-planning', label: 'Multi-User', status: multiUserWorkspacePlanning.multiUserReadinessStatus },
     { id: 'organization-workspace-readiness', label: 'Organization', status: organizationWorkspaceReadiness.organizationReadinessStatus },
+    { id: 'saas-readiness', label: 'SaaS Ready', status: enterpriseSaasReadiness.saasReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4870,6 +4891,84 @@ function App() {
             </section>
           </div>
           <span className="event-line">{organizationWorkspaceReadiness.eventType}</span>
+        </article>
+
+        <article id="saas-readiness" className={`panel saas-readiness-panel ${enterpriseSaasReadiness.saasReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>SaaS Readiness</h2>
+            <span>Enterprise conversion planning summary only. No authentication, billing, organizations, accounts, or permission enforcement.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>SaaS Readiness Status</span>
+              <strong>{enterpriseSaasReadiness.saasReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${enterpriseSaasReadiness.saasReadinessStatus === 'blocked' ? 'danger' : enterpriseSaasReadiness.saasReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planning only
+            </span>
+          </div>
+          <p className="empty-state">{enterpriseSaasReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Auth Readiness Summary" value={enterpriseSaasReadiness.authReadinessSummary.status} />
+            <MetricCard label="Permission Planning Summary" value={enterpriseSaasReadiness.permissionPlanningSummary.status} />
+            <MetricCard label="Multi-User Workspace Summary" value={enterpriseSaasReadiness.multiUserWorkspaceSummary.status} />
+            <MetricCard label="Organization Workspace Summary" value={enterpriseSaasReadiness.organizationWorkspaceSummary.status} />
+            <MetricCard label="Persistence Readiness Summary" value={enterpriseSaasReadiness.persistenceReadinessSummary.status} />
+            <MetricCard label="SaaS Readiness Status" value={enterpriseSaasReadiness.saasReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Auth Readiness Summary</h3>
+              <p className="empty-state">
+                {formatNumber(enterpriseSaasReadiness.authReadinessSummary.roleCount)} planned roles / real authentication disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Permission Planning Summary</h3>
+              <p className="empty-state">
+                {formatNumber(enterpriseSaasReadiness.permissionPlanningSummary.roleCapabilityCount)} role capability maps / enforcement disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Multi-User Workspace Summary</h3>
+              <p className="empty-state">
+                {formatNumber(enterpriseSaasReadiness.multiUserWorkspaceSummary.membershipPlaceholderCount)} membership placeholders / real accounts disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Organization Workspace Summary</h3>
+              <p className="empty-state">
+                {enterpriseSaasReadiness.organizationWorkspaceSummary.organizationId ?? 'No organization placeholder'} / real organizations disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Persistence Readiness Summary</h3>
+              <p className="empty-state">
+                Local adapter {enterpriseSaasReadiness.persistenceReadinessSummary.localAdapterStatus} / PostgreSQL implementation pending / multi-user persistence disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Audit Readiness Summary</h3>
+              <p className="empty-state">
+                Integrity {enterpriseSaasReadiness.auditReadinessSummary.status} / {formatNumber(enterpriseSaasReadiness.auditReadinessSummary.auditRecordCount)} records.
+              </p>
+            </section>
+            <section>
+              <h3>Release Control Readiness Summary</h3>
+              <p className="empty-state">
+                Release {enterpriseSaasReadiness.releaseControlReadinessSummary.status} / health {enterpriseSaasReadiness.releaseControlReadinessSummary.platformHealthStatus}.
+              </p>
+            </section>
+            <section>
+              <h3>SaaS Planning Boundaries</h3>
+              <p className="empty-state">No authentication / no billing / no organizations / no accounts / no permission enforcement / paper trading only.</p>
+            </section>
+            <section>
+              <h3>SaaS Source Events</h3>
+              <p className="empty-state">{Object.values(enterpriseSaasReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{enterpriseSaasReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
