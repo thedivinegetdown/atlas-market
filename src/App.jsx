@@ -54,6 +54,7 @@ import { recordEnterpriseAuditTrail } from '../lib/system/enterpriseAuditTrailEn
 import { evaluateEnterpriseReleaseControl } from '../lib/system/enterpriseReleaseControlCenterEngine.js'
 import { prepareWorkspacePersistence } from '../lib/system/workspacePersistenceEngine.js'
 import { recoverWorkspaceSession } from '../lib/system/workspaceSessionRecoveryEngine.js'
+import { transferWorkspaceConfiguration } from '../lib/system/workspaceConfigurationTransferEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1236,10 +1237,22 @@ function App() {
     systemHealthCommandCenter,
     workspacePersistence,
   ])
+  const workspaceConfigurationTransfer = useMemo(() => transferWorkspaceConfiguration({
+    workspacePersistence,
+    workspaceSessionRecovery,
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+  }, { emitEvent: false }), [
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+    workspacePersistence,
+    workspaceSessionRecovery,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
     { id: 'workspace-session-recovery', label: 'Recovery', status: workspaceSessionRecovery.recoveryValidationStatus },
+    { id: 'workspace-configuration-transfer', label: 'Config Transfer', status: workspaceConfigurationTransfer.importStatus },
   ]
 
   return (
@@ -3934,6 +3947,119 @@ function App() {
             </section>
           </div>
           <span className="event-line">{workspaceSessionRecovery.eventType}</span>
+        </article>
+
+        <article id="workspace-configuration-transfer" className={`panel workspace-configuration-transfer-panel ${workspaceConfigurationTransfer.importStatus}`}>
+          <div className="panel-heading">
+            <h2>Workspace Configuration Transfer</h2>
+            <span>Paper-only export and import package for portable operator workspace setup.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Import Status</span>
+              <strong>{workspaceConfigurationTransfer.importStatus}</strong>
+            </div>
+            <span className={`decision-pill ${workspaceConfigurationTransfer.importStatus === 'rejected' ? 'danger' : workspaceConfigurationTransfer.importStatus === 'partial' ? 'warning' : 'positive'}`}>
+              {formatNumber(workspaceConfigurationTransfer.importConflictSummary.conflictCount)} conflicts
+            </span>
+          </div>
+          <p className="empty-state">{workspaceConfigurationTransfer.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Normalized Export Package" value={workspaceConfigurationTransfer.normalizedExportPackage.packageVersion} />
+            <MetricCard label="Layout Export" value={workspaceConfigurationTransfer.layoutExport.layoutId} />
+            <MetricCard label="Panel Visibility Export" value={formatNumber(Object.keys(workspaceConfigurationTransfer.panelVisibilityExport).length)} />
+            <MetricCard label="Operator Preferences Export" value={workspaceConfigurationTransfer.operatorPreferencesExport.density} />
+            <MetricCard label="Paper-Mode Profile Export" value={workspaceConfigurationTransfer.paperModeProfileExport.tradingMode} />
+            <MetricCard label="Import Validation" value={workspaceConfigurationTransfer.importValidation.valid ? 'valid' : 'invalid'} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Normalized Export Package Model</h3>
+              <div className="mini-row">
+                <span>{workspaceConfigurationTransfer.normalizedExportPackage.packageId}</span>
+                <strong>{workspaceConfigurationTransfer.normalizedExportPackage.workspaceId}</strong>
+              </div>
+              <p className="empty-state">
+                exported {formatDate(workspaceConfigurationTransfer.normalizedExportPackage.exportedAt)}
+              </p>
+            </section>
+            <section>
+              <h3>Layout Export</h3>
+              {workspaceConfigurationTransfer.layoutExport.panels.slice(0, 5).map((panel) => (
+                <div key={panel.id} className="mini-row">
+                  <span>{panel.label}</span>
+                  <strong>{panel.sortOrder}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Panel Visibility Export</h3>
+              {Object.entries(workspaceConfigurationTransfer.panelVisibilityExport).slice(0, 5).map(([panelId, state]) => (
+                <div key={panelId} className="mini-row">
+                  <span>{panelId}</span>
+                  <strong>{state.visible ? 'visible' : 'hidden'}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Operator Preferences Export</h3>
+              <div className="mini-row">
+                <span>theme</span>
+                <strong>{workspaceConfigurationTransfer.operatorPreferencesExport.theme}</strong>
+              </div>
+              <div className="mini-row">
+                <span>density</span>
+                <strong>{workspaceConfigurationTransfer.operatorPreferencesExport.density}</strong>
+              </div>
+              <div className="mini-row">
+                <span>landing panel</span>
+                <strong>{workspaceConfigurationTransfer.operatorPreferencesExport.defaultLandingPanel}</strong>
+              </div>
+            </section>
+            <section>
+              <h3>Paper-Mode Profile Export</h3>
+              <p className="empty-state">
+                {workspaceConfigurationTransfer.paperModeProfileExport.tradingMode} mode / live orders {workspaceConfigurationTransfer.paperModeProfileExport.liveOrders ? 'enabled' : 'disabled'} / brokerage {workspaceConfigurationTransfer.paperModeProfileExport.brokerageIntegration ? 'enabled' : 'disabled'}.
+              </p>
+            </section>
+            <section>
+              <h3>Import Validation</h3>
+              {(workspaceConfigurationTransfer.importValidation.issues.length > 0 ? workspaceConfigurationTransfer.importValidation.issues : ['Import package validated for paper-mode transfer.']).map((issue) => (
+                <div key={issue} className="mini-row">
+                  <span>{issue}</span>
+                  <strong>{workspaceConfigurationTransfer.importValidation.valid ? 'valid' : 'invalid'}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Import Conflict Summary</h3>
+              {workspaceConfigurationTransfer.importConflictSummary.conflicts.length > 0 ? workspaceConfigurationTransfer.importConflictSummary.conflicts.map((conflict) => (
+                <div key={`${conflict.field}-${conflict.severity}`} className="mini-row">
+                  <span>{conflict.field}</span>
+                  <strong>{conflict.severity}</strong>
+                </div>
+              )) : (
+                <p className="empty-state">No import conflicts detected.</p>
+              )}
+            </section>
+            <section>
+              <h3>Transfer Source Events</h3>
+              <p className="empty-state">
+                {Object.values(workspaceConfigurationTransfer.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+            <section>
+              <h3>Transfer Boundaries</h3>
+              <p className="empty-state">
+                No authentication yet / no multi-user support yet / no trading logic changes / no live orders.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{workspaceConfigurationTransfer.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
