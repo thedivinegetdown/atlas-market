@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { Suspense, useMemo } from 'react'
 import './App.css'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
@@ -119,6 +119,17 @@ function MetricCard({ label, value, tone }) {
     <article className={`metric-card ${tone ?? ''}`}>
       <span>{label}</span>
       <strong>{value}</strong>
+    </article>
+  )
+}
+
+function PanelLoadingFallback({ label = 'Loading dashboard panel' }) {
+  return (
+    <article className="panel">
+      <div className="panel-heading">
+        <h2>{label}</h2>
+        <span>Preparing paper-trading dashboard context.</span>
+      </div>
     </article>
   )
 }
@@ -990,6 +1001,7 @@ function App() {
       </section>
 
       <WorkspaceLayout navigation={workspaceNavigation}>
+        <Suspense fallback={<PanelLoadingFallback />}>
         <article id="market-data-health" className={`panel market-data-health-panel ${marketDataAdapterHealth.health.status}`}>
           <div className="panel-heading">
             <h2>Market Data Health</h2>
@@ -3094,6 +3106,7 @@ function App() {
             </ul>
           </div>
         </article>
+        </Suspense>
       </WorkspaceLayout>
 
       <section className="panel positions-panel">
