@@ -63,6 +63,7 @@ import { evaluateMultiUserWorkspacePlanning } from '../lib/system/multiUserWorks
 import { evaluateOrganizationWorkspaceReadiness } from '../lib/system/organizationWorkspaceReadinessEngine.js'
 import { evaluateEnterpriseSaasReadiness } from '../lib/system/enterpriseSaasReadinessSummaryEngine.js'
 import { evaluateProductionDeploymentReadiness } from '../lib/system/productionDeploymentReadinessEngine.js'
+import { evaluateProductionSecurityReadiness } from '../lib/system/productionSecurityReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1533,6 +1534,27 @@ function App() {
     systemHealthCommandCenter,
     workspacePersistence,
   ])
+  const productionSecurityReadiness = useMemo(() => evaluateProductionSecurityReadiness({
+    productionDeploymentReadiness,
+    enterpriseSaasReadiness,
+    authReadiness: authenticationReadiness,
+    permissionPlanning,
+    enterpriseAuditTrail,
+    eventObservability,
+    enterpriseReleaseControl,
+    marketDataAdapterHealth,
+    brokerAdapterHealth,
+  }, { emitEvent: false }), [
+    authenticationReadiness,
+    brokerAdapterHealth,
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    enterpriseSaasReadiness,
+    eventObservability,
+    marketDataAdapterHealth,
+    permissionPlanning,
+    productionDeploymentReadiness,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1546,6 +1568,7 @@ function App() {
     { id: 'organization-workspace-readiness', label: 'Organization', status: organizationWorkspaceReadiness.organizationReadinessStatus },
     { id: 'saas-readiness', label: 'SaaS Ready', status: enterpriseSaasReadiness.saasReadinessStatus },
     { id: 'deployment-readiness', label: 'Deployment', status: productionDeploymentReadiness.deploymentReadinessStatus },
+    { id: 'security-readiness', label: 'Security', status: productionSecurityReadiness.securityReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -5080,6 +5103,84 @@ function App() {
             </section>
           </div>
           <span className="event-line">{productionDeploymentReadiness.eventType}</span>
+        </article>
+
+        <article id="security-readiness" className={`panel security-readiness-panel ${productionSecurityReadiness.securityReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Security Readiness</h2>
+            <span>Future production security planning only. No secrets, authentication, billing, or live execution are enabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Security Readiness Status</span>
+              <strong>{productionSecurityReadiness.securityReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${productionSecurityReadiness.securityReadinessStatus === 'blocked' ? 'danger' : productionSecurityReadiness.securityReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planning only
+            </span>
+          </div>
+          <p className="empty-state">{productionSecurityReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Environment Secret Handling Summary" value={productionSecurityReadiness.environmentSecretHandlingSummary.status} />
+            <MetricCard label="API Boundary Security Summary" value={productionSecurityReadiness.apiBoundarySecuritySummary.status} />
+            <MetricCard label="Paper-Trading Safety Lock Summary" value={productionSecurityReadiness.paperTradingSafetyLockSummary.status} />
+            <MetricCard label="Adapter / Broker Mock-Mode Security Summary" value={productionSecurityReadiness.adapterBrokerMockModeSecuritySummary.status} />
+            <MetricCard label="Persistence Security Readiness Summary" value={productionSecurityReadiness.persistenceSecurityReadinessSummary.status} />
+            <MetricCard label="Security Readiness Status" value={productionSecurityReadiness.securityReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Environment Secret Handling Summary</h3>
+              <p className="empty-state">
+                Secret values excluded / configuration {productionSecurityReadiness.environmentSecretHandlingSummary.secretsConfigured ? 'planned ready' : 'pending'} / no secret exposure.
+              </p>
+            </section>
+            <section>
+              <h3>API Boundary Security Summary</h3>
+              <p className="empty-state">
+                Auth {productionSecurityReadiness.apiBoundarySecuritySummary.authReadinessStatus} / permissions {productionSecurityReadiness.apiBoundarySecuritySummary.permissionPlanningStatus} / production exposure disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Paper-Trading Safety Lock Summary</h3>
+              <p className="empty-state">
+                Mode {productionSecurityReadiness.paperTradingSafetyLockSummary.tradingMode} / lock {productionSecurityReadiness.paperTradingSafetyLockSummary.safetyLockEnabled ? 'enabled' : 'blocked'} / live orders disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Adapter / Broker Mock-Mode Security Summary</h3>
+              <p className="empty-state">
+                {productionSecurityReadiness.adapterBrokerMockModeSecuritySummary.marketProvider} / {productionSecurityReadiness.adapterBrokerMockModeSecuritySummary.brokerProvider} / mock mode required.
+              </p>
+            </section>
+            <section>
+              <h3>Persistence Security Readiness Summary</h3>
+              <p className="empty-state">
+                PostgreSQL {productionSecurityReadiness.persistenceSecurityReadinessSummary.postgresImplemented ? 'implemented' : 'pending'} / production credentials not stored.
+              </p>
+            </section>
+            <section>
+              <h3>Audit / Security Traceability Summary</h3>
+              <p className="empty-state">
+                Audit {productionSecurityReadiness.auditSecurityTraceabilitySummary.status} / observability {productionSecurityReadiness.auditSecurityTraceabilitySummary.observabilityStatus} / {formatNumber(productionSecurityReadiness.auditSecurityTraceabilitySummary.auditRecordCount)} records.
+              </p>
+            </section>
+            <section>
+              <h3>Deployment Security Dependency Summary</h3>
+              <p className="empty-state">
+                Deployment {productionSecurityReadiness.deploymentSecurityDependencySummary.status} / SaaS {productionSecurityReadiness.deploymentSecurityDependencySummary.saasReadinessStatus} / release {productionSecurityReadiness.deploymentSecurityDependencySummary.releaseControlStatus}.
+              </p>
+            </section>
+            <section>
+              <h3>Security Planning Boundaries</h3>
+              <p className="empty-state">No real authentication / no billing / no live broker execution / no exposed secrets / paper trading only.</p>
+            </section>
+            <section>
+              <h3>Security Source Events</h3>
+              <p className="empty-state">{Object.values(productionSecurityReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{productionSecurityReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
