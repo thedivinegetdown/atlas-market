@@ -55,6 +55,7 @@ import { evaluateEnterpriseReleaseControl } from '../lib/system/enterpriseReleas
 import { prepareWorkspacePersistence } from '../lib/system/workspacePersistenceEngine.js'
 import { recoverWorkspaceSession } from '../lib/system/workspaceSessionRecoveryEngine.js'
 import { transferWorkspaceConfiguration } from '../lib/system/workspaceConfigurationTransferEngine.js'
+import { applyWorkspaceTemplate } from '../lib/system/workspaceTemplateEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1248,11 +1249,29 @@ function App() {
     workspacePersistence,
     workspaceSessionRecovery,
   ])
+  const workspaceTemplate = useMemo(() => applyWorkspaceTemplate({
+    dashboardNavigation: [
+      ...workspaceNavigationBase,
+      { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
+      { id: 'workspace-session-recovery', label: 'Recovery', status: workspaceSessionRecovery.recoveryValidationStatus },
+      { id: 'workspace-configuration-transfer', label: 'Config Transfer', status: workspaceConfigurationTransfer.importStatus },
+    ],
+    workspacePersistence,
+    workspaceSessionRecovery,
+    workspaceConfigurationTransfer,
+    templateId: 'enterprise-release-review',
+  }, { emitEvent: false }), [
+    workspaceConfigurationTransfer,
+    workspaceNavigationBase,
+    workspacePersistence,
+    workspaceSessionRecovery,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
     { id: 'workspace-session-recovery', label: 'Recovery', status: workspaceSessionRecovery.recoveryValidationStatus },
     { id: 'workspace-configuration-transfer', label: 'Config Transfer', status: workspaceConfigurationTransfer.importStatus },
+    { id: 'workspace-template', label: 'Templates', status: workspaceTemplate.templateValidationStatus },
   ]
 
   return (
@@ -4060,6 +4079,107 @@ function App() {
             </section>
           </div>
           <span className="event-line">{workspaceConfigurationTransfer.eventType}</span>
+        </article>
+
+        <article id="workspace-template" className={`panel workspace-template-panel ${workspaceTemplate.templateValidationStatus}`}>
+          <div className="panel-heading">
+            <h2>Workspace Template</h2>
+            <span>Paper-only professional workspace mode presets for operators.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Template Validation Status</span>
+              <strong>{workspaceTemplate.templateValidationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${workspaceTemplate.templateValidationStatus === 'invalid' ? 'danger' : workspaceTemplate.templateValidationStatus === 'caution' ? 'warning' : 'positive'}`}>
+              {workspaceTemplate.appliedTemplateName}
+            </span>
+          </div>
+          <p className="empty-state">{workspaceTemplate.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Normalized Workspace Template Model" value={workspaceTemplate.appliedTemplateId} />
+            <MetricCard label="Default Templates" value={formatNumber(workspaceTemplate.defaultTemplates.length)} />
+            <MetricCard label="Template Panel Visibility Presets" value={formatNumber(Object.keys(workspaceTemplate.templatePanelVisibilityPresets).length)} />
+            <MetricCard label="Template Layout Presets" value={workspaceTemplate.templateLayoutPresets.layoutId} />
+            <MetricCard label="Template Preference Presets" value={workspaceTemplate.templatePreferencePresets.density} />
+            <MetricCard label="Template Validation Status" value={workspaceTemplate.templateValidationStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Default Templates</h3>
+              {workspaceTemplate.defaultTemplates.map((template) => (
+                <div key={template.templateId} className="mini-row">
+                  <span>{template.templateName}</span>
+                  <strong>{template.templatePreferencePreset.density}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Template Layout Presets</h3>
+              {workspaceTemplate.templateLayoutPresets.panels.slice(0, 6).map((panel) => (
+                <div key={panel.id} className="mini-row">
+                  <span>{panel.label}</span>
+                  <strong>{panel.sortOrder}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Template Panel Visibility Presets</h3>
+              {Object.entries(workspaceTemplate.templatePanelVisibilityPresets).slice(0, 6).map(([panelId, preset]) => (
+                <div key={panelId} className="mini-row">
+                  <span>{panelId}</span>
+                  <strong>{preset.visible ? 'visible' : 'hidden'}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Template Preference Presets</h3>
+              <div className="mini-row">
+                <span>density</span>
+                <strong>{workspaceTemplate.templatePreferencePresets.density}</strong>
+              </div>
+              <div className="mini-row">
+                <span>landing panel</span>
+                <strong>{workspaceTemplate.templatePreferencePresets.defaultLandingPanel}</strong>
+              </div>
+              <div className="mini-row">
+                <span>refresh mode</span>
+                <strong>{workspaceTemplate.templatePreferencePresets.eventRefreshMode}</strong>
+              </div>
+            </section>
+            <section>
+              <h3>Template Validation Issues</h3>
+              {(workspaceTemplate.templateValidationIssues.length > 0 ? workspaceTemplate.templateValidationIssues : ['Template validated for paper-mode workspace use.']).map((issue) => (
+                <div key={issue} className="mini-row">
+                  <span>{issue}</span>
+                  <strong>{workspaceTemplate.templateValidationStatus}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Template Source Events</h3>
+              <p className="empty-state">
+                {Object.values(workspaceTemplate.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Trading Operations Template</h3>
+              <p className="empty-state">Decision, risk, guardrails, execution simulation, accounting, journal, and operator action panels.</p>
+            </section>
+            <section>
+              <h3>Research Intelligence Template</h3>
+              <p className="empty-state">Research intelligence, signal score, decision context, multi-timeframe, regime, and research AI panels.</p>
+            </section>
+            <section>
+              <h3>Enterprise Release Review Template</h3>
+              <p className="empty-state">Readiness, stabilization, observability, health, audit, release control, persistence, recovery, and transfer panels.</p>
+            </section>
+          </div>
+          <span className="event-line">{workspaceTemplate.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
