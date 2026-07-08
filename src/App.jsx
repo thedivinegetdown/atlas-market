@@ -193,7 +193,98 @@ function buildDemoTimeframeContext(baseContext, bucket, overrides = {}) {
   }
 }
 
-function WorkspaceLayout({ navigation, children }) {
+const WORKSPACE_FAMILY_LABELS = {
+  market: 'Market & Research',
+  strategy: 'Strategy & Backtesting',
+  trading: 'Trading Operations',
+  portfolio: 'Portfolio Analytics',
+  system: 'System & Release',
+  workspace: 'Workspace Tools',
+}
+
+function getWorkspaceFamily(panelId) {
+  if ([
+    'market-data-health',
+    'market-regime',
+    'broker-adapter-health',
+    'research-intelligence',
+    'research-signal-score',
+    'research-decision-context',
+    'multi-timeframe-research',
+    'research-enhanced-decision',
+    'scanner-signal',
+  ].includes(panelId)) return 'market'
+  if ([
+    'strategy-builder',
+    'strategy-rule-evaluation',
+    'strategy-signal-composer',
+    'strategy-lifecycle',
+    'strategy-registry',
+    'strategy-backtest-input',
+    'historical-replay',
+    'strategy-backtest-execution',
+    'strategy-backtest-performance',
+    'strategy-walk-forward',
+    'strategy-monte-carlo',
+    'strategy-backtest-report',
+    'multi-strategy',
+  ].includes(panelId)) return 'strategy'
+  if ([
+    'ai-decision',
+    'risk',
+    'position-sizing',
+    'guardrails',
+    'execution',
+    'accounting',
+    'journal',
+    'performance',
+    'drawdown-protection',
+    'capital-allocation',
+  ].includes(panelId)) return 'trading'
+  if ([
+    'portfolio-analytics',
+    'portfolio-correlation',
+    'portfolio-factor-exposure',
+    'portfolio-optimization',
+    'portfolio-optimization-governance',
+    'performance',
+  ].includes(panelId)) return 'portfolio'
+  if ([
+    'event-observability',
+    'system-health-command-center',
+    'operator-action-center',
+    'enterprise-audit-trail',
+    'enterprise-release-control',
+    'release-readiness',
+    'rc-stabilization',
+    'event-timeline',
+  ].includes(panelId)) return 'system'
+  return 'workspace'
+}
+
+function groupWorkspaceNavigation(navigation = []) {
+  const groups = Object.keys(WORKSPACE_FAMILY_LABELS).map((family) => ({
+    family,
+    label: WORKSPACE_FAMILY_LABELS[family],
+    items: navigation.filter((item) => item.family === family),
+  }))
+
+  return groups.filter((group) => group.items.length > 0)
+}
+
+function WorkspaceLayout({ navigation, commandPalette, workspaceTemplate, children }) {
+  const groupedNavigation = groupWorkspaceNavigation(navigation)
+  const quickJumpItems = navigation.filter((item) => [
+    'enterprise-release-control',
+    'workspace-command-palette',
+    'system-health-command-center',
+    'operator-action-center',
+    'risk',
+    'strategy-backtest-report',
+  ].includes(item.id))
+  const visibleTemplatePanels = Object.values(workspaceTemplate?.templatePanelVisibilityPresets ?? {})
+    .filter((preset) => preset.visible).length
+
   return (
     <section className="workspace-layout" aria-label="Institutional trading workspace">
       <aside className="workspace-rail" aria-label="Workspace operating panels">
@@ -201,16 +292,51 @@ function WorkspaceLayout({ navigation, children }) {
           <span className="workspace-rail-kicker">Workspace</span>
           <strong>Paper Trading OS</strong>
         </div>
-        <nav>
-          {navigation.map((item) => (
-            <a key={item.id} href={`#${item.id}`} className="workspace-rail-item">
-              <span>{item.label}</span>
-              <strong>{item.status}</strong>
-            </a>
+        <div className="workspace-rail-summary" aria-label="Command Palette Integration">
+          <span>Command Palette Integration</span>
+          <strong>{commandPalette?.commandAvailabilityChecks?.availableCount ?? navigation.length} safe commands</strong>
+        </div>
+        <nav className="quick-jump-nav" aria-label="Quick Jump Anchors">
+          <span>Quick Jump Anchors</span>
+          <div>
+            {quickJumpItems.map((item) => (
+              <a key={item.id} href={`#${item.id}`}>{item.label}</a>
+            ))}
+          </div>
+        </nav>
+        <nav className="workspace-grouped-nav" aria-label="Workspace Navigation Groups">
+          <span>Workspace Navigation Groups</span>
+          {groupedNavigation.map((group) => (
+            <section key={group.family} className="workspace-nav-group">
+              <h3>{group.label}</h3>
+              {group.items.map((item) => (
+                <a key={item.id} href={`#${item.id}`} className="workspace-rail-item">
+                  <span>{item.label}</span>
+                  <strong>{item.status}</strong>
+                </a>
+              ))}
+            </section>
           ))}
         </nav>
       </aside>
       <section className="dashboard-grid workspace-panels">
+        <article className="panel workspace-ux-panel" aria-label="Workspace UX Navigation Summary">
+          <div className="panel-heading">
+            <h2>Workspace UX Navigation</h2>
+            <span>Panel Family Labels, quick jumps, command palette references, and template-aware grouping for paper-mode operations.</span>
+          </div>
+          <div className="analytics-grid">
+            <MetricCard label="Panel Family Labels" value={groupedNavigation.length} />
+            <MetricCard label="Quick Jump Anchors" value={quickJumpItems.length} />
+            <MetricCard label="Command Palette References" value={commandPalette?.normalizedCommandCatalog?.length ?? 0} />
+            <MetricCard label="Template-aware Panel Grouping" value={visibleTemplatePanels} />
+            <MetricCard label="Operator-friendly Panel Descriptions" value="enabled" />
+            <MetricCard label="Empty / Loading State Consistency" value="standardized" />
+          </div>
+          <p className="empty-state">
+            Workspace actions remain paper trading only, with no live orders, no brokerage integration, and no trading logic changes.
+          </p>
+        </article>
         {children}
       </section>
     </section>
@@ -1300,7 +1426,10 @@ function App() {
     { id: 'workspace-configuration-transfer', label: 'Config Transfer', status: workspaceConfigurationTransfer.importStatus },
     { id: 'workspace-template', label: 'Templates', status: workspaceTemplate.templateValidationStatus },
     { id: 'workspace-command-palette', label: 'Commands', status: workspaceCommandPalette.commandExecutionResult.status },
-  ]
+  ].map((item) => ({
+    ...item,
+    family: getWorkspaceFamily(item.id),
+  }))
 
   return (
     <main className="risk-dashboard">
@@ -1336,7 +1465,7 @@ function App() {
         <MetricCard label="Open Risk" value={formatCurrency(risk.summary.openRisk)} tone={risk.summary.openRiskPct > 2 ? 'warning' : ''} />
       </section>
 
-      <WorkspaceLayout navigation={workspaceNavigation}>
+      <WorkspaceLayout navigation={workspaceNavigation} commandPalette={workspaceCommandPalette} workspaceTemplate={workspaceTemplate}>
         <Suspense fallback={<PanelLoadingFallback />}>
         <article id="market-data-health" className={`panel market-data-health-panel ${marketDataAdapterHealth.health.status}`}>
           <div className="panel-heading">

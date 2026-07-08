@@ -155,6 +155,67 @@ h1 {
   gap: 7px;
 }
 
+.workspace-rail-summary {
+  display: grid;
+  gap: 5px;
+  padding: 10px;
+  border: 1px solid rgba(56, 189, 248, 0.26);
+  border-radius: 7px;
+  background: #0b1220;
+}
+
+.workspace-rail-summary span,
+.quick-jump-nav > span,
+.workspace-grouped-nav > span {
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-rail-summary strong {
+  color: var(--text-strong);
+  font-size: 13px;
+}
+
+.quick-jump-nav {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-jump-nav div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.quick-jump-nav a {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 8px;
+  color: var(--text);
+  background: #0b1220;
+  font-size: 11px;
+  text-decoration: none;
+}
+
+.workspace-grouped-nav {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-nav-group {
+  display: grid;
+  gap: 7px;
+}
+
+.workspace-nav-group h3 {
+  color: var(--text-muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
 .workspace-rail-item {
   display: flex;
   justify-content: space-between;
@@ -187,6 +248,10 @@ h1 {
 
 .workspace-panels {
   margin-bottom: 0;
+}
+
+.workspace-ux-panel {
+  grid-column: 1 / -1;
 }
 
 .dashboard-grid {
@@ -1207,6 +1272,10 @@ tr:last-child td {
 
   .workspace-rail nav {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workspace-grouped-nav {
+    grid-template-columns: 1fr;
   }
 
   .header-status {
