@@ -52,6 +52,7 @@ import { evaluateSystemHealthCommandCenter } from '../lib/system/systemHealthCom
 import { generateOperatorActions } from '../lib/system/operatorActionCenterEngine.js'
 import { recordEnterpriseAuditTrail } from '../lib/system/enterpriseAuditTrailEngine.js'
 import { evaluateEnterpriseReleaseControl } from '../lib/system/enterpriseReleaseControlCenterEngine.js'
+import { prepareWorkspacePersistence } from '../lib/system/workspacePersistenceEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1161,7 +1162,7 @@ function App() {
     releaseReadiness,
     systemHealthCommandCenter,
   ])
-  const workspaceNavigation = [
+  const workspaceNavigationBase = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
     { id: 'broker-adapter-health', label: 'Broker Adapter', status: brokerAdapterHealth.health.status },
@@ -1206,6 +1207,28 @@ function App() {
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
+  ]
+  const workspacePersistence = useMemo(() => prepareWorkspacePersistence({
+    dashboardNavigation: workspaceNavigationBase,
+    activePanelId: 'enterprise-release-control',
+    operatorPreferences: {
+      theme: 'system',
+      density: 'operator',
+      defaultLandingPanel: 'enterprise-release-control',
+      eventRefreshMode: 'manual',
+    },
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+    operatorActionCenter,
+  }, { emitEvent: false }), [
+    enterpriseReleaseControl,
+    operatorActionCenter,
+    systemHealthCommandCenter,
+    workspaceNavigationBase,
+  ])
+  const workspaceNavigation = [
+    ...workspaceNavigationBase,
+    { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
   ]
 
   return (
@@ -3689,6 +3712,107 @@ function App() {
             </section>
           </div>
           <span className="event-line">{enterpriseReleaseControl.eventType}</span>
+        </article>
+
+        <article id="workspace-persistence" className={`panel workspace-persistence-panel ${workspacePersistence.persistenceStatus}`}>
+          <div className="panel-heading">
+            <h2>Workspace Persistence</h2>
+            <span>Prepared operator workspace state only. No authentication, multi-user support, live orders, or brokerage integration.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Workspace Persistence Model</span>
+              <strong>{workspacePersistence.persistenceStatus}</strong>
+            </div>
+            <span className={`decision-pill ${workspacePersistence.persistenceStatus === 'caution' ? 'warning' : 'positive'}`}>
+              {formatNumber(workspacePersistence.savedDashboardLayoutState.panels.length)} panels
+            </span>
+          </div>
+          <p className="empty-state">{workspacePersistence.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Saved Dashboard Layout State" value={workspacePersistence.savedDashboardLayoutState.layoutId} />
+            <MetricCard label="Saved Panel Visibility State" value={formatNumber(Object.keys(workspacePersistence.savedPanelVisibilityState).length)} />
+            <MetricCard label="Saved Operator Preferences" value={workspacePersistence.savedOperatorPreferences.density} />
+            <MetricCard label="Saved Paper-Mode Environment Profile" value={workspacePersistence.savedPaperModeEnvironmentProfile.tradingMode} />
+            <MetricCard label="Local Persistence Adapter" value={workspacePersistence.localPersistenceAdapter.status} />
+            <MetricCard label="PostgreSQL Interface" value={workspacePersistence.futurePostgresPersistenceInterface.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Dashboard Layout State</h3>
+              {workspacePersistence.savedDashboardLayoutState.panels.slice(0, 6).map((panel) => (
+                <div key={panel.id} className="mini-row">
+                  <span>{panel.label}</span>
+                  <strong>{panel.sortOrder}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Panel Visibility State</h3>
+              {Object.entries(workspacePersistence.savedPanelVisibilityState).slice(0, 6).map(([panelId, state]) => (
+                <div key={panelId} className="mini-row">
+                  <span>{panelId}</span>
+                  <strong>{state.visible ? 'visible' : 'hidden'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Operator Preferences</h3>
+              <div className="mini-row">
+                <span>theme</span>
+                <strong>{workspacePersistence.savedOperatorPreferences.theme}</strong>
+              </div>
+              <div className="mini-row">
+                <span>default panel</span>
+                <strong>{workspacePersistence.savedOperatorPreferences.defaultLandingPanel}</strong>
+              </div>
+              <div className="mini-row">
+                <span>event refresh</span>
+                <strong>{workspacePersistence.savedOperatorPreferences.eventRefreshMode}</strong>
+              </div>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Paper-Mode Environment Profile</h3>
+              <p className="empty-state">
+                {workspacePersistence.savedPaperModeEnvironmentProfile.releaseStatus} release / {workspacePersistence.savedPaperModeEnvironmentProfile.platformHealthStatus} health / {workspacePersistence.savedPaperModeEnvironmentProfile.operatorActionSeverity} operator severity.
+              </p>
+            </section>
+            <section>
+              <h3>Local Persistence Adapter</h3>
+              <p className="empty-state">
+                {workspacePersistence.localPersistenceAdapter.name} / {workspacePersistence.localPersistenceAdapter.status} / key {workspacePersistence.localPersistenceAdapter.storageKey ?? 'browser-local'}.
+              </p>
+            </section>
+            <section>
+              <h3>Future PostgreSQL Persistence Interface</h3>
+              <p className="empty-state">
+                {workspacePersistence.futurePostgresPersistenceInterface.operations.join(' / ')} / placeholder only.
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Persistence Source Events</h3>
+              <p className="empty-state">
+                {Object.values(workspacePersistence.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+            <section>
+              <h3>Persistence Boundaries</h3>
+              <p className="empty-state">
+                No authentication yet / no multi-user support yet / no trading logic changes.
+              </p>
+            </section>
+            <section>
+              <h3>Adapter Safety</h3>
+              <p className="empty-state">
+                Paper trading only / no live orders / no brokerage integration.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{workspacePersistence.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
