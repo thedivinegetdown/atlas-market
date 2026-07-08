@@ -53,6 +53,7 @@ import { generateOperatorActions } from '../lib/system/operatorActionCenterEngin
 import { recordEnterpriseAuditTrail } from '../lib/system/enterpriseAuditTrailEngine.js'
 import { evaluateEnterpriseReleaseControl } from '../lib/system/enterpriseReleaseControlCenterEngine.js'
 import { prepareWorkspacePersistence } from '../lib/system/workspacePersistenceEngine.js'
+import { recoverWorkspaceSession } from '../lib/system/workspaceSessionRecoveryEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1226,9 +1227,19 @@ function App() {
     systemHealthCommandCenter,
     workspaceNavigationBase,
   ])
+  const workspaceSessionRecovery = useMemo(() => recoverWorkspaceSession({
+    workspacePersistence,
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+  }, { emitEvent: false }), [
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
+    { id: 'workspace-session-recovery', label: 'Recovery', status: workspaceSessionRecovery.recoveryValidationStatus },
   ]
 
   return (
@@ -3813,6 +3824,116 @@ function App() {
             </section>
           </div>
           <span className="event-line">{workspacePersistence.eventType}</span>
+        </article>
+
+        <article id="workspace-session-recovery" className={`panel workspace-session-recovery-panel ${workspaceSessionRecovery.recoveryValidationStatus}`}>
+          <div className="panel-heading">
+            <h2>Workspace Session Recovery</h2>
+            <span>Restores operator workspace shell state after reloads or interrupted development sessions.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Recovery Validation Status</span>
+              <strong>{workspaceSessionRecovery.recoveryValidationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${workspaceSessionRecovery.recoveryValidationStatus === 'failed' ? 'danger' : workspaceSessionRecovery.recoveryValidationStatus === 'partial' ? 'warning' : 'positive'}`}>
+              {workspaceSessionRecovery.savedWorkspaceStateHydration.source}
+            </span>
+          </div>
+          <p className="empty-state">{workspaceSessionRecovery.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Saved Workspace State Hydration" value={workspaceSessionRecovery.savedWorkspaceStateHydration.loadStatus} />
+            <MetricCard label="Layout Restoration" value={workspaceSessionRecovery.layoutRestoration.restored ? 'restored' : 'missing'} />
+            <MetricCard label="Panel Visibility Restoration" value={workspaceSessionRecovery.panelVisibilityRestoration.restored ? 'restored' : 'missing'} />
+            <MetricCard label="Operator Preference Restoration" value={workspaceSessionRecovery.operatorPreferenceRestoration.restored ? 'restored' : 'missing'} />
+            <MetricCard label="Paper-Mode Profile Restoration" value={workspaceSessionRecovery.paperModeProfileRestoration.restored ? 'restored' : 'missing'} />
+            <MetricCard label="Recovery Issues" value={formatNumber(workspaceSessionRecovery.recoveryIssueSummary.length)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Saved Workspace State Hydration</h3>
+              <div className="mini-row">
+                <span>{workspaceSessionRecovery.savedWorkspaceStateHydration.workspaceId ?? 'no workspace id'}</span>
+                <strong>{workspaceSessionRecovery.savedWorkspaceStateHydration.source}</strong>
+              </div>
+              <p className="empty-state">
+                model {workspaceSessionRecovery.savedWorkspaceStateHydration.modelVersion ?? 'none'} / {workspaceSessionRecovery.savedWorkspaceStateHydration.loadStatus}
+              </p>
+            </section>
+            <section>
+              <h3>Layout Restoration</h3>
+              {workspaceSessionRecovery.layoutRestoration.panels.slice(0, 5).map((panel) => (
+                <div key={panel.id} className="mini-row">
+                  <span>{panel.label}</span>
+                  <strong>{panel.visible ? 'visible' : 'hidden'}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Panel Visibility Restoration</h3>
+              <div className="mini-row">
+                <span>visible panels</span>
+                <strong>{formatNumber(workspaceSessionRecovery.panelVisibilityRestoration.visiblePanelIds.length)}</strong>
+              </div>
+              <div className="mini-row">
+                <span>hidden panels</span>
+                <strong>{formatNumber(workspaceSessionRecovery.panelVisibilityRestoration.hiddenPanelIds.length)}</strong>
+              </div>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Operator Preference Restoration</h3>
+              <div className="mini-row">
+                <span>theme</span>
+                <strong>{workspaceSessionRecovery.operatorPreferenceRestoration.preferences.theme}</strong>
+              </div>
+              <div className="mini-row">
+                <span>density</span>
+                <strong>{workspaceSessionRecovery.operatorPreferenceRestoration.preferences.density}</strong>
+              </div>
+              <div className="mini-row">
+                <span>landing panel</span>
+                <strong>{workspaceSessionRecovery.operatorPreferenceRestoration.preferences.defaultLandingPanel}</strong>
+              </div>
+            </section>
+            <section>
+              <h3>Paper-Mode Profile Restoration</h3>
+              <p className="empty-state">
+                {workspaceSessionRecovery.paperModeProfileRestoration.profile.tradingMode} mode / live orders {workspaceSessionRecovery.paperModeProfileRestoration.profile.liveOrders ? 'enabled' : 'disabled'} / brokerage {workspaceSessionRecovery.paperModeProfileRestoration.profile.brokerageIntegration ? 'enabled' : 'disabled'}.
+              </p>
+            </section>
+            <section>
+              <h3>Recovery Issue Summary</h3>
+              {workspaceSessionRecovery.recoveryIssueSummary.slice(0, 4).map((issue) => (
+                <div key={issue} className="mini-row">
+                  <span>{issue}</span>
+                  <strong>{workspaceSessionRecovery.recoveryValidationStatus}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Recovery Source Events</h3>
+              <p className="empty-state">
+                {Object.values(workspaceSessionRecovery.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+            <section>
+              <h3>Recovery Boundaries</h3>
+              <p className="empty-state">
+                No authentication yet / no multi-user support yet / no trading logic changes.
+              </p>
+            </section>
+            <section>
+              <h3>Recovery Safety</h3>
+              <p className="empty-state">
+                Paper trading only / no live orders / no brokerage integration.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{workspaceSessionRecovery.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
