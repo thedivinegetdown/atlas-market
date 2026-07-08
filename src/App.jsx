@@ -59,6 +59,7 @@ import { applyWorkspaceTemplate } from '../lib/system/workspaceTemplateEngine.js
 import { executeWorkspaceCommandPalette } from '../lib/system/workspaceCommandPaletteEngine.js'
 import { evaluateAuthenticationReadiness } from '../lib/system/authenticationReadinessEngine.js'
 import { evaluateRoleBasedPermissionPlanning } from '../lib/system/roleBasedPermissionPlanningEngine.js'
+import { evaluateMultiUserWorkspacePlanning } from '../lib/system/multiUserWorkspacePlanningEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1447,6 +1448,21 @@ function App() {
     workspaceCommandPalette,
     workspacePersistence,
   ])
+  const multiUserWorkspacePlanning = useMemo(() => evaluateMultiUserWorkspacePlanning({
+    authReadiness: authenticationReadiness,
+    permissionPlanning,
+    workspacePersistence,
+    enterpriseAuditTrail,
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    authenticationReadiness,
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    permissionPlanning,
+    systemHealthCommandCenter,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1456,6 +1472,7 @@ function App() {
     { id: 'workspace-command-palette', label: 'Commands', status: workspaceCommandPalette.commandExecutionResult.status },
     { id: 'authentication-readiness', label: 'Auth Ready', status: authenticationReadiness.authReadinessStatus },
     { id: 'permission-planning', label: 'Permissions', status: permissionPlanning.permissionReadinessStatus },
+    { id: 'multi-user-workspace-planning', label: 'Multi-User', status: multiUserWorkspacePlanning.multiUserReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4659,6 +4676,99 @@ function App() {
             </section>
           </div>
           <span className="event-line">{permissionPlanning.eventType}</span>
+        </article>
+
+        <article id="multi-user-workspace-planning" className={`panel multi-user-workspace-planning-panel ${multiUserWorkspacePlanning.multiUserReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Multi-User Workspace Planning</h2>
+            <span>Future organization, team workspace, and membership planning only. No real users or enforcement are enabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Multi-User Readiness Status</span>
+              <strong>{multiUserWorkspacePlanning.multiUserReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${multiUserWorkspacePlanning.multiUserReadinessStatus === 'blocked' ? 'danger' : multiUserWorkspacePlanning.multiUserReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              placeholder only
+            </span>
+          </div>
+          <p className="empty-state">{multiUserWorkspacePlanning.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Future Organization Model Placeholder" value={multiUserWorkspacePlanning.futureOrganizationModelPlaceholder.modelStatus} />
+            <MetricCard label="Future Team Workspace Model Placeholder" value={multiUserWorkspacePlanning.futureTeamWorkspaceModelPlaceholder.modelStatus} />
+            <MetricCard label="User Membership Model Placeholder" value={formatNumber(multiUserWorkspacePlanning.userMembershipModelPlaceholder.length)} />
+            <MetricCard label="Workspace Ownership Planning" value={multiUserWorkspacePlanning.workspaceOwnershipPlanning.plannedOwnerRole} />
+            <MetricCard label="Shared Workspace Access Planning" value={formatNumber(multiUserWorkspacePlanning.sharedWorkspaceAccessPlanning.plannedSharedRoles.length)} />
+            <MetricCard label="Multi-User Readiness Status" value={multiUserWorkspacePlanning.multiUserReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Future Organization Model Placeholder</h3>
+              <div className="mini-row">
+                <span>{multiUserWorkspacePlanning.futureOrganizationModelPlaceholder.organizationName}</span>
+                <strong>{multiUserWorkspacePlanning.futureOrganizationModelPlaceholder.organizationId}</strong>
+              </div>
+              <p className="empty-state">Persisted: no / real accounts: disabled.</p>
+            </section>
+            <section>
+              <h3>Future Team Workspace Model Placeholder</h3>
+              <div className="mini-row">
+                <span>{multiUserWorkspacePlanning.futureTeamWorkspaceModelPlaceholder.teamWorkspaceId}</span>
+                <strong>{multiUserWorkspacePlanning.futureTeamWorkspaceModelPlaceholder.organizationId}</strong>
+              </div>
+              <p className="empty-state">Shared layout, templates, and commands remain planning-only.</p>
+            </section>
+            <section>
+              <h3>User Membership Model Placeholder</h3>
+              {multiUserWorkspacePlanning.userMembershipModelPlaceholder.map((membership) => (
+                <div key={membership.membershipId} className="mini-row">
+                  <span>{membership.role}</span>
+                  <strong>{membership.membershipStatus}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Workspace Ownership Planning</h3>
+              <p className="empty-state">
+                Owner role: {multiUserWorkspacePlanning.workspaceOwnershipPlanning.plannedOwnerRole} / transfer disabled / enforcement disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Shared Workspace Access Planning</h3>
+              <p className="empty-state">
+                {multiUserWorkspacePlanning.sharedWorkspaceAccessPlanning.plannedSharedRoles.join(' / ')} / sharing disabled until real auth exists.
+              </p>
+            </section>
+            <section>
+              <h3>Collaboration Boundary Summary</h3>
+              <p className="empty-state">
+                {multiUserWorkspacePlanning.collaborationBoundarySummary.deniedCollaborationActions.join(' / ')}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Audit and Permission Dependency Summary</h3>
+              <p className="empty-state">
+                Audit {multiUserWorkspacePlanning.auditAndPermissionDependencySummary.auditTrailStatus} / permission {multiUserWorkspacePlanning.auditAndPermissionDependencySummary.permissionReadinessStatus} / dependencies {multiUserWorkspacePlanning.auditAndPermissionDependencySummary.dependenciesReady ? 'ready' : 'review'}.
+              </p>
+            </section>
+            <section>
+              <h3>Multi-User Boundaries</h3>
+              <p className="empty-state">
+                Do not add real authentication yet / no real multi-user accounts / no permission enforcement / no sign-in UI.
+              </p>
+            </section>
+            <section>
+              <h3>Multi-User Source Events</h3>
+              <p className="empty-state">
+                {Object.values(multiUserWorkspacePlanning.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{multiUserWorkspacePlanning.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
