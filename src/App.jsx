@@ -50,6 +50,7 @@ import { evaluateReleaseCandidateStabilization } from '../lib/system/releaseCand
 import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
 import { evaluateSystemHealthCommandCenter } from '../lib/system/systemHealthCommandCenterEngine.js'
 import { generateOperatorActions } from '../lib/system/operatorActionCenterEngine.js'
+import { recordEnterpriseAuditTrail } from '../lib/system/enterpriseAuditTrailEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1127,6 +1128,23 @@ function App() {
     risk,
     systemHealthCommandCenter,
   ])
+  const enterpriseAuditTrail = useMemo(() => recordEnterpriseAuditTrail({
+    eventObservability,
+    operatorActionCenter,
+    strategyLifecycle,
+    portfolioRisk: risk,
+    tradeGuardrail: guardrails[0]?.result,
+    releaseReadiness,
+    systemHealthCommandCenter,
+  }, { emitEvent: false }), [
+    eventObservability,
+    guardrails,
+    operatorActionCenter,
+    releaseReadiness,
+    risk,
+    strategyLifecycle,
+    systemHealthCommandCenter,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -1167,6 +1185,7 @@ function App() {
     { id: 'event-observability', label: 'Observability', status: eventObservability.observabilityStatus },
     { id: 'system-health-command-center', label: 'System Health', status: systemHealthCommandCenter.finalPlatformHealthStatus },
     { id: 'operator-action-center', label: 'Operator Actions', status: operatorActionCenter.platformActionSummary.topSeverity },
+    { id: 'enterprise-audit-trail', label: 'Audit Trail', status: enterpriseAuditTrail.auditIntegrityStatus.status },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -3454,6 +3473,103 @@ function App() {
             </section>
           </div>
           <span className="event-line">{operatorActionCenter.eventType}</span>
+        </article>
+
+        <article id="enterprise-audit-trail" className={`panel enterprise-audit-trail-panel ${enterpriseAuditTrail.auditIntegrityStatus.status}`}>
+          <div className="panel-heading">
+            <h2>Enterprise Audit Trail</h2>
+            <span>Normalized paper-only audit records across events, actions, lifecycle, risk, and release readiness.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Audit Integrity Status</span>
+              <strong>{enterpriseAuditTrail.auditIntegrityStatus.status}</strong>
+            </div>
+            <span className={`decision-pill ${enterpriseAuditTrail.auditIntegrityStatus.status === 'invalid' ? 'danger' : enterpriseAuditTrail.auditIntegrityStatus.status === 'caution' ? 'warning' : 'positive'}`}>
+              {formatNumber(enterpriseAuditTrail.normalizedAuditRecords.length)} records
+            </span>
+          </div>
+          <p className="empty-state">{enterpriseAuditTrail.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Normalized Audit Records" value={formatNumber(enterpriseAuditTrail.normalizedAuditRecords.length)} />
+            <MetricCard label="Audit Categories" value={formatNumber(enterpriseAuditTrail.auditCategoryGrouping.length)} />
+            <MetricCard label="Highest Severity" value={enterpriseAuditTrail.auditSeverityClassification.highestSeverity} />
+            <MetricCard label="Critical Records" value={formatNumber(enterpriseAuditTrail.auditSeverityClassification.critical)} />
+            <MetricCard label="Operator References" value={formatNumber(enterpriseAuditTrail.operatorActionReferences.length)} />
+            <MetricCard label="Risk References" value={formatNumber(enterpriseAuditTrail.riskDecisionReferences.length)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Audit Category Grouping</h3>
+              {enterpriseAuditTrail.auditCategoryGrouping.map((group) => (
+                <div key={group.category} className="mini-row">
+                  <span>{group.category}</span>
+                  <strong>{group.highestSeverity}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Audit Severity Classification</h3>
+              {Object.entries(enterpriseAuditTrail.auditSeverityClassification)
+                .filter(([severity]) => severity !== 'highestSeverity')
+                .map(([severity, count]) => (
+                  <div key={severity} className="mini-row">
+                    <span>{severity}</span>
+                    <strong>{formatNumber(count)}</strong>
+                  </div>
+                ))}
+            </section>
+            <section>
+              <h3>Actor / Source Attribution</h3>
+              {enterpriseAuditTrail.actorSourceAttribution.slice(0, 5).map((attribution) => (
+                <div key={attribution.auditRecordId} className="mini-row">
+                  <span>{attribution.actor}</span>
+                  <strong>{attribution.source}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Event Chain References</h3>
+              <p className="empty-state">
+                {enterpriseAuditTrail.eventChainReferences.slice(0, 8).join(' / ')}
+              </p>
+            </section>
+            <section>
+              <h3>Operator Action References</h3>
+              <p className="empty-state">
+                {enterpriseAuditTrail.operatorActionReferences.slice(0, 5).join(' / ') || 'No operator action references.'}
+              </p>
+            </section>
+            <section>
+              <h3>Strategy Lifecycle References</h3>
+              <p className="empty-state">
+                {enterpriseAuditTrail.strategyLifecycleReferences.join(' / ') || 'No strategy lifecycle references.'}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Risk Decision References</h3>
+              <p className="empty-state">
+                {enterpriseAuditTrail.riskDecisionReferences.join(' / ') || 'No risk decision references.'}
+              </p>
+            </section>
+            <section>
+              <h3>Event Output</h3>
+              <p className="empty-state">
+                Paper trading audit only / no live orders / no brokerage execution.
+              </p>
+            </section>
+            <section>
+              <h3>Integrity Checks</h3>
+              <p className="empty-state">
+                {formatNumber(enterpriseAuditTrail.auditIntegrityStatus.missingEventTypeCount)} missing event types / {formatNumber(enterpriseAuditTrail.auditIntegrityStatus.unsafeRecordCount)} unsafe records.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{enterpriseAuditTrail.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
