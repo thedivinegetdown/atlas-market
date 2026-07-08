@@ -51,6 +51,7 @@ import { evaluateReleaseReadiness } from '../lib/system/releaseReadiness.js'
 import { evaluateSystemHealthCommandCenter } from '../lib/system/systemHealthCommandCenterEngine.js'
 import { generateOperatorActions } from '../lib/system/operatorActionCenterEngine.js'
 import { recordEnterpriseAuditTrail } from '../lib/system/enterpriseAuditTrailEngine.js'
+import { evaluateEnterpriseReleaseControl } from '../lib/system/enterpriseReleaseControlCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1145,6 +1146,21 @@ function App() {
     strategyLifecycle,
     systemHealthCommandCenter,
   ])
+  const enterpriseReleaseControl = useMemo(() => evaluateEnterpriseReleaseControl({
+    releaseReadiness,
+    releaseCandidateStabilization,
+    systemHealthCommandCenter,
+    eventObservability,
+    operatorActionCenter,
+    enterpriseAuditTrail,
+  }, { emitEvent: false }), [
+    enterpriseAuditTrail,
+    eventObservability,
+    operatorActionCenter,
+    releaseCandidateStabilization,
+    releaseReadiness,
+    systemHealthCommandCenter,
+  ])
   const workspaceNavigation = [
     { id: 'market-data-health', label: 'Market Data', status: marketDataAdapterHealth.health.status },
     { id: 'market-regime', label: 'Regime', status: marketRegimeClassification.riskRegime.regime },
@@ -1186,6 +1202,7 @@ function App() {
     { id: 'system-health-command-center', label: 'System Health', status: systemHealthCommandCenter.finalPlatformHealthStatus },
     { id: 'operator-action-center', label: 'Operator Actions', status: operatorActionCenter.platformActionSummary.topSeverity },
     { id: 'enterprise-audit-trail', label: 'Audit Trail', status: enterpriseAuditTrail.auditIntegrityStatus.status },
+    { id: 'enterprise-release-control', label: 'Release Control', status: enterpriseReleaseControl.finalReleaseStatus },
     { id: 'drawdown-protection', label: 'Drawdown', status: drawdownProtection.protectionStatus },
     { id: 'multi-strategy', label: 'Strategies', status: strategyPortfolioManager.strategyApprovalStatus },
     { id: 'event-timeline', label: 'Events', status: eventTimeline.length },
@@ -3570,6 +3587,108 @@ function App() {
             </section>
           </div>
           <span className="event-line">{enterpriseAuditTrail.eventType}</span>
+        </article>
+
+        <article id="enterprise-release-control" className={`panel enterprise-release-control-panel ${enterpriseReleaseControl.finalReleaseStatus}`}>
+          <div className="panel-heading">
+            <h2>Enterprise Release Control</h2>
+            <span>Final paper-only release decision across readiness, stabilization, health, observability, operator actions, and audit.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Release Decision Summary</span>
+              <strong>{enterpriseReleaseControl.finalReleaseStatus}</strong>
+            </div>
+            <span className={`decision-pill ${enterpriseReleaseControl.finalReleaseStatus === 'blocked' ? 'danger' : enterpriseReleaseControl.finalReleaseStatus === 'caution' ? 'warning' : 'positive'}`}>
+              {formatNumber(enterpriseReleaseControl.releaseDecisionSummary.passedGateCount)} passed
+            </span>
+          </div>
+          <p className="empty-state">{enterpriseReleaseControl.releaseRationaleSummary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Final Release Status" value={enterpriseReleaseControl.finalReleaseStatus} />
+            <MetricCard label="Passed Gates" value={formatNumber(enterpriseReleaseControl.releaseDecisionSummary.passedGateCount)} />
+            <MetricCard label="Caution Gates" value={formatNumber(enterpriseReleaseControl.releaseDecisionSummary.cautionGateCount)} />
+            <MetricCard label="Blocked Gates" value={formatNumber(enterpriseReleaseControl.releaseDecisionSummary.blockedGateCount)} />
+            <MetricCard label="Paper Trading Only" value={enterpriseReleaseControl.releaseDecisionSummary.paperTradingOnly ? 'yes' : 'no'} />
+            <MetricCard label="Live Orders" value={enterpriseReleaseControl.releaseDecisionSummary.liveOrders ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Readiness Gate Review</h3>
+              <div className="mini-row">
+                <span>{enterpriseReleaseControl.readinessGateReview.sourceStatus}</span>
+                <strong>{enterpriseReleaseControl.readinessGateReview.status}</strong>
+              </div>
+              <p className="empty-state">{enterpriseReleaseControl.readinessGateReview.summary}</p>
+            </section>
+            <section>
+              <h3>Stabilization Gate Review</h3>
+              <div className="mini-row">
+                <span>{enterpriseReleaseControl.stabilizationGateReview.sourceStatus}</span>
+                <strong>{enterpriseReleaseControl.stabilizationGateReview.status}</strong>
+              </div>
+              <p className="empty-state">{enterpriseReleaseControl.stabilizationGateReview.summary}</p>
+            </section>
+            <section>
+              <h3>System Health Gate Review</h3>
+              <div className="mini-row">
+                <span>{enterpriseReleaseControl.systemHealthGateReview.sourceStatus}</span>
+                <strong>{enterpriseReleaseControl.systemHealthGateReview.status}</strong>
+              </div>
+              <p className="empty-state">{enterpriseReleaseControl.systemHealthGateReview.summary}</p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Event Observability Gate Review</h3>
+              <div className="mini-row">
+                <span>{enterpriseReleaseControl.eventObservabilityGateReview.sourceStatus}</span>
+                <strong>{enterpriseReleaseControl.eventObservabilityGateReview.status}</strong>
+              </div>
+              <p className="empty-state">
+                {(enterpriseReleaseControl.eventObservabilityGateReview.references ?? []).slice(0, 5).join(' / ') || 'No observability references.'}
+              </p>
+            </section>
+            <section>
+              <h3>Operator Action Gate Review</h3>
+              <div className="mini-row">
+                <span>{enterpriseReleaseControl.operatorActionGateReview.sourceStatus}</span>
+                <strong>{enterpriseReleaseControl.operatorActionGateReview.status}</strong>
+              </div>
+              <p className="empty-state">
+                {(enterpriseReleaseControl.operatorActionGateReview.references ?? []).slice(0, 5).join(' / ') || 'No operator action references.'}
+              </p>
+            </section>
+            <section>
+              <h3>Audit Trail Gate Review</h3>
+              <div className="mini-row">
+                <span>{enterpriseReleaseControl.auditTrailGateReview.sourceStatus}</span>
+                <strong>{enterpriseReleaseControl.auditTrailGateReview.status}</strong>
+              </div>
+              <p className="empty-state">
+                {(enterpriseReleaseControl.auditTrailGateReview.references ?? []).slice(0, 5).join(' / ') || 'No audit references.'}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Release Rationale Summary</h3>
+              <p className="empty-state">{enterpriseReleaseControl.releaseRationaleSummary}</p>
+            </section>
+            <section>
+              <h3>Source Event Chain</h3>
+              <p className="empty-state">
+                {Object.values(enterpriseReleaseControl.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+            <section>
+              <h3>Release Safety Boundary</h3>
+              <p className="empty-state">
+                Paper trading only / no live orders / no brokerage integration.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{enterpriseReleaseControl.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
