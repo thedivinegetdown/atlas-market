@@ -57,6 +57,7 @@ import { recoverWorkspaceSession } from '../lib/system/workspaceSessionRecoveryE
 import { transferWorkspaceConfiguration } from '../lib/system/workspaceConfigurationTransferEngine.js'
 import { applyWorkspaceTemplate } from '../lib/system/workspaceTemplateEngine.js'
 import { executeWorkspaceCommandPalette } from '../lib/system/workspaceCommandPaletteEngine.js'
+import { evaluateAuthenticationReadiness } from '../lib/system/authenticationReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1419,6 +1420,19 @@ function App() {
     workspaceSessionRecovery,
     workspaceTemplate,
   ])
+  const authenticationReadiness = useMemo(() => evaluateAuthenticationReadiness({
+    workspacePersistence,
+    workspaceSessionRecovery,
+    workspaceCommandPalette,
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+    workspaceCommandPalette,
+    workspacePersistence,
+    workspaceSessionRecovery,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1426,6 +1440,7 @@ function App() {
     { id: 'workspace-configuration-transfer', label: 'Config Transfer', status: workspaceConfigurationTransfer.importStatus },
     { id: 'workspace-template', label: 'Templates', status: workspaceTemplate.templateValidationStatus },
     { id: 'workspace-command-palette', label: 'Commands', status: workspaceCommandPalette.commandExecutionResult.status },
+    { id: 'authentication-readiness', label: 'Auth Ready', status: authenticationReadiness.authReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4444,6 +4459,99 @@ function App() {
             </section>
           </div>
           <span className="event-line">{workspaceCommandPalette.eventType}</span>
+        </article>
+
+        <article id="authentication-readiness" className={`panel authentication-readiness-panel ${authenticationReadiness.authReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Authentication Readiness</h2>
+            <span>Future authentication model placeholders only. No login, sign-in UI, or multi-user persistence is enabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Auth Readiness Status</span>
+              <strong>{authenticationReadiness.authReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${authenticationReadiness.authReadinessStatus === 'blocked' ? 'danger' : authenticationReadiness.authReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              placeholder only
+            </span>
+          </div>
+          <p className="empty-state">{authenticationReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Future User Identity Model Placeholder" value={authenticationReadiness.futureUserIdentityModelPlaceholder.modelStatus} />
+            <MetricCard label="Operator Session Identity Placeholder" value={authenticationReadiness.operatorSessionIdentityPlaceholder.sessionStatus} />
+            <MetricCard label="Role Model Placeholder" value={formatNumber(authenticationReadiness.roleModelPlaceholder.length)} />
+            <MetricCard label="Permission Boundary Summary" value={authenticationReadiness.permissionBoundarySummary.status} />
+            <MetricCard label="Paper-mode Access Boundary" value={authenticationReadiness.paperModeAccessBoundary.tradingMode} />
+            <MetricCard label="Auth Readiness Status" value={authenticationReadiness.authReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Future User Identity Model Placeholder</h3>
+              <div className="mini-row">
+                <span>{authenticationReadiness.futureUserIdentityModelPlaceholder.displayName}</span>
+                <strong>{authenticationReadiness.futureUserIdentityModelPlaceholder.userId}</strong>
+              </div>
+              <p className="empty-state">Provider: {authenticationReadiness.futureUserIdentityModelPlaceholder.authenticationProvider} / persisted: no.</p>
+            </section>
+            <section>
+              <h3>Operator Session Identity Placeholder</h3>
+              <div className="mini-row">
+                <span>{authenticationReadiness.operatorSessionIdentityPlaceholder.workspaceId}</span>
+                <strong>{authenticationReadiness.operatorSessionIdentityPlaceholder.hydrationSource}</strong>
+              </div>
+              <p className="empty-state">Authenticated: no / sign-in required: no / future session only.</p>
+            </section>
+            <section>
+              <h3>Role Model Placeholder</h3>
+              {authenticationReadiness.roleModelPlaceholder.map((role) => (
+                <div key={role.role} className="mini-row">
+                  <span>{role.role}</span>
+                  <strong>{formatNumber(role.permissions.length)}</strong>
+                </div>
+              ))}
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Permission Boundary Summary</h3>
+              <p className="empty-state">
+                {formatNumber(authenticationReadiness.permissionBoundarySummary.safeWorkspaceCommandCount)} safe workspace commands / {formatNumber(authenticationReadiness.permissionBoundarySummary.blockedTradingCommandCount)} blocked trading commands.
+              </p>
+            </section>
+            <section>
+              <h3>Paper-mode Access Boundary</h3>
+              <p className="empty-state">
+                Paper trading only / live orders {authenticationReadiness.paperModeAccessBoundary.liveOrders ? 'enabled' : 'disabled'} / brokerage {authenticationReadiness.paperModeAccessBoundary.brokerageIntegration ? 'enabled' : 'disabled'}.
+              </p>
+            </section>
+            <section>
+              <h3>Denied Permission Scopes</h3>
+              <p className="empty-state">
+                {authenticationReadiness.permissionBoundarySummary.deniedScopes.join(' / ')}
+              </p>
+            </section>
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Allowed Workspace Scopes</h3>
+              <p className="empty-state">
+                {authenticationReadiness.permissionBoundarySummary.allowedScopes.join(' / ')}
+              </p>
+            </section>
+            <section>
+              <h3>Authentication Boundaries</h3>
+              <p className="empty-state">
+                Do not add real authentication yet / no sign-in UI / no multi-user persistence.
+              </p>
+            </section>
+            <section>
+              <h3>Auth Source Events</h3>
+              <p className="empty-state">
+                {Object.values(authenticationReadiness.sourceEvents).filter(Boolean).join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{authenticationReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
