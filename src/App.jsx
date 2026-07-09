@@ -72,6 +72,9 @@ import { generateProductionMonitoringPlan } from '../lib/system/productionMonito
 import { evaluateDataQualityReadiness } from '../lib/system/dataQualityReadinessEngine.js'
 import { evaluateDataLineage } from '../lib/system/dataLineageEngine.js'
 import { planDataRetention } from '../lib/system/dataRetentionPlanningEngine.js'
+import { evaluateComplianceReadiness } from '../lib/system/complianceReadinessEngine.js'
+import { planPolicyControl } from '../lib/system/policyControlPlanningEngine.js'
+import { evaluateGovernanceReviewBoard } from '../lib/system/governanceReviewBoardEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -282,6 +285,9 @@ function getWorkspaceFamily(panelId) {
     'data-quality',
     'data-lineage',
     'data-retention',
+    'compliance-readiness',
+    'policy-control',
+    'governance-review-board',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1757,6 +1763,61 @@ function App() {
     strategyBacktestReport,
     workspacePersistence,
   ])
+  const complianceReadiness = useMemo(() => evaluateComplianceReadiness({
+    enterpriseAuditTrail,
+    dataQualityReadiness,
+    dataLineage,
+    dataRetentionPlanning,
+    productionSecurityReadiness,
+    enterpriseReleaseControl,
+    productionDeploymentReadiness,
+  }, { emitEvent: false }), [
+    dataLineage,
+    dataQualityReadiness,
+    dataRetentionPlanning,
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+  ])
+  const policyControlPlanning = useMemo(() => planPolicyControl({
+    complianceReadiness,
+    workspacePersistence,
+    dataQualityReadiness,
+    dataLineage,
+    dataRetentionPlanning,
+    enterpriseReleaseControl,
+    productionDeploymentReadiness,
+    operatorActionCenter,
+    systemHealthCommandCenter,
+  }, { emitEvent: false }), [
+    complianceReadiness,
+    dataLineage,
+    dataQualityReadiness,
+    dataRetentionPlanning,
+    enterpriseReleaseControl,
+    operatorActionCenter,
+    productionDeploymentReadiness,
+    systemHealthCommandCenter,
+    workspacePersistence,
+  ])
+  const governanceReviewBoard = useMemo(() => evaluateGovernanceReviewBoard({
+    complianceReadiness,
+    policyControlPlanning,
+    enterpriseReleaseControl,
+    operatorActionCenter,
+    systemHealthCommandCenter,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+  }, { emitEvent: false }), [
+    complianceReadiness,
+    enterpriseReleaseControl,
+    operatorActionCenter,
+    policyControlPlanning,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    systemHealthCommandCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1779,6 +1840,9 @@ function App() {
     { id: 'data-quality', label: 'Data Quality', status: dataQualityReadiness.dataQualityStatus },
     { id: 'data-lineage', label: 'Lineage', status: dataLineage.lineageStatus },
     { id: 'data-retention', label: 'Retention', status: dataRetentionPlanning.retentionReadinessStatus },
+    { id: 'compliance-readiness', label: 'Compliance', status: complianceReadiness.complianceReadinessStatus },
+    { id: 'policy-control', label: 'Policy', status: policyControlPlanning.policyReadinessStatus },
+    { id: 'governance-review-board', label: 'Review Board', status: governanceReviewBoard.governanceDecision },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -5855,6 +5919,161 @@ function App() {
             </section>
           </div>
           <span className="event-line">{dataRetentionPlanning.eventType}</span>
+        </article>
+
+        <article id="compliance-readiness" className={`panel compliance-readiness-panel ${complianceReadiness.complianceReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Readiness</h2>
+            <span>Future compliance planning only. No legal claims, policy enforcement, live orders, or broker execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Compliance Readiness Status</span>
+              <strong>{complianceReadiness.complianceReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceReadiness.complianceReadinessStatus === 'blocked' ? 'danger' : complianceReadiness.complianceReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planning only
+            </span>
+          </div>
+          <p className="empty-state">{complianceReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Paper-Trading Compliance Boundary Summary" value={complianceReadiness.paperTradingComplianceBoundarySummary.status} />
+            <MetricCard label="Audit Compatibility Summary" value={complianceReadiness.auditCompatibilitySummary.status} />
+            <MetricCard label="Data Governance Compatibility Summary" value={complianceReadiness.dataGovernanceCompatibilitySummary.status} />
+            <MetricCard label="Security Readiness Compatibility Summary" value={complianceReadiness.securityReadinessCompatibilitySummary.status} />
+            <MetricCard label="Release Control Compatibility Summary" value={complianceReadiness.releaseControlCompatibilitySummary.status} />
+            <MetricCard label="Compliance Readiness Status" value={complianceReadiness.complianceReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Compatibility Domains</h3>
+              {[
+                complianceReadiness.paperTradingComplianceBoundarySummary,
+                complianceReadiness.auditCompatibilitySummary,
+                complianceReadiness.dataGovernanceCompatibilitySummary,
+                complianceReadiness.securityReadinessCompatibilitySummary,
+                complianceReadiness.releaseControlCompatibilitySummary,
+              ].map((summary) => (
+                <div key={summary.id} className="mini-row">
+                  <span>{summary.label}</span>
+                  <strong>{summary.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Compliance Planning Boundaries</h3>
+              <p className="empty-state">No legal claims / no policy enforcement / no authentication / no user accounts / paper trading only.</p>
+            </section>
+            <section>
+              <h3>Compliance Source Events</h3>
+              <p className="empty-state">{Object.values(complianceReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceReadiness.eventType}</span>
+        </article>
+
+        <article id="policy-control" className={`panel policy-control-panel ${policyControlPlanning.policyReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Policy Control</h2>
+            <span>Future policy model planning only. Policy enforcement remains disabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Policy Readiness Status</span>
+              <strong>{policyControlPlanning.policyReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${policyControlPlanning.policyReadinessStatus === 'blocked' ? 'danger' : policyControlPlanning.policyReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              enforcement disabled
+            </span>
+          </div>
+          <p className="empty-state">{policyControlPlanning.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Future Policy Model Placeholder" value={policyControlPlanning.futurePolicyModelPlaceholder.version} />
+            <MetricCard label="Policy Category Summary" value={formatNumber(policyControlPlanning.policyCategorySummary.totalCategories)} />
+            <MetricCard label="Workspace Policy Planning" value={policyControlPlanning.workspacePolicyPlanning.status} />
+            <MetricCard label="Trading Safety Policy Planning" value={policyControlPlanning.tradingSafetyPolicyPlanning.status} />
+            <MetricCard label="Data Policy Planning" value={policyControlPlanning.dataPolicyPlanning.status} />
+            <MetricCard label="Release Policy Planning" value={policyControlPlanning.releasePolicyPlanning.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Policy Planning Domains</h3>
+              {[
+                policyControlPlanning.workspacePolicyPlanning,
+                policyControlPlanning.tradingSafetyPolicyPlanning,
+                policyControlPlanning.dataPolicyPlanning,
+                policyControlPlanning.releasePolicyPlanning,
+              ].map((plan) => (
+                <div key={plan.id} className="mini-row">
+                  <span>{plan.label}</span>
+                  <strong>{plan.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Policy Category Summary</h3>
+              <p className="empty-state">
+                {formatNumber(policyControlPlanning.policyCategorySummary.readyCount)} ready / {formatNumber(policyControlPlanning.policyCategorySummary.cautionCount)} caution / {formatNumber(policyControlPlanning.policyCategorySummary.blockedCount)} blocked / enforcement disabled.
+              </p>
+            </section>
+            <section>
+              <h3>Policy Source Events</h3>
+              <p className="empty-state">{Object.values(policyControlPlanning.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{policyControlPlanning.eventType}</span>
+        </article>
+
+        <article id="governance-review-board" className={`panel governance-review-board-panel ${governanceReviewBoard.governanceDecision}`}>
+          <div className="panel-heading">
+            <h2>Governance Review Board</h2>
+            <span>Placeholder enterprise review board for future operational governance. Decisions are not enforced.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Governance Decision</span>
+              <strong>{governanceReviewBoard.governanceDecision}</strong>
+            </div>
+            <span className={`decision-pill ${governanceReviewBoard.governanceDecision === 'blocked' ? 'danger' : governanceReviewBoard.governanceDecision === 'caution' ? 'warning' : 'positive'}`}>
+              review only
+            </span>
+          </div>
+          <p className="empty-state">{governanceReviewBoard.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Review Board Model Placeholder" value={governanceReviewBoard.reviewBoardModelPlaceholder.implemented ? 'implemented' : 'planned'} />
+            <MetricCard label="Review Domain Summary" value={formatNumber(governanceReviewBoard.reviewDomainSummary.totalDomains)} />
+            <MetricCard label="Compliance Review Summary" value={governanceReviewBoard.complianceReviewSummary.status} />
+            <MetricCard label="Policy Review Summary" value={governanceReviewBoard.policyReviewSummary.status} />
+            <MetricCard label="Release Review Summary" value={governanceReviewBoard.releaseReviewSummary.status} />
+            <MetricCard label="Risk Review Summary" value={governanceReviewBoard.riskReviewSummary.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Review Domain Summary</h3>
+              {[
+                governanceReviewBoard.complianceReviewSummary,
+                governanceReviewBoard.policyReviewSummary,
+                governanceReviewBoard.releaseReviewSummary,
+                governanceReviewBoard.riskReviewSummary,
+              ].map((review) => (
+                <div key={review.id} className="mini-row">
+                  <span>{review.label}</span>
+                  <strong>{review.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Governance Review Boundary</h3>
+              <p className="empty-state">
+                {formatNumber(governanceReviewBoard.reviewDomainSummary.approvedCount)} approved / {formatNumber(governanceReviewBoard.reviewDomainSummary.cautionCount)} caution / {formatNumber(governanceReviewBoard.reviewDomainSummary.blockedCount)} blocked / decisions not enforced.
+              </p>
+            </section>
+            <section>
+              <h3>Governance Source Events</h3>
+              <p className="empty-state">{Object.values(governanceReviewBoard.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{governanceReviewBoard.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
