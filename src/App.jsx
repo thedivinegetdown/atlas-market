@@ -75,6 +75,9 @@ import { planDataRetention } from '../lib/system/dataRetentionPlanningEngine.js'
 import { evaluateComplianceReadiness } from '../lib/system/complianceReadinessEngine.js'
 import { planPolicyControl } from '../lib/system/policyControlPlanningEngine.js'
 import { evaluateGovernanceReviewBoard } from '../lib/system/governanceReviewBoardEngine.js'
+import { evaluateCommercialReadiness } from '../lib/system/commercialReadinessEngine.js'
+import { planPricingPackaging } from '../lib/system/pricingPackagingPlanningEngine.js'
+import { evaluateCustomerOnboardingReadiness } from '../lib/system/customerOnboardingReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -288,6 +291,9 @@ function getWorkspaceFamily(panelId) {
     'compliance-readiness',
     'policy-control',
     'governance-review-board',
+    'commercial-readiness',
+    'pricing-packaging',
+    'customer-onboarding',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1818,6 +1824,61 @@ function App() {
     productionSecurityReadiness,
     systemHealthCommandCenter,
   ])
+  const commercialReadiness = useMemo(() => evaluateCommercialReadiness({
+    enterpriseSaasReadiness,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    complianceReadiness,
+    governanceReviewBoard,
+    productionOperationsRunbook,
+    operatorActionCenter,
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    complianceReadiness,
+    enterpriseReleaseControl,
+    enterpriseSaasReadiness,
+    governanceReviewBoard,
+    operatorActionCenter,
+    productionDeploymentReadiness,
+    productionOperationsRunbook,
+    productionSecurityReadiness,
+    systemHealthCommandCenter,
+  ])
+  const pricingPackagingPlanning = useMemo(() => planPricingPackaging({
+    commercialReadiness,
+    workspaceTemplate,
+    workspaceCommandPalette,
+    governanceReviewBoard,
+    complianceReadiness,
+    policyControlPlanning,
+  }, { emitEvent: false }), [
+    commercialReadiness,
+    complianceReadiness,
+    governanceReviewBoard,
+    policyControlPlanning,
+    workspaceCommandPalette,
+    workspaceTemplate,
+  ])
+  const customerOnboardingReadiness = useMemo(() => evaluateCustomerOnboardingReadiness({
+    workspacePersistence,
+    workspaceTemplate,
+    workspaceCommandPalette,
+    productionSecurityReadiness,
+    productionOperationsRunbook,
+    commercialReadiness,
+    enterpriseReleaseControl,
+    systemHealthCommandCenter,
+  }, { emitEvent: false }), [
+    commercialReadiness,
+    enterpriseReleaseControl,
+    productionOperationsRunbook,
+    productionSecurityReadiness,
+    systemHealthCommandCenter,
+    workspaceCommandPalette,
+    workspacePersistence,
+    workspaceTemplate,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1843,6 +1904,9 @@ function App() {
     { id: 'compliance-readiness', label: 'Compliance', status: complianceReadiness.complianceReadinessStatus },
     { id: 'policy-control', label: 'Policy', status: policyControlPlanning.policyReadinessStatus },
     { id: 'governance-review-board', label: 'Review Board', status: governanceReviewBoard.governanceDecision },
+    { id: 'commercial-readiness', label: 'Commercial', status: commercialReadiness.commercialReadinessStatus },
+    { id: 'pricing-packaging', label: 'Packaging', status: pricingPackagingPlanning.pricingReadinessStatus },
+    { id: 'customer-onboarding', label: 'Onboarding', status: customerOnboardingReadiness.onboardingReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -6074,6 +6138,154 @@ function App() {
             </section>
           </div>
           <span className="event-line">{governanceReviewBoard.eventType}</span>
+        </article>
+
+        <article id="commercial-readiness" className={`panel commercial-readiness-panel ${commercialReadiness.commercialReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Commercial Readiness</h2>
+            <span>Future commercialization planning only. Billing, payments, auth enforcement, and real user accounts remain disabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Commercial Readiness Status</span>
+              <strong>{commercialReadiness.commercialReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${commercialReadiness.commercialReadinessStatus === 'blocked' ? 'danger' : commercialReadiness.commercialReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planning only
+            </span>
+          </div>
+          <p className="empty-state">{commercialReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Product Readiness Summary" value={commercialReadiness.productReadinessSummary.status} />
+            <MetricCard label="SaaS Readiness Summary" value={commercialReadiness.saasReadinessSummary.status} />
+            <MetricCard label="Deployment Readiness Summary" value={commercialReadiness.deploymentReadinessSummary.status} />
+            <MetricCard label="Security Readiness Summary" value={commercialReadiness.securityReadinessSummary.status} />
+            <MetricCard label="Compliance / Governance Readiness Summary" value={commercialReadiness.complianceGovernanceReadinessSummary.status} />
+            <MetricCard label="Operator Readiness Summary" value={commercialReadiness.operatorReadinessSummary.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Commercial Readiness Domains</h3>
+              {[
+                commercialReadiness.productReadinessSummary,
+                commercialReadiness.saasReadinessSummary,
+                commercialReadiness.deploymentReadinessSummary,
+                commercialReadiness.securityReadinessSummary,
+                commercialReadiness.complianceGovernanceReadinessSummary,
+                commercialReadiness.operatorReadinessSummary,
+              ].map((summary) => (
+                <div key={summary.id} className="mini-row">
+                  <span>{summary.label}</span>
+                  <strong>{summary.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Commercial Planning Boundaries</h3>
+              <p className="empty-state">No billing / no payments / no real user accounts / no authentication enforcement / paper trading only.</p>
+            </section>
+            <section>
+              <h3>Commercial Source Events</h3>
+              <p className="empty-state">{Object.values(commercialReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{commercialReadiness.eventType}</span>
+        </article>
+
+        <article id="pricing-packaging" className={`panel pricing-packaging-panel ${pricingPackagingPlanning.pricingReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Pricing & Packaging</h2>
+            <span>Future package planning only. No prices, billing, payments, or account provisioning are enabled.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Pricing Readiness Status</span>
+              <strong>{pricingPackagingPlanning.pricingReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${pricingPackagingPlanning.pricingReadinessStatus === 'blocked' ? 'danger' : pricingPackagingPlanning.pricingReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              billing disabled
+            </span>
+          </div>
+          <p className="empty-state">{pricingPackagingPlanning.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Future Package Model Placeholder" value={pricingPackagingPlanning.futurePackageModelPlaceholder.version} />
+            <MetricCard label="Package Tiers Placeholder" value={formatNumber(pricingPackagingPlanning.packageTiersPlaceholder.length)} />
+            <MetricCard label="Feature Grouping Summary" value={formatNumber(pricingPackagingPlanning.featureGroupingSummary.featureGroupCount)} />
+            <MetricCard label="Workspace / Package Compatibility Summary" value={pricingPackagingPlanning.workspacePackageCompatibilitySummary.status} />
+            <MetricCard label="Governance / Package Compatibility Summary" value={pricingPackagingPlanning.governancePackageCompatibilitySummary.status} />
+            <MetricCard label="Pricing Readiness Status" value={pricingPackagingPlanning.pricingReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Package Tiers Placeholder</h3>
+              {pricingPackagingPlanning.packageTiersPlaceholder.map((tier) => (
+                <div key={tier.tierId} className="mini-row">
+                  <span>{tier.label}</span>
+                  <strong>{formatNumber(tier.featureGroups.length)} groups</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Feature Grouping Summary</h3>
+              <p className="empty-state">{pricingPackagingPlanning.featureGroupingSummary.featureGroups.join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Packaging Source Events</h3>
+              <p className="empty-state">{Object.values(pricingPackagingPlanning.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{pricingPackagingPlanning.eventType}</span>
+        </article>
+
+        <article id="customer-onboarding" className={`panel customer-onboarding-panel ${customerOnboardingReadiness.onboardingReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Customer Onboarding</h2>
+            <span>Future onboarding readiness for workspace setup, templates, commands, paper safety, and runbook support.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Onboarding Readiness Status</span>
+              <strong>{customerOnboardingReadiness.onboardingReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${customerOnboardingReadiness.onboardingReadinessStatus === 'blocked' ? 'danger' : customerOnboardingReadiness.onboardingReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              accounts disabled
+            </span>
+          </div>
+          <p className="empty-state">{customerOnboardingReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Onboarding Flow Placeholder" value={customerOnboardingReadiness.onboardingFlowPlaceholder.flowId} />
+            <MetricCard label="Workspace Setup Readiness" value={customerOnboardingReadiness.workspaceSetupReadiness.status} />
+            <MetricCard label="Template Onboarding Readiness" value={customerOnboardingReadiness.templateOnboardingReadiness.status} />
+            <MetricCard label="Command Palette Onboarding Readiness" value={customerOnboardingReadiness.commandPaletteOnboardingReadiness.status} />
+            <MetricCard label="Paper-Trading Safety Onboarding Readiness" value={customerOnboardingReadiness.paperTradingSafetyOnboardingReadiness.status} />
+            <MetricCard label="Support / Runbook Readiness" value={customerOnboardingReadiness.supportRunbookReadiness.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Onboarding Readiness Domains</h3>
+              {[
+                customerOnboardingReadiness.workspaceSetupReadiness,
+                customerOnboardingReadiness.templateOnboardingReadiness,
+                customerOnboardingReadiness.commandPaletteOnboardingReadiness,
+                customerOnboardingReadiness.paperTradingSafetyOnboardingReadiness,
+                customerOnboardingReadiness.supportRunbookReadiness,
+              ].map((section) => (
+                <div key={section.id} className="mini-row">
+                  <span>{section.label}</span>
+                  <strong>{section.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Onboarding Flow Placeholder</h3>
+              <p className="empty-state">{customerOnboardingReadiness.onboardingFlowPlaceholder.steps.join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Onboarding Source Events</h3>
+              <p className="empty-state">{Object.values(customerOnboardingReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{customerOnboardingReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
