@@ -78,6 +78,9 @@ import { evaluateGovernanceReviewBoard } from '../lib/system/governanceReviewBoa
 import { evaluateCommercialReadiness } from '../lib/system/commercialReadinessEngine.js'
 import { planPricingPackaging } from '../lib/system/pricingPackagingPlanningEngine.js'
 import { evaluateCustomerOnboardingReadiness } from '../lib/system/customerOnboardingReadinessEngine.js'
+import { evaluateSupportOperationsReadiness } from '../lib/system/supportOperationsReadinessEngine.js'
+import { reviewLaunchReadiness } from '../lib/system/launchReadinessReviewEngine.js'
+import { summarizeCommercialRelease } from '../lib/system/commercialReleaseSummaryEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -294,6 +297,9 @@ function getWorkspaceFamily(panelId) {
     'commercial-readiness',
     'pricing-packaging',
     'customer-onboarding',
+    'support-operations',
+    'launch-readiness',
+    'commercial-release-summary',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1879,6 +1885,51 @@ function App() {
     workspacePersistence,
     workspaceTemplate,
   ])
+  const supportOperationsReadiness = useMemo(() => evaluateSupportOperationsReadiness({
+    productionOperationsRunbook,
+    customerOnboardingReadiness,
+    productionIncidentResponse,
+    productionMonitoringPlan,
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false }), [
+    customerOnboardingReadiness,
+    enterpriseReleaseControl,
+    productionIncidentResponse,
+    productionMonitoringPlan,
+    productionOperationsRunbook,
+    systemHealthCommandCenter,
+  ])
+  const launchReadinessReview = useMemo(() => reviewLaunchReadiness({
+    systemHealthCommandCenter,
+    enterpriseReleaseControl,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    governanceReviewBoard,
+    commercialReadiness,
+    supportOperationsReadiness,
+  }, { emitEvent: false }), [
+    commercialReadiness,
+    enterpriseReleaseControl,
+    governanceReviewBoard,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    supportOperationsReadiness,
+    systemHealthCommandCenter,
+  ])
+  const commercialReleaseSummary = useMemo(() => summarizeCommercialRelease({
+    enterpriseReleaseControl,
+    releaseReadiness,
+    launchReadinessReview,
+    commercialReadiness,
+    supportOperationsReadiness,
+  }, { emitEvent: false }), [
+    commercialReadiness,
+    enterpriseReleaseControl,
+    launchReadinessReview,
+    releaseReadiness,
+    supportOperationsReadiness,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1907,6 +1958,9 @@ function App() {
     { id: 'commercial-readiness', label: 'Commercial', status: commercialReadiness.commercialReadinessStatus },
     { id: 'pricing-packaging', label: 'Packaging', status: pricingPackagingPlanning.pricingReadinessStatus },
     { id: 'customer-onboarding', label: 'Onboarding', status: customerOnboardingReadiness.onboardingReadinessStatus },
+    { id: 'support-operations', label: 'Support', status: supportOperationsReadiness.supportReadinessStatus },
+    { id: 'launch-readiness', label: 'Launch', status: launchReadinessReview.launchReadinessStatus },
+    { id: 'commercial-release-summary', label: 'Commercial Release', status: commercialReleaseSummary.finalCommercialReleaseStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -6286,6 +6340,160 @@ function App() {
             </section>
           </div>
           <span className="event-line">{customerOnboardingReadiness.eventType}</span>
+        </article>
+
+        <article id="support-operations" className={`panel support-operations-panel ${supportOperationsReadiness.supportReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Support Operations</h2>
+            <span>Future support operations planning only. No ticketing integration, accounts, billing, deployment, or broker execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Support Readiness Status</span>
+              <strong>{supportOperationsReadiness.supportReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${supportOperationsReadiness.supportReadinessStatus === 'blocked' ? 'danger' : supportOperationsReadiness.supportReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              planning only
+            </span>
+          </div>
+          <p className="empty-state">{supportOperationsReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Support Workflow Placeholder" value={supportOperationsReadiness.supportWorkflowPlaceholder.workflowId} />
+            <MetricCard label="Operator Support Runbook Summary" value={supportOperationsReadiness.operatorSupportRunbookSummary.status} />
+            <MetricCard label="Customer Support Readiness Summary" value={supportOperationsReadiness.customerSupportReadinessSummary.status} />
+            <MetricCard label="Incident / Support Escalation Summary" value={supportOperationsReadiness.incidentSupportEscalationSummary.status} />
+            <MetricCard label="Documentation Readiness Summary" value={supportOperationsReadiness.documentationReadinessSummary.status} />
+            <MetricCard label="Support Readiness Status" value={supportOperationsReadiness.supportReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Support Readiness Domains</h3>
+              {[
+                supportOperationsReadiness.operatorSupportRunbookSummary,
+                supportOperationsReadiness.customerSupportReadinessSummary,
+                supportOperationsReadiness.incidentSupportEscalationSummary,
+                supportOperationsReadiness.documentationReadinessSummary,
+              ].map((summary) => (
+                <div key={summary.id} className="mini-row">
+                  <span>{summary.label}</span>
+                  <strong>{summary.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Support Workflow Placeholder</h3>
+              <p className="empty-state">{supportOperationsReadiness.supportWorkflowPlaceholder.steps.join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Support Source Events</h3>
+              <p className="empty-state">{Object.values(supportOperationsReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{supportOperationsReadiness.eventType}</span>
+        </article>
+
+        <article id="launch-readiness" className={`panel launch-readiness-panel ${launchReadinessReview.launchReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Launch Readiness</h2>
+            <span>Launch gate review for future commercial readiness. No deployment or commercial side effects.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Launch Readiness Status</span>
+              <strong>{launchReadinessReview.launchReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${launchReadinessReview.launchReadinessStatus === 'blocked' ? 'danger' : launchReadinessReview.launchReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              gates only
+            </span>
+          </div>
+          <p className="empty-state">{launchReadinessReview.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Product Readiness Gate" value={launchReadinessReview.productReadinessGate.status} />
+            <MetricCard label="Deployment Readiness Gate" value={launchReadinessReview.deploymentReadinessGate.status} />
+            <MetricCard label="Security Readiness Gate" value={launchReadinessReview.securityReadinessGate.status} />
+            <MetricCard label="Governance Readiness Gate" value={launchReadinessReview.governanceReadinessGate.status} />
+            <MetricCard label="Commercial Readiness Gate" value={launchReadinessReview.commercialReadinessGate.status} />
+            <MetricCard label="Support Readiness Gate" value={launchReadinessReview.supportReadinessGate.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Launch Readiness Gates</h3>
+              {[
+                launchReadinessReview.productReadinessGate,
+                launchReadinessReview.deploymentReadinessGate,
+                launchReadinessReview.securityReadinessGate,
+                launchReadinessReview.governanceReadinessGate,
+                launchReadinessReview.commercialReadinessGate,
+                launchReadinessReview.supportReadinessGate,
+              ].map((gate) => (
+                <div key={gate.id} className="mini-row">
+                  <span>{gate.label}</span>
+                  <strong>{gate.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Launch Planning Boundaries</h3>
+              <p className="empty-state">No deployment / no billing / no payments / no accounts / no live orders / no broker execution.</p>
+            </section>
+            <section>
+              <h3>Launch Source Events</h3>
+              <p className="empty-state">{Object.values(launchReadinessReview.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{launchReadinessReview.eventType}</span>
+        </article>
+
+        <article id="commercial-release-summary" className={`panel commercial-release-summary-panel ${commercialReleaseSummary.finalCommercialReleaseStatus}`}>
+          <div className="panel-heading">
+            <h2>Commercial Release Summary</h2>
+            <span>Final commercial release planning summary. Release status does not deploy, bill, or enable live trading.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Final Commercial Release Status</span>
+              <strong>{commercialReleaseSummary.finalCommercialReleaseStatus}</strong>
+            </div>
+            <span className={`decision-pill ${commercialReleaseSummary.finalCommercialReleaseStatus === 'blocked' ? 'danger' : commercialReleaseSummary.finalCommercialReleaseStatus === 'caution' ? 'warning' : 'positive'}`}>
+              summary only
+            </span>
+          </div>
+          <p className="empty-state">{commercialReleaseSummary.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Release Candidate Summary" value={commercialReleaseSummary.releaseCandidateSummary.status} />
+            <MetricCard label="Launch Readiness Summary" value={commercialReleaseSummary.launchReadinessSummary.status} />
+            <MetricCard label="Commercial Readiness Summary" value={commercialReleaseSummary.commercialReadinessSummary.status} />
+            <MetricCard label="Support Readiness Summary" value={commercialReleaseSummary.supportReadinessSummary.status} />
+            <MetricCard label="Remaining Blocker Summary" value={formatNumber(commercialReleaseSummary.remainingBlockerSummary.blockerCount)} />
+            <MetricCard label="Final Commercial Release Status" value={commercialReleaseSummary.finalCommercialReleaseStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Commercial Release Sections</h3>
+              {[
+                commercialReleaseSummary.releaseCandidateSummary,
+                commercialReleaseSummary.launchReadinessSummary,
+                commercialReleaseSummary.commercialReadinessSummary,
+                commercialReleaseSummary.supportReadinessSummary,
+              ].map((summary) => (
+                <div key={summary.id} className="mini-row">
+                  <span>{summary.label}</span>
+                  <strong>{summary.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Remaining Blocker Summary</h3>
+              <p className="empty-state">
+                {formatNumber(commercialReleaseSummary.remainingBlockerSummary.blockerCount)} blockers / {formatNumber(commercialReleaseSummary.remainingBlockerSummary.cautionCount)} cautions / deployment and billing unauthorized.
+              </p>
+            </section>
+            <section>
+              <h3>Commercial Release Source Events</h3>
+              <p className="empty-state">{Object.values(commercialReleaseSummary.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{commercialReleaseSummary.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
