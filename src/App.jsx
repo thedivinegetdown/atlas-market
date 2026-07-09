@@ -69,6 +69,9 @@ import { generateProductionOperationsRunbook } from '../lib/system/productionOpe
 import { planProductionIncidentResponse } from '../lib/system/productionIncidentResponsePlanner.js'
 import { evaluateProductionRollbackReadiness } from '../lib/system/productionRollbackReadinessEngine.js'
 import { generateProductionMonitoringPlan } from '../lib/system/productionMonitoringPlanEngine.js'
+import { evaluateDataQualityReadiness } from '../lib/system/dataQualityReadinessEngine.js'
+import { evaluateDataLineage } from '../lib/system/dataLineageEngine.js'
+import { planDataRetention } from '../lib/system/dataRetentionPlanningEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -276,6 +279,9 @@ function getWorkspaceFamily(panelId) {
     'incident-response',
     'rollback-readiness',
     'monitoring-plan',
+    'data-quality',
+    'data-lineage',
+    'data-retention',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1662,6 +1668,95 @@ function App() {
     productionSecurityReadiness,
     systemHealthCommandCenter,
   ])
+  const dataQualityReadiness = useMemo(() => evaluateDataQualityReadiness({
+    marketDataAdapterHealth,
+    marketIntelligence,
+    researchSignalScore,
+    researchDecisionContext,
+    multiTimeframeResearchContext,
+    strategyBlueprintValidation,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+    strategyBacktestInput,
+    portfolioAnalytics,
+    portfolioCorrelation,
+    portfolioFactorExposure,
+    eventObservability,
+    productionMonitoringPlan,
+  }, { emitEvent: false }), [
+    eventObservability,
+    marketDataAdapterHealth,
+    marketIntelligence,
+    multiTimeframeResearchContext,
+    portfolioAnalytics,
+    portfolioCorrelation,
+    portfolioFactorExposure,
+    productionMonitoringPlan,
+    researchDecisionContext,
+    researchSignalScore,
+    strategyBacktestInput,
+    strategyBlueprintValidation,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+  ])
+  const dataLineage = useMemo(() => evaluateDataLineage({
+    marketDataAdapterHealth,
+    marketIntelligence,
+    researchSignalScore,
+    researchDecisionContext,
+    multiTimeframeResearchContext,
+    strategyBlueprintValidation,
+    strategyBacktestPerformance,
+    portfolioAnalytics,
+    workspacePersistence,
+    eventObservability,
+    enterpriseAuditTrail,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    productionMonitoringPlan,
+    dataQualityReadiness,
+  }, { emitEvent: false }), [
+    dataQualityReadiness,
+    enterpriseAuditTrail,
+    eventObservability,
+    marketDataAdapterHealth,
+    marketIntelligence,
+    multiTimeframeResearchContext,
+    portfolioAnalytics,
+    productionDeploymentReadiness,
+    productionMonitoringPlan,
+    productionSecurityReadiness,
+    researchDecisionContext,
+    researchSignalScore,
+    strategyBacktestPerformance,
+    strategyBlueprintValidation,
+    workspacePersistence,
+  ])
+  const dataRetentionPlanning = useMemo(() => planDataRetention({
+    eventObservability,
+    enterpriseAuditTrail,
+    workspacePersistence,
+    strategyBacktestReport,
+    marketIntelligence,
+    researchDecisionContext,
+    dataQualityReadiness,
+    dataLineage,
+    productionDeploymentReadiness,
+    productionSecurityReadiness,
+    productionMonitoringPlan,
+  }, { emitEvent: false }), [
+    dataLineage,
+    dataQualityReadiness,
+    enterpriseAuditTrail,
+    eventObservability,
+    marketIntelligence,
+    productionDeploymentReadiness,
+    productionMonitoringPlan,
+    productionSecurityReadiness,
+    researchDecisionContext,
+    strategyBacktestReport,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1681,6 +1776,9 @@ function App() {
     { id: 'incident-response', label: 'Incidents', status: productionIncidentResponse.incidentReadinessStatus },
     { id: 'rollback-readiness', label: 'Rollback', status: productionRollbackReadiness.rollbackReadinessStatus },
     { id: 'monitoring-plan', label: 'Monitoring', status: productionMonitoringPlan.monitoringReadinessStatus },
+    { id: 'data-quality', label: 'Data Quality', status: dataQualityReadiness.dataQualityStatus },
+    { id: 'data-lineage', label: 'Lineage', status: dataLineage.lineageStatus },
+    { id: 'data-retention', label: 'Retention', status: dataRetentionPlanning.retentionReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -5593,6 +5691,170 @@ function App() {
             </section>
           </div>
           <span className="event-line">{productionMonitoringPlan.eventType}</span>
+        </article>
+
+        <article id="data-quality" className={`panel data-quality-panel ${dataQualityReadiness.dataQualityStatus}`}>
+          <div className="panel-heading">
+            <h2>Data Quality</h2>
+            <span>Enterprise data quality readiness for market, research, strategy, portfolio, and event data. Planning only.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Data Quality Status</span>
+              <strong>{dataQualityReadiness.dataQualityStatus}</strong>
+            </div>
+            <span className={`decision-pill ${dataQualityReadiness.dataQualityStatus === 'blocked' ? 'danger' : dataQualityReadiness.dataQualityStatus === 'caution' ? 'warning' : 'positive'}`}>
+              no data mutation
+            </span>
+          </div>
+          <p className="empty-state">{dataQualityReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Market Data Quality Summary" value={dataQualityReadiness.marketDataQualitySummary.status} />
+            <MetricCard label="Research Data Quality Summary" value={dataQualityReadiness.researchDataQualitySummary.status} />
+            <MetricCard label="Strategy Data Quality Summary" value={dataQualityReadiness.strategyDataQualitySummary.status} />
+            <MetricCard label="Portfolio Analytics Data Quality Summary" value={dataQualityReadiness.portfolioAnalyticsDataQualitySummary.status} />
+            <MetricCard label="Event Data Quality Summary" value={dataQualityReadiness.eventDataQualitySummary.status} />
+            <MetricCard label="Missing / Stale / Incomplete Data Summary" value={dataQualityReadiness.missingStaleIncompleteDataSummary.affectedDomains.length} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Data Quality Domain Summary</h3>
+              {[
+                dataQualityReadiness.marketDataQualitySummary,
+                dataQualityReadiness.researchDataQualitySummary,
+                dataQualityReadiness.strategyDataQualitySummary,
+                dataQualityReadiness.portfolioAnalyticsDataQualitySummary,
+                dataQualityReadiness.eventDataQualitySummary,
+              ].map((summary) => (
+                <div key={summary.id} className="mini-row">
+                  <span>{summary.label}</span>
+                  <strong>{summary.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Missing / Stale / Incomplete Data Summary</h3>
+              <p className="empty-state">
+                {formatNumber(dataQualityReadiness.missingStaleIncompleteDataSummary.missingDataCount)} missing / {formatNumber(dataQualityReadiness.missingStaleIncompleteDataSummary.staleDataCount)} stale / {formatNumber(dataQualityReadiness.missingStaleIncompleteDataSummary.incompleteDataCount)} incomplete / user data unchanged.
+              </p>
+            </section>
+            <section>
+              <h3>Data Quality Source Events</h3>
+              <p className="empty-state">{Object.values(dataQualityReadiness.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{dataQualityReadiness.eventType}</span>
+        </article>
+
+        <article id="data-lineage" className={`panel data-lineage-panel ${dataLineage.lineageStatus}`}>
+          <div className="panel-heading">
+            <h2>Data Lineage</h2>
+            <span>Source, engine, adapter, research, and audit provenance mapping for paper-mode operations.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Lineage Status</span>
+              <strong>{dataLineage.lineageStatus}</strong>
+            </div>
+            <span className={`decision-pill ${dataLineage.lineageStatus === 'invalid' ? 'danger' : dataLineage.lineageStatus === 'caution' ? 'warning' : 'positive'}`}>
+              provenance
+            </span>
+          </div>
+          <p className="empty-state">{dataLineage.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Input Source Lineage Summary" value={formatNumber(dataLineage.inputSourceLineageSummary.length)} />
+            <MetricCard label="Engine Output Lineage Summary" value={formatNumber(dataLineage.engineOutputLineageSummary.length)} />
+            <MetricCard label="Event Lineage References" value={formatNumber(dataLineage.eventLineageReferences.length)} />
+            <MetricCard label="Research / Mock Data Provenance Summary" value={dataLineage.researchMockDataProvenanceSummary.status} />
+            <MetricCard label="Adapter Provenance Summary" value={dataLineage.adapterProvenanceSummary.status} />
+            <MetricCard label="Audit Lineage Compatibility" value={dataLineage.auditLineageCompatibility.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Input Source Lineage Summary</h3>
+              {dataLineage.inputSourceLineageSummary.map((entry) => (
+                <div key={entry.id} className="mini-row">
+                  <span>{entry.label}</span>
+                  <strong>{entry.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Engine Output Lineage Summary</h3>
+              {dataLineage.engineOutputLineageSummary.map((entry) => (
+                <div key={entry.id} className="mini-row">
+                  <span>{entry.label}</span>
+                  <strong>{entry.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Research / Mock Data Provenance Summary</h3>
+              <p className="empty-state">
+                Mock inputs allowed / paid API not required / {formatNumber(dataLineage.researchMockDataProvenanceSummary.researchEvents.length)} research event references.
+              </p>
+            </section>
+            <section>
+              <h3>Audit Lineage Compatibility</h3>
+              <p className="empty-state">
+                {formatNumber(dataLineage.auditLineageCompatibility.auditRecordCount)} audit records / {formatNumber(dataLineage.auditLineageCompatibility.eventLineageReferenceCount)} lineage references.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{dataLineage.eventType}</span>
+        </article>
+
+        <article id="data-retention" className={`panel data-retention-panel ${dataRetentionPlanning.retentionReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Data Retention</h2>
+            <span>Retention planning only. No database migrations, deletions, or user-data mutation.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Retention Readiness Status</span>
+              <strong>{dataRetentionPlanning.retentionReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${dataRetentionPlanning.retentionReadinessStatus === 'blocked' ? 'danger' : dataRetentionPlanning.retentionReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              migrations disabled
+            </span>
+          </div>
+          <p className="empty-state">{dataRetentionPlanning.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Event Retention Planning" value={dataRetentionPlanning.eventRetentionPlanning.status} />
+            <MetricCard label="Audit Retention Planning" value={dataRetentionPlanning.auditRetentionPlanning.status} />
+            <MetricCard label="Workspace Retention Planning" value={dataRetentionPlanning.workspaceRetentionPlanning.status} />
+            <MetricCard label="Backtest Retention Planning" value={dataRetentionPlanning.backtestRetentionPlanning.status} />
+            <MetricCard label="Research Retention Planning" value={dataRetentionPlanning.researchRetentionPlanning.status} />
+            <MetricCard label="Future PostgreSQL Retention Placeholder" value={dataRetentionPlanning.futurePostgresRetentionPlaceholder.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Retention Planning Domains</h3>
+              {[
+                dataRetentionPlanning.eventRetentionPlanning,
+                dataRetentionPlanning.auditRetentionPlanning,
+                dataRetentionPlanning.workspaceRetentionPlanning,
+                dataRetentionPlanning.backtestRetentionPlanning,
+                dataRetentionPlanning.researchRetentionPlanning,
+              ].map((plan) => (
+                <div key={plan.id} className="mini-row">
+                  <span>{plan.label}</span>
+                  <strong>{plan.status}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Future PostgreSQL Retention Placeholder</h3>
+              <p className="empty-state">
+                {formatNumber(dataRetentionPlanning.futurePostgresRetentionPlaceholder.retentionTablesPlanned.length)} planned tables / migrations disabled / user data unchanged.
+              </p>
+            </section>
+            <section>
+              <h3>Retention Source Events</h3>
+              <p className="empty-state">{Object.values(dataRetentionPlanning.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{dataRetentionPlanning.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
