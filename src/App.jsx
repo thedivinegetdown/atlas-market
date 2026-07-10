@@ -115,6 +115,9 @@ import { evaluateInvestigationRemediationCommandCenter } from '../lib/system/inv
 import { evaluateEvidenceGovernance } from '../lib/system/evidenceGovernanceEngine.js'
 import { evaluateRemediationEffectiveness } from '../lib/system/remediationEffectivenessEngine.js'
 import { evaluateAdministrativeGovernanceCommandCenter } from '../lib/system/administrativeGovernanceCommandCenterEngine.js'
+import { evaluateAdministrativePolicyGovernance } from '../lib/system/administrativePolicyGovernanceEngine.js'
+import { evaluateControlAssurance } from '../lib/system/controlAssuranceEngine.js'
+import { evaluatePolicyControlAssuranceCommandCenter } from '../lib/system/policyControlAssuranceCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2067,6 +2070,13 @@ function App() {
       'remediation-effectiveness-review',
       'remediation-follow-up-review',
       'administrative-governance-health',
+      'administrative-policies',
+      'administrative-policy-detail',
+      'policy-status-update',
+      'control-assurance-review',
+      'policy-exceptions',
+      'policy-exception-status-update',
+      'policy-control-assurance-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2846,6 +2856,47 @@ function App() {
     remediationEffectiveness,
     tenantAdministrationOperations,
   ])
+  const administrativePolicyGovernance = useMemo(() => evaluateAdministrativePolicyGovernance({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    evidenceGovernance,
+    remediationEffectiveness,
+    administrativeGovernanceCommandCenter,
+    accessReview,
+    accessCertification,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:01:00.000Z' }), [
+    accessCertification,
+    accessReview,
+    administrativeGovernanceCommandCenter,
+    evidenceGovernance,
+    inAppNotificationCenter.tenantAndUserScope,
+    remediationEffectiveness,
+  ])
+  const controlAssurance = useMemo(() => evaluateControlAssurance({
+    policyGovernance: administrativePolicyGovernance,
+    evidenceGovernance,
+    remediationEffectiveness,
+    accessReview,
+    accessCertification,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:02:00.000Z' }), [
+    accessCertification,
+    accessReview,
+    administrativePolicyGovernance,
+    evidenceGovernance,
+    remediationEffectiveness,
+  ])
+  const policyControlAssuranceCommandCenter = useMemo(() => evaluatePolicyControlAssuranceCommandCenter({
+    policyGovernance: administrativePolicyGovernance,
+    controlAssurance,
+    administrativeGovernanceCommandCenter,
+    tenantAdministrationOperations,
+    operatorIntelligenceCommandCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:03:00.000Z' }), [
+    administrativeGovernanceCommandCenter,
+    administrativePolicyGovernance,
+    controlAssurance,
+    operatorIntelligenceCommandCenter,
+    tenantAdministrationOperations,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2893,6 +2944,7 @@ function App() {
     { id: 'operator-intelligence', label: 'Operator Intel', status: operatorIntelligenceCommandCenter.commandCenterStatus },
     { id: 'investigation-remediation', label: 'Investigations', status: investigationRemediationCommandCenter.commandCenterStatus },
     { id: 'administrative-governance', label: 'Admin Governance', status: administrativeGovernanceCommandCenter.commandCenterStatus },
+    { id: 'policy-control-assurance', label: 'Policy Controls', status: policyControlAssuranceCommandCenter.commandCenterStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8204,6 +8256,52 @@ function App() {
           <span className="event-line">{evidenceGovernance.eventType}</span>
           <span className="event-line">{remediationEffectiveness.eventType}</span>
           <span className="event-line">{administrativeGovernanceCommandCenter.eventType}</span>
+        </article>
+
+        <article id="policy-control-assurance" className={`panel policy-control-assurance-panel ${policyControlAssuranceCommandCenter.commandCenterStatus}`}>
+          <div className="panel-heading">
+            <h2>Policy and Control Assurance</h2>
+            <span>Administrative policy governance, control assurance, exceptions, and human-reviewed compliance readiness.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Policy Assurance Status</span>
+              <strong>{policyControlAssuranceCommandCenter.commandCenterStatus}</strong>
+            </div>
+            <span className={`decision-pill ${policyControlAssuranceCommandCenter.commandCenterStatus === 'blocked' ? 'danger' : policyControlAssuranceCommandCenter.commandCenterStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{policyControlAssuranceCommandCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Active Policies" value={formatNumber(policyControlAssuranceCommandCenter.activePolicies)} />
+            <MetricCard label="Policies Under Review" value={formatNumber(policyControlAssuranceCommandCenter.policiesUnderReview)} />
+            <MetricCard label="Policies Past Review Date" value={formatNumber(policyControlAssuranceCommandCenter.policiesPastReviewDate)} />
+            <MetricCard label="Controls Without Evidence" value={formatNumber(policyControlAssuranceCommandCenter.controlsWithoutEvidence)} />
+            <MetricCard label="Open Policy Exceptions" value={formatNumber(policyControlAssuranceCommandCenter.openPolicyExceptions)} />
+            <MetricCard label="Critical Exception Severity" value={formatNumber(policyControlAssuranceCommandCenter.criticalExceptionSeverity)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Administrative Policy Governance Design</h3>
+              <p className="empty-state">Policies normalize domains, versions, review dates, control references, evidence requirements, exception state, and advisory enforcement modes.</p>
+            </section>
+            <section>
+              <h3>Control Assurance and Exception Management Design</h3>
+              <p className="empty-state">Assurance maps existing findings to policy controls, tracks coverage and exceptions, and never approves exceptions or resolves findings automatically.</p>
+            </section>
+            <section>
+              <h3>Policy and Control Assurance Command Center Design</h3>
+              <p className="empty-state">The command center consumes policy governance, control assurance, administrative governance, tenant health, and operator intelligence outputs.</p>
+            </section>
+            <section>
+              <h3>Controls by Effectiveness</h3>
+              <p className="empty-state">
+                Effective {formatNumber(policyControlAssuranceCommandCenter.controlsByEffectiveness.effective)} / Partial {formatNumber(policyControlAssuranceCommandCenter.controlsByEffectiveness.partiallyEffective)} / Ineffective {formatNumber(policyControlAssuranceCommandCenter.controlsByEffectiveness.ineffective)}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{administrativePolicyGovernance.eventType}</span>
+          <span className="event-line">{controlAssurance.eventType}</span>
+          <span className="event-line">{policyControlAssuranceCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
