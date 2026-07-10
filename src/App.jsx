@@ -106,6 +106,9 @@ import { evaluateTenantAdministrationWorkflow } from '../lib/system/tenantAdmini
 import { normalizeNotificationDigest } from '../lib/system/notificationDigestEngine.js'
 import { evaluateUserActivityRiskReview } from '../lib/system/userActivityRiskReviewEngine.js'
 import { evaluateAdministrationWorkflowSla } from '../lib/system/administrationWorkflowSlaEngine.js'
+import { prioritizeOperatorAttention } from '../lib/system/operatorAttentionPrioritizationEngine.js'
+import { buildAdministrativeCases } from '../lib/system/administrativeCaseManagementEngine.js'
+import { evaluateOperatorIntelligenceCommandCenter } from '../lib/system/operatorIntelligenceCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2040,6 +2043,11 @@ function App() {
       'notification-digest',
       'user-activity-risk-review',
       'workflow-sla-review',
+      'operator-attention-queue',
+      'administrative-cases',
+      'administrative-case-detail',
+      'administrative-case-status-update',
+      'operator-intelligence-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2701,6 +2709,53 @@ function App() {
     operatorActionCenter,
     tenantAdministrationWorkflow,
   ])
+  const operatorAttention = useMemo(() => prioritizeOperatorAttention({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    notificationDigest,
+    userActivityRiskReview,
+    administrationWorkflowSla,
+    tenantAdministrationWorkflow,
+    accessReview,
+    sessionSecurity: { eventType: 'system.sessionSecurity.evaluated', securityStatus: 'healthy' },
+    tenantOperationsHealth,
+    administrativeAudit: { eventType: 'system.administrativeAudit.recorded', status: 'recorded' },
+  }, { emitEvent: false, timestamp: '2026-07-10T12:52:00.000Z' }), [
+    accessReview,
+    administrationWorkflowSla,
+    inAppNotificationCenter.tenantAndUserScope,
+    notificationDigest,
+    tenantAdministrationWorkflow,
+    tenantOperationsHealth,
+    userActivityRiskReview,
+  ])
+  const administrativeCases = useMemo(() => buildAdministrativeCases({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    operatorAttention,
+    userActivityRiskReview,
+    administrationWorkflowSla,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:53:00.000Z' }), [
+    administrationWorkflowSla,
+    inAppNotificationCenter.tenantAndUserScope,
+    operatorAttention,
+    userActivityRiskReview,
+  ])
+  const operatorIntelligenceCommandCenter = useMemo(() => evaluateOperatorIntelligenceCommandCenter({
+    operatorAttention,
+    administrativeCases,
+    userActivityRiskReview,
+    notificationDigest,
+    administrationWorkflowSla,
+    tenantAdministrationOperations,
+    tenantOperationsHealth,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:54:00.000Z' }), [
+    administrationWorkflowSla,
+    administrativeCases,
+    notificationDigest,
+    operatorAttention,
+    tenantAdministrationOperations,
+    tenantOperationsHealth,
+    userActivityRiskReview,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2745,7 +2800,7 @@ function App() {
     { id: 'access-certification', label: 'Certification', status: accessCertification.certificationStatus },
     { id: 'tenant-administration', label: 'Tenant Admin', status: tenantAdministrationOperations.operationalStatus },
     { id: 'administration-workflow', label: 'Admin Workflow', status: tenantAdministrationWorkflow.status },
-    { id: 'operator-intelligence', label: 'Operator Intel', status: administrationWorkflowSla.workflowSlaStatus },
+    { id: 'operator-intelligence', label: 'Operator Intel', status: operatorIntelligenceCommandCenter.commandCenterStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7922,39 +7977,39 @@ function App() {
           <span className="event-line">{tenantAdministrationWorkflow.eventType}</span>
         </article>
 
-        <article id="operator-intelligence" className={`panel operator-intelligence-panel ${administrationWorkflowSla.workflowSlaStatus}`}>
+        <article id="operator-intelligence" className={`panel operator-intelligence-panel ${operatorIntelligenceCommandCenter.commandCenterStatus}`}>
           <div className="panel-heading">
-            <h2>Operator Intelligence</h2>
-            <span>Notification digest, activity risk review, and workflow SLA planning for owner/admin oversight.</span>
+            <h2>Operator Intelligence Command Center</h2>
+            <span>Ranked attention queue, administrative cases, activity risk, notification digest, workflow SLA, and tenant health summaries.</span>
           </div>
           <div className="guardrail-card-header">
             <div>
               <span>Operator Intelligence Status</span>
-              <strong>{administrationWorkflowSla.workflowSlaStatus}</strong>
+              <strong>{operatorIntelligenceCommandCenter.commandCenterStatus}</strong>
             </div>
-            <span className={`decision-pill ${administrationWorkflowSla.workflowSlaStatus === 'blocked' ? 'danger' : administrationWorkflowSla.workflowSlaStatus === 'caution' ? 'warning' : 'positive'}`}>review only</span>
+            <span className={`decision-pill ${operatorIntelligenceCommandCenter.commandCenterStatus === 'blocked' ? 'danger' : operatorIntelligenceCommandCenter.commandCenterStatus === 'caution' ? 'warning' : 'positive'}`}>review only</span>
           </div>
-          <p className="empty-state">{administrationWorkflowSla.summary}</p>
+          <p className="empty-state">{operatorIntelligenceCommandCenter.summary}</p>
           <div className="analytics-grid">
-            <MetricCard label="Notification Digest" value={`${formatNumber(notificationDigest.normalizedNotificationDigest.notificationCount)} items`} />
-            <MetricCard label="Critical Notification Summary" value={formatNumber(notificationDigest.normalizedNotificationDigest.criticalCount)} />
+            <MetricCard label="Ranked Attention Queue" value={`${formatNumber(operatorIntelligenceCommandCenter.rankedAttentionQueueSummary.total)} items`} />
+            <MetricCard label="Open Administrative Cases" value={formatNumber(operatorIntelligenceCommandCenter.openAdministrativeCases.total)} />
             <MetricCard label="Activity Risk Score" value={formatNumber(userActivityRiskReview.activityRiskScore)} />
-            <MetricCard label="Activity Risk Status" value={userActivityRiskReview.activityRiskStatus} />
+            <MetricCard label="Critical Unresolved Findings" value={formatNumber(operatorIntelligenceCommandCenter.criticalUnresolvedFindings)} />
             <MetricCard label="Workflow SLA Breaches" value={formatNumber(administrationWorkflowSla.workflowSlaSummary.breached)} />
-            <MetricCard label="Workflow SLA Due Soon" value={formatNumber(administrationWorkflowSla.workflowSlaSummary.dueSoon)} />
+            <MetricCard label="Cases Nearing Due Dates" value={formatNumber(operatorIntelligenceCommandCenter.casesNearingDueDates)} />
           </div>
           <div className="analytics-columns">
             <section>
-              <h3>Notification Digest Design</h3>
-              <p className="empty-state">Digest records summarize in-app notifications only; email and webhook delivery remain disabled placeholders.</p>
+              <h3>Operator Attention Design</h3>
+              <p className="empty-state">Attention items normalize severity, urgency, confidence, due-state, source event references, and workflow references for human review.</p>
             </section>
             <section>
-              <h3>Activity Risk Review Design</h3>
-              <p className="empty-state">Risk review reuses the redacted user activity timeline and never creates duplicate audit records.</p>
+              <h3>Administrative Case Management Design</h3>
+              <p className="empty-state">Cases group notifications, risk findings, workflows, SLA breaches, access findings, session findings, and audit evidence with owner/admin boundaries.</p>
             </section>
             <section>
-              <h3>Workflow SLA Design</h3>
-              <p className="empty-state">SLA review plans owner/admin escalation for due-soon or breached workflows without automatic workflow mutation.</p>
+              <h3>Operator Intelligence Command Center Design</h3>
+              <p className="empty-state">The command center reuses upstream engine outputs and shows safe summaries only; no duplicate calculations or destructive actions are introduced.</p>
             </section>
             <section>
               <h3>Security Boundary</h3>
@@ -7964,6 +8019,9 @@ function App() {
           <span className="event-line">{notificationDigest.eventType}</span>
           <span className="event-line">{userActivityRiskReview.eventType}</span>
           <span className="event-line">{administrationWorkflowSla.eventType}</span>
+          <span className="event-line">{operatorAttention.eventType}</span>
+          <span className="event-line">{administrativeCases.eventType}</span>
+          <span className="event-line">{operatorIntelligenceCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
