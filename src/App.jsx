@@ -84,6 +84,7 @@ import { summarizeCommercialRelease } from '../lib/system/commercialReleaseSumma
 import { evaluatePersistenceApiIntegration } from '../lib/system/persistenceApiIntegrationEngine.js'
 import { evaluateDatabaseOperations } from '../lib/system/databaseOperationsEngine.js'
 import { evaluateApiReliability } from '../lib/system/apiReliabilityEngine.js'
+import { evaluateAuthorization } from '../lib/auth/authorizationService.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -306,6 +307,7 @@ function getWorkspaceFamily(panelId) {
     'persistence-api-foundation',
     'database-operations',
     'api-reliability',
+    'identity-authorization',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1970,6 +1972,11 @@ function App() {
       'workspace-configurations',
       'system-events',
       'operator-actions',
+      'session-status',
+      'current-user',
+      'session-revoke',
+      'protected-workspace-configurations',
+      'authorization-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2011,6 +2018,77 @@ function App() {
     persistenceApiIntegration,
     productionMonitoringPlan,
   ])
+  const identityAuthorization = useMemo(() => {
+    const roleDecisions = ['owner', 'admin', 'analyst', 'viewer'].map((role) => evaluateAuthorization({
+      user: {
+        id: `demo-${role}`,
+        role,
+        metadata: { ownedWorkspaceIds: ['atlas-paper-operator-workspace'] },
+      },
+      permission: role === 'viewer' ? 'dashboard.read' : 'workspace.admin',
+      workspaceId: 'atlas-paper-operator-workspace',
+      permissionPlanning,
+      apiReliability,
+    }, { emitEvent: false }))
+    const ownerTransferDecision = evaluateAuthorization({
+      user: {
+        id: 'demo-admin',
+        role: 'admin',
+        metadata: { ownedWorkspaceIds: [] },
+      },
+      permission: 'workspace.owner',
+      workspaceId: 'atlas-paper-operator-workspace',
+      permissionPlanning,
+      apiReliability,
+    }, { emitEvent: false })
+    const authorizationStatus = roleDecisions.every((decision) => decision.allowed) && ownerTransferDecision.allowed === false
+      ? 'ready'
+      : 'caution'
+    return {
+      eventType: 'system.identityAuthorization.evaluated',
+      authenticationEventType: 'system.authentication.initialized',
+      authorizationEventType: 'system.authorization.evaluated',
+      authenticationProviderInterface: {
+        swappable: true,
+        localDevelopmentAdapter: 'non-production',
+        externalProviderContract: 'future-provider-contract',
+      },
+      authenticatedSessionModel: {
+        validation: 'active / expired / revoked',
+        expirationHandling: 'ttl-enforced',
+        tokenStorage: 'hash-only',
+      },
+      userIdentityPersistence: {
+        eventType: 'system.userIdentity.persisted',
+        tables: ['atlas_users', 'atlas_user_sessions'],
+        rawTokensStored: false,
+        plaintextPasswordsStored: false,
+      },
+      authorizationEnforcement: {
+        eventType: 'system.authorization.evaluated',
+        defaultDeny: true,
+        enforcedOnlyForNewAuthenticatedRoutes: true,
+        routeMiddleware: 'createAuthenticatedApiHandler',
+      },
+      roleDecisions,
+      ownerTransferDecision,
+      securityBoundarySummary: {
+        secureCookieOrBearerTokenAbstraction: true,
+        csrfReadiness: true,
+        originValidation: true,
+        sessionRevocation: true,
+        safePublicErrors: true,
+        structuredInternalDiagnostics: true,
+        liveTradingEndpoints: false,
+        brokerExecutionEndpoints: false,
+      },
+      authorizationStatus,
+      summary: `Identity and authorization foundation ${authorizationStatus}: swappable authentication, persisted identity/session models, route middleware, and default-deny role checks prepared for protected API routes.`,
+    }
+  }, [
+    apiReliability,
+    permissionPlanning,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2045,6 +2123,7 @@ function App() {
     { id: 'persistence-api-foundation', label: 'Persistence API', status: persistenceApiIntegration.persistenceReadinessStatus },
     { id: 'database-operations', label: 'DB Ops', status: databaseOperations.databaseOperationsStatus },
     { id: 'api-reliability', label: 'API Reliability', status: apiReliability.apiReliabilityStatus },
+    { id: 'identity-authorization', label: 'Identity/Auth', status: identityAuthorization.authorizationStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -6743,6 +6822,77 @@ function App() {
             </section>
           </div>
           <span className="event-line">{apiReliability.eventType}</span>
+        </article>
+
+        <article id="identity-authorization" className={`panel identity-authorization-panel ${identityAuthorization.authorizationStatus}`}>
+          <div className="panel-heading">
+            <h2>Identity &amp; Authorization</h2>
+            <span>Authentication provider abstraction, identity/session persistence, and default-deny authorization for new protected API routes.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Authorization Foundation Status</span>
+              <strong>{identityAuthorization.authorizationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${identityAuthorization.authorizationStatus === 'blocked' ? 'danger' : identityAuthorization.authorizationStatus === 'caution' ? 'warning' : 'positive'}`}>
+              protected routes only
+            </span>
+          </div>
+          <p className="empty-state">{identityAuthorization.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Authentication Provider Interface" value={identityAuthorization.authenticationProviderInterface.swappable ? 'swappable' : 'fixed'} />
+            <MetricCard label="Local Development Authentication Adapter" value={identityAuthorization.authenticationProviderInterface.localDevelopmentAdapter} />
+            <MetricCard label="Authenticated Session Model" value={identityAuthorization.authenticatedSessionModel.validation} />
+            <MetricCard label="Session Expiration Handling" value={identityAuthorization.authenticatedSessionModel.expirationHandling} />
+            <MetricCard label="User Identity Persistence" value={identityAuthorization.userIdentityPersistence.tables[0]} />
+            <MetricCard label="User Session Persistence" value={identityAuthorization.userIdentityPersistence.tables[1]} />
+            <MetricCard label="Authorization Service" value={identityAuthorization.authorizationEnforcement.defaultDeny ? 'default deny' : 'open'} />
+            <MetricCard label="Route-Level Authorization Middleware" value={identityAuthorization.authorizationEnforcement.routeMiddleware} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Role-Based Authorization Enforcement Foundation</h3>
+              {identityAuthorization.roleDecisions.map((decision) => (
+                <div key={decision.role} className="mini-row">
+                  <span>{decision.role}</span>
+                  <strong>{decision.authorizationStatus}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Initial Access Expectations</h3>
+              <p className="empty-state">owner full workspace administration / admin excludes ownership transfer / analyst research, strategy, backtesting, paper trading, and analytics / viewer read-only dashboard and analytics.</p>
+            </section>
+            <section>
+              <h3>Protected API Routes</h3>
+              <p className="empty-state">session-status / current-user / session-revoke / protected-workspace-configurations / authorization-health.</p>
+            </section>
+            <section>
+              <h3>Security Requirements</h3>
+              <p className="empty-state">
+                Bearer or secure-cookie abstraction / CSRF readiness / origin validation / session revocation / safe public errors / structured diagnostics.
+              </p>
+            </section>
+            <section>
+              <h3>Authorization Decision Audit Records</h3>
+              <p className="empty-state">
+                {identityAuthorization.ownerTransferDecision.authorizationDecisionAuditRecord.summary}
+              </p>
+            </section>
+            <section>
+              <h3>Identity Source Events</h3>
+              <p className="empty-state">
+                {[
+                  identityAuthorization.authenticationEventType,
+                  identityAuthorization.userIdentityPersistence.eventType,
+                  'system.userSession.updated',
+                  identityAuthorization.authorizationEventType,
+                ].join(' / ')}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{identityAuthorization.authenticationEventType}</span>
+          <span className="event-line">{identityAuthorization.authorizationEventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
