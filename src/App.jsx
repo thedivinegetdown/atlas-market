@@ -89,6 +89,8 @@ import { resolveWorkspaceAccess } from '../lib/auth/organizationWorkspaceAccess.
 import { evaluateIdentityOrganizationOperations } from '../lib/system/identityOrganizationOperationsEngine.js'
 import { resolveTeamWorkspaceAccess } from '../lib/auth/teamWorkspaceAccess.js'
 import { evaluateWorkspaceCollaborationOperations } from '../lib/system/workspaceCollaborationOperationsEngine.js'
+import { evaluateSessionSecurity } from '../lib/auth/sessionSecurityService.js'
+import { evaluateCollaborationGovernance } from '../lib/system/collaborationGovernanceEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -1995,6 +1997,14 @@ function App() {
       'team-workspace-memberships',
       'protected-team-workspace-configurations',
       'collaboration-health',
+      'organization-administration',
+      'team-workspace-administration',
+      'membership-role-management',
+      'membership-status-management',
+      'active-sessions',
+      'revoke-selected-session',
+      'revoke-other-sessions',
+      'session-security-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2224,6 +2234,89 @@ function App() {
     multiUserWorkspacePlanning,
     permissionPlanning,
   ])
+  const collaborationGovernance = useMemo(() => {
+    const userId = 'local-development:local-operator'
+    const sessionSecurity = evaluateSessionSecurity({
+      user: { id: userId, role: 'owner' },
+      sessions: [
+        {
+          id: 'local-session-local-operator',
+          userId,
+          status: 'active',
+          deviceFingerprint: 'local-development-device',
+          lastSeenAt: '2026-07-10T12:00:00.000Z',
+          expiresAt: '2026-07-10T13:00:00.000Z',
+          ipAddress: 'local-development',
+          userAgent: 'Atlas Local Workspace',
+        },
+      ],
+    }, {
+      emitEvent: false,
+      now: () => new Date('2026-07-10T12:05:00.000Z'),
+      timestamp: '2026-07-10T12:05:00.000Z',
+    })
+    return evaluateCollaborationGovernance({
+      organizationMemberships: [
+        {
+          id: 'membership-org-atlas-local-local-operator',
+          organizationId: 'org-atlas-local',
+          userId,
+          role: 'owner',
+          status: 'active',
+        },
+        {
+          id: 'membership-org-atlas-local-analyst',
+          organizationId: 'org-atlas-local',
+          userId: 'future-analyst',
+          role: 'analyst',
+          status: 'active',
+        },
+      ],
+      teamMemberships: [
+        {
+          id: 'team-membership-atlas-research-desk-local-operator',
+          organizationId: 'org-atlas-local',
+          teamWorkspaceId: 'team-atlas-research-desk',
+          userId,
+          role: 'owner',
+          status: 'active',
+        },
+        {
+          id: 'team-membership-atlas-research-desk-analyst',
+          organizationId: 'org-atlas-local',
+          teamWorkspaceId: 'team-atlas-research-desk',
+          userId: 'future-analyst',
+          role: 'analyst',
+          status: 'active',
+        },
+      ],
+      invitations: [
+        {
+          id: 'invitation-atlas-research-desk-analyst',
+          organizationId: 'org-atlas-local',
+          teamWorkspaceId: 'team-atlas-research-desk',
+          role: 'analyst',
+          status: 'pending',
+        },
+      ],
+      teamWorkspaces: [
+        {
+          id: 'team-atlas-research-desk',
+          organizationId: 'org-atlas-local',
+          status: 'active',
+        },
+      ],
+      crossBoundaryDenials: [],
+      sessionSecurity,
+      enterpriseAuditTrail,
+      operatorActions: operatorActionCenter,
+      systemHealth: systemHealthCommandCenter,
+    }, { emitEvent: false, timestamp: '2026-07-10T12:05:00.000Z' })
+  }, [
+    enterpriseAuditTrail,
+    operatorActionCenter,
+    systemHealthCommandCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2261,6 +2354,7 @@ function App() {
     { id: 'identity-authorization', label: 'Identity/Auth', status: identityAuthorization.authorizationStatus },
     { id: 'identity-organization-operations', label: 'Identity Ops', status: identityOrganizationOperations.operationalStatus },
     { id: 'workspace-collaboration-operations', label: 'Collaboration', status: workspaceCollaborationOperations.operationalStatus },
+    { id: 'collaboration-governance', label: 'Governance', status: collaborationGovernance.governanceStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7145,6 +7239,61 @@ function App() {
           <span className="event-line">system.teamWorkspaceMembership.updated</span>
           <span className="event-line">system.membershipInvitation.updated</span>
           <span className="event-line">{workspaceCollaborationOperations.eventType}</span>
+        </article>
+
+        <article id="collaboration-governance" className={`panel collaboration-governance-panel ${collaborationGovernance.governanceStatus}`}>
+          <div className="panel-heading">
+            <h2>Collaboration Governance</h2>
+            <span>Review-only governance across organization memberships, team access, invitations, sessions, audit, and collaboration boundaries.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Governance Status</span>
+              <strong>{collaborationGovernance.governanceStatus}</strong>
+            </div>
+            <span className={`decision-pill ${collaborationGovernance.governanceStatus === 'blocked' ? 'danger' : collaborationGovernance.governanceStatus === 'caution' ? 'warning' : 'positive'}`}>
+              review only
+            </span>
+          </div>
+          <p className="empty-state">{collaborationGovernance.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Organization Membership Review Summary" value={formatNumber(collaborationGovernance.organizationMembershipReviewSummary.total)} />
+            <MetricCard label="Team Membership Review Summary" value={formatNumber(collaborationGovernance.teamMembershipReviewSummary.total)} />
+            <MetricCard label="Invitation Risk Summary" value={collaborationGovernance.invitationRiskSummary.status} />
+            <MetricCard label="Inactive / Suspended Membership Summary" value={formatNumber(collaborationGovernance.inactiveSuspendedMembershipSummary.count)} />
+            <MetricCard label="Orphaned Workspace Detection" value={collaborationGovernance.orphanedWorkspaceDetection.status} />
+            <MetricCard label="Elevated-Role Review Summary" value={formatNumber(collaborationGovernance.elevatedRoleReviewSummary.elevatedRoleCount)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Administration Design</h3>
+              <p className="empty-state">Organization and team administration remain owner/admin gated, final-owner protected, cross-organization denied, audited, and paper-mode only.</p>
+            </section>
+            <section>
+              <h3>Session Security Design</h3>
+              <p className="empty-state">Active sessions expose device metadata only; raw session tokens and token hashes stay out of public responses.</p>
+            </section>
+            <section>
+              <h3>Collaboration Governance Design</h3>
+              <p className="empty-state">Governance reviews elevated roles, suspended memberships, invitations, orphaned workspaces, and boundary denials without automatic role changes or revocations.</p>
+            </section>
+            <section>
+              <h3>Administration API Endpoints</h3>
+              <p className="empty-state">organization-administration / team-workspace-administration / membership-role-management / membership-status-management.</p>
+            </section>
+            <section>
+              <h3>Session Security API Endpoints</h3>
+              <p className="empty-state">active-sessions / revoke-selected-session / revoke-other-sessions / session-security-health.</p>
+            </section>
+            <section>
+              <h3>Collaboration Governance Source Events</h3>
+              <p className="empty-state">{Object.values(collaborationGovernance.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">system.organizationAdministration.updated</span>
+          <span className="event-line">system.teamWorkspaceAdministration.updated</span>
+          <span className="event-line">system.sessionSecurity.evaluated</span>
+          <span className="event-line">{collaborationGovernance.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
