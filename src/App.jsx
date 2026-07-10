@@ -103,6 +103,9 @@ import { evaluateTenantAdministrationOperations } from '../lib/system/tenantAdmi
 import { evaluateNotificationPreference, normalizeInAppNotification } from '../lib/system/inAppNotificationService.js'
 import { evaluateUserActivityTimeline } from '../lib/system/userActivityTimelineService.js'
 import { evaluateTenantAdministrationWorkflow } from '../lib/system/tenantAdministrationWorkflowEngine.js'
+import { normalizeNotificationDigest } from '../lib/system/notificationDigestEngine.js'
+import { evaluateUserActivityRiskReview } from '../lib/system/userActivityRiskReviewEngine.js'
+import { evaluateAdministrationWorkflowSla } from '../lib/system/administrationWorkflowSlaEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2034,6 +2037,9 @@ function App() {
       'tenant-administration-workflows',
       'workflow-status-update',
       'administration-workflow-health',
+      'notification-digest',
+      'user-activity-risk-review',
+      'workflow-sla-review',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2651,6 +2657,50 @@ function App() {
     operatorActionCenter,
     tenantOperationsHealth,
   ])
+  const notificationDigest = useMemo(() => {
+    const digest = normalizeNotificationDigest({
+      tenantContext: inAppNotificationCenter.tenantAndUserScope,
+      userId: 'local-development:local-operator',
+      notifications: inAppNotificationCenter.notifications,
+      frequency: 'hourly',
+      timestamp: '2026-07-10T12:49:00.000Z',
+    })
+    return {
+      eventType: 'system.notificationDigest.generated',
+      timestamp: digest.generatedAt,
+      normalizedNotificationDigest: digest,
+      digestFrequency: digest.frequency,
+      categorySummary: digest.categorySummary,
+      criticalSecurityVisible: digest.criticalCount > 0,
+      preferenceApplied: true,
+      externalDelivery: false,
+      status: digest.criticalCount > 0 ? 'caution' : 'healthy',
+      summary: `Notification digest ${digest.criticalCount > 0 ? 'caution' : 'healthy'}: ${digest.notificationCount} in-app notifications summarized.`,
+      paperTrading: true,
+      liveOrders: false,
+      brokerExecution: false,
+    }
+  }, [inAppNotificationCenter.notifications, inAppNotificationCenter.tenantAndUserScope])
+  const userActivityRiskReview = useMemo(() => evaluateUserActivityRiskReview({
+    timeline: userActivityTimeline,
+    notifications: inAppNotificationCenter.notifications,
+    inAppNotificationCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:50:00.000Z' }), [
+    inAppNotificationCenter,
+    userActivityTimeline,
+  ])
+  const administrationWorkflowSla = useMemo(() => evaluateAdministrationWorkflowSla({
+    tenantAdministrationWorkflow,
+    operatorActions: operatorActionCenter,
+    accessCertification,
+  }, {
+    emitEvent: false,
+    now: '2026-07-10T12:51:00.000Z',
+  }), [
+    accessCertification,
+    operatorActionCenter,
+    tenantAdministrationWorkflow,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2695,6 +2745,7 @@ function App() {
     { id: 'access-certification', label: 'Certification', status: accessCertification.certificationStatus },
     { id: 'tenant-administration', label: 'Tenant Admin', status: tenantAdministrationOperations.operationalStatus },
     { id: 'administration-workflow', label: 'Admin Workflow', status: tenantAdministrationWorkflow.status },
+    { id: 'operator-intelligence', label: 'Operator Intel', status: administrationWorkflowSla.workflowSlaStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7869,6 +7920,50 @@ function App() {
           <span className="event-line">{inAppNotificationCenter.updateEventType}</span>
           <span className="event-line">{userActivityTimeline.eventType}</span>
           <span className="event-line">{tenantAdministrationWorkflow.eventType}</span>
+        </article>
+
+        <article id="operator-intelligence" className={`panel operator-intelligence-panel ${administrationWorkflowSla.workflowSlaStatus}`}>
+          <div className="panel-heading">
+            <h2>Operator Intelligence</h2>
+            <span>Notification digest, activity risk review, and workflow SLA planning for owner/admin oversight.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Operator Intelligence Status</span>
+              <strong>{administrationWorkflowSla.workflowSlaStatus}</strong>
+            </div>
+            <span className={`decision-pill ${administrationWorkflowSla.workflowSlaStatus === 'blocked' ? 'danger' : administrationWorkflowSla.workflowSlaStatus === 'caution' ? 'warning' : 'positive'}`}>review only</span>
+          </div>
+          <p className="empty-state">{administrationWorkflowSla.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Notification Digest" value={`${formatNumber(notificationDigest.normalizedNotificationDigest.notificationCount)} items`} />
+            <MetricCard label="Critical Notification Summary" value={formatNumber(notificationDigest.normalizedNotificationDigest.criticalCount)} />
+            <MetricCard label="Activity Risk Score" value={formatNumber(userActivityRiskReview.activityRiskScore)} />
+            <MetricCard label="Activity Risk Status" value={userActivityRiskReview.activityRiskStatus} />
+            <MetricCard label="Workflow SLA Breaches" value={formatNumber(administrationWorkflowSla.workflowSlaSummary.breached)} />
+            <MetricCard label="Workflow SLA Due Soon" value={formatNumber(administrationWorkflowSla.workflowSlaSummary.dueSoon)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Notification Digest Design</h3>
+              <p className="empty-state">Digest records summarize in-app notifications only; email and webhook delivery remain disabled placeholders.</p>
+            </section>
+            <section>
+              <h3>Activity Risk Review Design</h3>
+              <p className="empty-state">Risk review reuses the redacted user activity timeline and never creates duplicate audit records.</p>
+            </section>
+            <section>
+              <h3>Workflow SLA Design</h3>
+              <p className="empty-state">SLA review plans owner/admin escalation for due-soon or breached workflows without automatic workflow mutation.</p>
+            </section>
+            <section>
+              <h3>Security Boundary</h3>
+              <p className="empty-state">No live orders, broker execution, credentials, secrets, token hashes, IP addresses, or sensitive session metadata are surfaced.</p>
+            </section>
+          </div>
+          <span className="event-line">{notificationDigest.eventType}</span>
+          <span className="event-line">{userActivityRiskReview.eventType}</span>
+          <span className="event-line">{administrationWorkflowSla.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
