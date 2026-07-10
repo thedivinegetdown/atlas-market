@@ -97,6 +97,9 @@ import { evaluateAccessReview } from '../lib/system/accessReviewEngine.js'
 import { evaluateTenantOperationsHealth } from '../lib/system/tenantOperationsHealthEngine.js'
 import { planTenantBackupRecovery } from '../lib/system/tenantBackupRecoveryPlanningEngine.js'
 import { evaluateAccessCertification } from '../lib/system/accessCertificationEngine.js'
+import { normalizeUserProfile, validateUserProfile } from '../lib/auth/userAccountService.js'
+import { normalizeNotificationPreferences } from '../lib/system/notificationPreferenceService.js'
+import { evaluateTenantAdministrationOperations } from '../lib/system/tenantAdministrationOperationsEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2015,6 +2018,11 @@ function App() {
       'tenant-operations-health',
       'tenant-backup-recovery-plan',
       'access-certification',
+      'current-account',
+      'account-profile-update',
+      'account-health',
+      'notification-preferences',
+      'notification-preferences-update',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2449,6 +2457,94 @@ function App() {
     collaborationGovernance,
     operatorActionCenter,
   ])
+  const userAccount = useMemo(() => {
+    const profile = normalizeUserProfile({
+      userId: 'local-development:local-operator',
+      displayName: 'Local Development Operator',
+      timezone: 'America/New_York',
+      locale: 'en-US',
+      preferredWorkspace: 'team-atlas-research-desk',
+      accessibilityPreferences: { density: 'compact', reducedMotion: false },
+    })
+    return {
+      eventType: 'system.userAccount.updated',
+      timestamp: '2026-07-10T12:30:00.000Z',
+      profile,
+      profileValidation: validateUserProfile(profile),
+      accountStatusSummary: { status: 'healthy', providerSubjectPreserved: true, passwordsStored: false, rawTokensStored: false },
+      status: 'updated',
+      paperTrading: true,
+      liveOrders: false,
+      brokerExecution: false,
+    }
+  }, [])
+  const notificationPreferences = useMemo(() => {
+    const preferences = normalizeNotificationPreferences({
+      userId: 'local-development:local-operator',
+      categories: {
+        security: { severityThreshold: 'high', channels: { inApp: true, emailReadyPlaceholder: true } },
+        'access review': { severityThreshold: 'medium', channels: { inApp: true } },
+        'paper-trading risk': { severityThreshold: 'high', channels: { inApp: true } },
+      },
+      quietHours: { enabled: true, start: '22:00', end: '07:00', timezone: 'America/New_York' },
+    })
+    return {
+      eventType: 'system.notificationPreferences.updated',
+      timestamp: '2026-07-10T12:35:00.000Z',
+      normalizedNotificationPreferenceModel: preferences,
+      quietHoursConfiguration: preferences.quietHours,
+      channelPlanning: { inAppFunctional: true, emailReadyPlaceholder: true, webhookReadyPlaceholder: true, externalProviderIntegration: false },
+      organizationPolicyOverridePlanningOnly: true,
+      secretsStored: false,
+      status: 'updated',
+      paperTrading: true,
+      liveOrders: false,
+      brokerExecution: false,
+    }
+  }, [])
+  const tenantAdministrationOperations = useMemo(() => evaluateTenantAdministrationOperations({
+    tenantContext: {
+      organizationId: 'org-atlas-local',
+      teamWorkspaceId: 'team-atlas-research-desk',
+      userId: 'local-development:local-operator',
+      role: 'owner',
+    },
+    organization: { id: 'org-atlas-local', name: 'Atlas Local Organization', status: 'healthy' },
+    teamWorkspace: { id: 'team-atlas-research-desk', name: 'Atlas Research Desk', status: 'healthy' },
+    accessReview,
+    accessCertification,
+    collaborationGovernance,
+    sessionSecurity: { eventType: 'system.sessionSecurity.evaluated', securityStatus: 'healthy', activeSessionListing: [{ id: 'local-session-local-operator' }] },
+    tenantOperationsHealth,
+    administrativeAudit: { eventType: 'system.administrativeAudit.recorded', status: 'recorded' },
+    userAccount,
+    notificationPreferences,
+    accountProfileSummary: {
+      displayName: userAccount.profile.displayName,
+      timezone: userAccount.profile.timezone,
+      locale: userAccount.profile.locale,
+      preferredWorkspace: userAccount.profile.preferredWorkspace,
+    },
+    notificationPreferenceSummary: {
+      enabledCategories: Object.values(notificationPreferences.normalizedNotificationPreferenceModel.categories).filter((category) => category.enabled).length,
+      quietHoursEnabled: notificationPreferences.quietHoursConfiguration.enabled,
+      emailWebhookPlaceholdersOnly: true,
+    },
+    rolePermissionSummary: {
+      role: 'owner',
+      permissionModel: 'owner/admin/analyst/viewer',
+      defaultDenyAuthorization: true,
+    },
+    activeSessionSummary: { activeSessions: 1 },
+    pendingInvitationSummary: { pendingCount: collaborationGovernance.invitationRiskSummary.pendingCount },
+  }, { emitEvent: false, timestamp: '2026-07-10T12:40:00.000Z' }), [
+    accessCertification,
+    accessReview,
+    collaborationGovernance,
+    notificationPreferences,
+    tenantOperationsHealth,
+    userAccount,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2491,6 +2587,7 @@ function App() {
     { id: 'tenant-operations-health', label: 'Tenant Ops', status: tenantOperationsHealth.operationalStatus },
     { id: 'tenant-backup-recovery', label: 'Recovery Plan', status: tenantBackupRecovery.backupReadinessStatus },
     { id: 'access-certification', label: 'Certification', status: accessCertification.certificationStatus },
+    { id: 'tenant-administration', label: 'Tenant Admin', status: tenantAdministrationOperations.operationalStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7576,6 +7673,50 @@ function App() {
             </section>
           </div>
           <span className="event-line">{accessCertification.eventType}</span>
+        </article>
+
+        <article id="tenant-administration" className={`panel tenant-administration-panel ${tenantAdministrationOperations.operationalStatus}`}>
+          <div className="panel-heading">
+            <h2>Tenant Administration</h2>
+            <span>Operator-facing account, notification, tenant context, role, session, invitation, and access certification summary.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Operational Status</span>
+              <strong>{tenantAdministrationOperations.operationalStatus}</strong>
+            </div>
+            <span className={`decision-pill ${tenantAdministrationOperations.operationalStatus === 'blocked' ? 'danger' : tenantAdministrationOperations.operationalStatus === 'caution' ? 'warning' : 'positive'}`}>default deny</span>
+          </div>
+          <p className="empty-state">{tenantAdministrationOperations.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Account Profile Summary" value={tenantAdministrationOperations.accountProfileSummary.displayName} />
+            <MetricCard label="Notification Preference Summary" value={formatNumber(tenantAdministrationOperations.notificationPreferenceSummary.enabledCategories)} />
+            <MetricCard label="Active Organization / Team Context" value={tenantAdministrationOperations.teamWorkspaceSummary.teamWorkspaceId} />
+            <MetricCard label="Role and Permission Summary" value={tenantAdministrationOperations.rolePermissionSummary.role} />
+            <MetricCard label="Active Session Summary" value={formatNumber(tenantAdministrationOperations.activeSessionSummary.activeSessions)} />
+            <MetricCard label="Pending Invitation Summary" value={formatNumber(tenantAdministrationOperations.pendingInvitationSummary.pendingCount)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Account Management Design</h3>
+              <p className="empty-state">Users manage only safe profile fields: display name, timezone, locale, preferred workspace, and accessibility preferences.</p>
+            </section>
+            <section>
+              <h3>Notification Preference Design</h3>
+              <p className="empty-state">In-app preferences are available; email and webhook channels remain readiness placeholders with no provider integration.</p>
+            </section>
+            <section>
+              <h3>Tenant Administration UX Design</h3>
+              <p className="empty-state">The dashboard summarizes existing protected APIs and engines without adding destructive admin actions.</p>
+            </section>
+            <section>
+              <h3>Access Certification Summary</h3>
+              <p className="empty-state">{tenantAdministrationOperations.accessCertificationSummary.certificationDecision} / {tenantAdministrationOperations.accessCertificationSummary.certificationStatus}</p>
+            </section>
+          </div>
+          <span className="event-line">system.userAccount.updated</span>
+          <span className="event-line">system.notificationPreferences.updated</span>
+          <span className="event-line">{tenantAdministrationOperations.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
