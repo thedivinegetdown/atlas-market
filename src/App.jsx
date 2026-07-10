@@ -94,6 +94,9 @@ import { evaluateCollaborationGovernance } from '../lib/system/collaborationGove
 import { evaluateTenantIsolation } from '../lib/auth/tenantIsolation.js'
 import { recordAdministrativeChange } from '../lib/system/administrativeAuditService.js'
 import { evaluateAccessReview } from '../lib/system/accessReviewEngine.js'
+import { evaluateTenantOperationsHealth } from '../lib/system/tenantOperationsHealthEngine.js'
+import { planTenantBackupRecovery } from '../lib/system/tenantBackupRecoveryPlanningEngine.js'
+import { evaluateAccessCertification } from '../lib/system/accessCertificationEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2009,6 +2012,9 @@ function App() {
       'revoke-other-sessions',
       'session-security-health',
       'administrative-audit',
+      'tenant-operations-health',
+      'tenant-backup-recovery-plan',
+      'access-certification',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2369,6 +2375,80 @@ function App() {
     enterpriseAuditTrail,
     operatorActionCenter,
   ])
+  const tenantOperationsHealth = useMemo(() => {
+    const tenantIsolation = evaluateTenantIsolation({
+      organizationId: 'org-atlas-local',
+      teamWorkspaceId: 'team-atlas-research-desk',
+      userId: 'local-development:local-operator',
+      role: 'owner',
+    }, { emitEvent: false, timestamp: '2026-07-10T12:15:00.000Z' })
+    const sessionSecurity = evaluateSessionSecurity({
+      user: { id: 'local-development:local-operator', role: 'owner' },
+      sessions: [
+        { id: 'local-session-local-operator', status: 'active', lastSeenAt: '2026-07-10T12:10:00.000Z', expiresAt: '2026-07-10T13:00:00.000Z' },
+      ],
+    }, { emitEvent: false, timestamp: '2026-07-10T12:15:00.000Z', now: () => new Date('2026-07-10T12:15:00.000Z') })
+    return evaluateTenantOperationsHealth({
+      tenantIsolation,
+      sessionSecurity,
+      collaborationGovernance,
+      accessReview,
+      eventObservability,
+      enterpriseAuditTrail,
+    }, { emitEvent: false, timestamp: '2026-07-10T12:15:00.000Z' })
+  }, [
+    accessReview,
+    collaborationGovernance,
+    enterpriseAuditTrail,
+    eventObservability,
+  ])
+  const tenantBackupRecovery = useMemo(() => {
+    const tenantIsolation = evaluateTenantIsolation({
+      organizationId: 'org-atlas-local',
+      teamWorkspaceId: 'team-atlas-research-desk',
+      userId: 'local-development:local-operator',
+      role: 'owner',
+    }, { emitEvent: false, timestamp: '2026-07-10T12:20:00.000Z' })
+    return planTenantBackupRecovery({
+      tenantIsolation,
+      dataRetention: dataRetentionPlanning,
+      dataLineage,
+      persistenceApiIntegration,
+      productionOperationsRunbook,
+      eventObservability,
+      operatorActions: operatorActionCenter,
+      enterpriseAuditTrail,
+    }, { emitEvent: false, timestamp: '2026-07-10T12:20:00.000Z' })
+  }, [
+    dataLineage,
+    dataRetentionPlanning,
+    enterpriseAuditTrail,
+    eventObservability,
+    operatorActionCenter,
+    persistenceApiIntegration,
+    productionOperationsRunbook,
+  ])
+  const accessCertification = useMemo(() => evaluateAccessCertification({
+    accessReview,
+    administrativeAudit: { eventType: 'system.administrativeAudit.recorded', status: 'recorded' },
+    collaborationGovernance,
+    sessionSecurity: { eventType: 'system.sessionSecurity.evaluated', activeSessionListing: [{ id: 'local-session-local-operator', status: 'active' }] },
+    operatorActions: operatorActionCenter,
+    organizationMemberships: [
+      { id: 'membership-org-atlas-local-local-operator', organizationId: 'org-atlas-local', userId: 'local-development:local-operator', role: 'owner', status: 'active' },
+      { id: 'membership-org-atlas-local-analyst', organizationId: 'org-atlas-local', userId: 'future-analyst', role: 'analyst', status: 'active' },
+    ],
+    teamMemberships: [
+      { id: 'team-membership-atlas-research-desk-local-operator', organizationId: 'org-atlas-local', teamWorkspaceId: 'team-atlas-research-desk', userId: 'local-development:local-operator', role: 'owner', status: 'active' },
+      { id: 'team-membership-atlas-research-desk-analyst', organizationId: 'org-atlas-local', teamWorkspaceId: 'team-atlas-research-desk', userId: 'future-analyst', role: 'analyst', status: 'active' },
+    ],
+    sessions: [{ id: 'local-session-local-operator', status: 'active' }],
+    invitations: [{ id: 'invitation-atlas-research-desk-analyst', status: 'pending' }],
+  }, { emitEvent: false, timestamp: '2026-07-10T12:25:00.000Z' }), [
+    accessReview,
+    collaborationGovernance,
+    operatorActionCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2408,6 +2488,9 @@ function App() {
     { id: 'workspace-collaboration-operations', label: 'Collaboration', status: workspaceCollaborationOperations.operationalStatus },
     { id: 'collaboration-governance', label: 'Governance', status: collaborationGovernance.governanceStatus },
     { id: 'access-review', label: 'Access Review', status: accessReview.reviewStatus },
+    { id: 'tenant-operations-health', label: 'Tenant Ops', status: tenantOperationsHealth.operationalStatus },
+    { id: 'tenant-backup-recovery', label: 'Recovery Plan', status: tenantBackupRecovery.backupReadinessStatus },
+    { id: 'access-certification', label: 'Certification', status: accessCertification.certificationStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7401,6 +7484,98 @@ function App() {
           <span className="event-line">system.tenantIsolation.evaluated</span>
           <span className="event-line">system.administrativeAudit.recorded</span>
           <span className="event-line">{accessReview.eventType}</span>
+        </article>
+
+        <article id="tenant-operations-health" className={`panel tenant-operations-health-panel ${tenantOperationsHealth.operationalStatus}`}>
+          <div className="panel-heading">
+            <h2>Tenant Operations Health</h2>
+            <span>Read-only tenant health across scoped persistence, memberships, sessions, invitations, events, audit, and boundary controls.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Operational Status</span>
+              <strong>{tenantOperationsHealth.operationalStatus}</strong>
+            </div>
+            <span className={`decision-pill ${tenantOperationsHealth.operationalStatus === 'blocked' ? 'danger' : tenantOperationsHealth.operationalStatus === 'caution' ? 'warning' : 'positive'}`}>read only</span>
+          </div>
+          <p className="empty-state">{tenantOperationsHealth.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Tenant Persistence Health Summary" value={tenantOperationsHealth.tenantPersistenceHealthSummary.status} />
+            <MetricCard label="Organization Membership Health" value={tenantOperationsHealth.organizationMembershipHealth.status} />
+            <MetricCard label="Team Workspace Membership Health" value={tenantOperationsHealth.teamWorkspaceMembershipHealth.status} />
+            <MetricCard label="Session Health" value={tenantOperationsHealth.sessionHealth.status} />
+            <MetricCard label="Invitation Health" value={tenantOperationsHealth.invitationHealth.status} />
+            <MetricCard label="Tenant Boundary Violation Summary" value={tenantOperationsHealth.tenantBoundaryViolationSummary.status} />
+          </div>
+          <span className="event-line">{tenantOperationsHealth.eventType}</span>
+        </article>
+
+        <article id="tenant-backup-recovery" className={`panel tenant-backup-recovery-panel ${tenantBackupRecovery.backupReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Tenant Backup &amp; Recovery</h2>
+            <span>Planning-only tenant backup scope and recovery ordering, with no dumps, restores, credentials, or data mutation.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Backup / Recovery Readiness</span>
+              <strong>{tenantBackupRecovery.backupReadinessStatus} / {tenantBackupRecovery.recoveryReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${tenantBackupRecovery.recoveryReadinessStatus === 'blocked' ? 'danger' : tenantBackupRecovery.recoveryReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>planning only</span>
+          </div>
+          <p className="empty-state">{tenantBackupRecovery.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Workspace Configuration Backup Scope" value={tenantBackupRecovery.workspaceConfigurationBackupScope.status} />
+            <MetricCard label="System Event Backup Scope" value={tenantBackupRecovery.systemEventBackupScope.status} />
+            <MetricCard label="Operator Action Backup Scope" value={tenantBackupRecovery.operatorActionBackupScope.status} />
+            <MetricCard label="Administrative Audit Backup Scope" value={tenantBackupRecovery.administrativeAuditBackupScope.status} />
+            <MetricCard label="Organization / Team Metadata Backup Scope" value={tenantBackupRecovery.organizationTeamMetadataBackupScope.status} />
+            <MetricCard label="Recovery Dependency Summary" value={tenantBackupRecovery.recoveryDependencySummary.lineageStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Recovery Ordering Plan</h3>
+              <p className="empty-state">{tenantBackupRecovery.recoveryOrderingPlan.join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Backup and Recovery Planning Design</h3>
+              <p className="empty-state">No real backup, restore, database dump, credential export, or data mutation is performed.</p>
+            </section>
+          </div>
+          <span className="event-line">{tenantBackupRecovery.eventType}</span>
+        </article>
+
+        <article id="access-certification" className={`panel access-certification-panel ${accessCertification.certificationStatus}`}>
+          <div className="panel-heading">
+            <h2>Access Certification</h2>
+            <span>Owner/admin review boundary for certifying tenant access without automatic revocation, role changes, or session changes.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Certification Status</span>
+              <strong>{accessCertification.certificationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${accessCertification.certificationStatus === 'blocked' ? 'danger' : accessCertification.certificationStatus === 'caution' ? 'warning' : 'positive'}`}>{accessCertification.certificationDecision}</span>
+          </div>
+          <p className="empty-state">{accessCertification.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Certification Period Model" value={`${accessCertification.certificationPeriodModel.periodStart} - ${accessCertification.certificationPeriodModel.periodEnd}`} />
+            <MetricCard label="Certifiable Organization Memberships" value={formatNumber(accessCertification.certifiableOrganizationMemberships.length)} />
+            <MetricCard label="Certifiable Team Memberships" value={formatNumber(accessCertification.certifiableTeamMemberships.length)} />
+            <MetricCard label="Elevated-Role Certifications" value={formatNumber(accessCertification.elevatedRoleCertifications.length)} />
+            <MetricCard label="Inactive Access Certifications" value={formatNumber(accessCertification.inactiveAccessCertifications.length)} />
+            <MetricCard label="Pending Invitation Certification Summary" value={formatNumber(accessCertification.pendingInvitationCertificationSummary.count)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Access Certification Design</h3>
+              <p className="empty-state">Certification decisions are approve, review, or revoke-recommended; all outcomes require human review and preserve paper-only boundaries.</p>
+            </section>
+            <section>
+              <h3>Certification Source Events</h3>
+              <p className="empty-state">{Object.values(accessCertification.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{accessCertification.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
