@@ -130,6 +130,9 @@ import { trackComplianceReviewFindings } from '../lib/system/complianceReviewFin
 import { evaluateComplianceReviewSla } from '../lib/system/complianceReviewSlaEngine.js'
 import { planComplianceEscalations } from '../lib/system/complianceEscalationPlanningEngine.js'
 import { evaluateComplianceRiskCommandCenter } from '../lib/system/complianceRiskCommandCenterEngine.js'
+import { generateComplianceReviewCalendar } from '../lib/system/complianceReviewCalendarEngine.js'
+import { planComplianceAttestationRenewals } from '../lib/system/complianceAttestationRenewalPlannerEngine.js'
+import { prepareComplianceGovernanceReadout } from '../lib/system/complianceGovernanceReadoutEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2105,6 +2108,9 @@ function App() {
       'compliance-escalation-plans',
       'compliance-escalation-status-update',
       'compliance-risk-health',
+      'compliance-review-calendar',
+      'compliance-attestation-renewals',
+      'compliance-governance-readouts',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3065,6 +3071,41 @@ function App() {
     complianceReviewFindingTracker,
     complianceReviewSla,
   ])
+  const complianceReviewCalendar = useMemo(() => generateComplianceReviewCalendar({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceReviewWorkflow,
+    complianceReviewSla,
+    complianceEscalationPlanning,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:16:00.000Z' }), [
+    complianceEscalationPlanning,
+    complianceReviewSla,
+    complianceReviewWorkflow,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceAttestationRenewalPlanning = useMemo(() => planComplianceAttestationRenewals({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    policyAttestation,
+    complianceObligationMapping,
+    complianceReviewCalendar,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:17:00.000Z' }), [
+    complianceObligationMapping,
+    complianceReviewCalendar,
+    inAppNotificationCenter.tenantAndUserScope,
+    policyAttestation,
+  ])
+  const complianceGovernanceReadout = useMemo(() => prepareComplianceGovernanceReadout({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceRiskCommandCenter,
+    complianceReviewCalendar,
+    complianceAttestationRenewalPlanning,
+    complianceEscalationPlanning,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:18:00.000Z' }), [
+    complianceAttestationRenewalPlanning,
+    complianceEscalationPlanning,
+    complianceReviewCalendar,
+    complianceRiskCommandCenter,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3117,6 +3158,7 @@ function App() {
     { id: 'compliance-operations', label: 'Compliance Ops', status: complianceOperationsCommandCenter.commandCenterStatus },
     { id: 'compliance-intake-review', label: 'Compliance Intake', status: complianceReviewFindingTracker.trackerStatus },
     { id: 'compliance-risk-command', label: 'Compliance Risk', status: complianceRiskCommandCenter.commandCenterStatus },
+    { id: 'compliance-governance-schedule', label: 'Compliance Schedule', status: complianceGovernanceReadout.readoutStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8650,6 +8692,50 @@ function App() {
           <span className="event-line">{complianceReviewSla.eventType}</span>
           <span className="event-line">{complianceEscalationPlanning.eventType}</span>
           <span className="event-line">{complianceRiskCommandCenter.eventType}</span>
+        </article>
+
+        <article id="compliance-governance-schedule" className={`panel compliance-governance-schedule-panel ${complianceGovernanceReadout.readoutStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Governance Schedule</h2>
+            <span>Review calendar, attestation renewal planning, and governance readouts for owner/admin oversight.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Governance Readout Status</span>
+              <strong>{complianceGovernanceReadout.readoutStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceGovernanceReadout.readoutStatus === 'blocked' ? 'danger' : complianceGovernanceReadout.readoutStatus === 'caution' ? 'warning' : 'positive'}`}>readout only</span>
+          </div>
+          <p className="empty-state">{complianceGovernanceReadout.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Calendar Due Soon" value={formatNumber(complianceReviewCalendar.calendarSummary.dueSoon)} />
+            <MetricCard label="Calendar Overdue" value={formatNumber(complianceReviewCalendar.calendarSummary.overdue)} />
+            <MetricCard label="Escalation Reviews" value={formatNumber(complianceReviewCalendar.calendarSummary.escalationReviews)} />
+            <MetricCard label="Renewals Due Soon" value={formatNumber(complianceAttestationRenewalPlanning.renewalSummary.dueSoon)} />
+            <MetricCard label="Renewals Overdue" value={formatNumber(complianceAttestationRenewalPlanning.renewalSummary.overdue)} />
+            <MetricCard label="Readouts Ready" value={formatNumber(complianceGovernanceReadout.readoutSummary.readyForReview)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Review Calendar Design</h3>
+              <p className="empty-state">Calendar items organize review workflows, SLA reviews, and escalation reviews for operator planning without scheduling automation.</p>
+            </section>
+            <section>
+              <h3>Attestation Renewal Planning Design</h3>
+              <p className="empty-state">Renewal planning references policy attestations, obligations, and calendar state without renewing or attesting automatically.</p>
+            </section>
+            <section>
+              <h3>Governance Readout Design</h3>
+              <p className="empty-state">Readouts summarize compliance risk, calendar pressure, renewals, and escalations for owner/admin review without distribution or compliance claims.</p>
+            </section>
+            <section>
+              <h3>Governance Schedule Boundary</h3>
+              <p className="empty-state">No automatic scheduling, renewal, attestation, distribution, approval, enforcement, live orders, broker execution, secrets, or token material are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceReviewCalendar.eventType}</span>
+          <span className="event-line">{complianceAttestationRenewalPlanning.eventType}</span>
+          <span className="event-line">{complianceGovernanceReadout.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
