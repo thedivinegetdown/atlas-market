@@ -109,6 +109,9 @@ import { evaluateAdministrationWorkflowSla } from '../lib/system/administrationW
 import { prioritizeOperatorAttention } from '../lib/system/operatorAttentionPrioritizationEngine.js'
 import { buildAdministrativeCases } from '../lib/system/administrativeCaseManagementEngine.js'
 import { evaluateOperatorIntelligenceCommandCenter } from '../lib/system/operatorIntelligenceCommandCenterEngine.js'
+import { collectAdministrativeEvidence } from '../lib/system/administrativeEvidenceEngine.js'
+import { buildRemediationPlans } from '../lib/system/remediationPlanningEngine.js'
+import { evaluateInvestigationRemediationCommandCenter } from '../lib/system/investigationRemediationCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2048,6 +2051,14 @@ function App() {
       'administrative-case-detail',
       'administrative-case-status-update',
       'operator-intelligence-health',
+      'administrative-evidence',
+      'administrative-evidence-detail',
+      'evidence-review-status-update',
+      'remediation-plans',
+      'remediation-plan-detail',
+      'remediation-plan-approval-update',
+      'remediation-plan-status-update',
+      'investigation-remediation-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2756,6 +2767,43 @@ function App() {
     tenantOperationsHealth,
     userActivityRiskReview,
   ])
+  const administrativeEvidence = useMemo(() => collectAdministrativeEvidence({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    administrativeCases,
+    operatorAttention,
+    userActivityRiskReview,
+    administrationWorkflowSla,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:55:00.000Z' }), [
+    administrationWorkflowSla,
+    administrativeCases,
+    inAppNotificationCenter.tenantAndUserScope,
+    operatorAttention,
+    userActivityRiskReview,
+  ])
+  const remediationPlanning = useMemo(() => buildRemediationPlans({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    administrativeEvidence,
+    administrativeCases,
+    operatorAttention,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:56:00.000Z' }), [
+    administrativeCases,
+    administrativeEvidence,
+    inAppNotificationCenter.tenantAndUserScope,
+    operatorAttention,
+  ])
+  const investigationRemediationCommandCenter = useMemo(() => evaluateInvestigationRemediationCommandCenter({
+    administrativeCases,
+    administrativeEvidence,
+    remediationPlanning,
+    tenantAdministrationOperations,
+    operatorAttention,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:57:00.000Z' }), [
+    administrativeCases,
+    administrativeEvidence,
+    operatorAttention,
+    remediationPlanning,
+    tenantAdministrationOperations,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2801,6 +2849,7 @@ function App() {
     { id: 'tenant-administration', label: 'Tenant Admin', status: tenantAdministrationOperations.operationalStatus },
     { id: 'administration-workflow', label: 'Admin Workflow', status: tenantAdministrationWorkflow.status },
     { id: 'operator-intelligence', label: 'Operator Intel', status: operatorIntelligenceCommandCenter.commandCenterStatus },
+    { id: 'investigation-remediation', label: 'Investigations', status: investigationRemediationCommandCenter.commandCenterStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8022,6 +8071,50 @@ function App() {
           <span className="event-line">{operatorAttention.eventType}</span>
           <span className="event-line">{administrativeCases.eventType}</span>
           <span className="event-line">{operatorIntelligenceCommandCenter.eventType}</span>
+        </article>
+
+        <article id="investigation-remediation" className={`panel investigation-remediation-panel ${investigationRemediationCommandCenter.commandCenterStatus}`}>
+          <div className="panel-heading">
+            <h2>Administrative Investigation &amp; Remediation</h2>
+            <span>Evidence workspace, remediation planning, and human-review investigation health for tenant administration.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Investigation Status</span>
+              <strong>{investigationRemediationCommandCenter.commandCenterStatus}</strong>
+            </div>
+            <span className={`decision-pill ${investigationRemediationCommandCenter.commandCenterStatus === 'blocked' ? 'danger' : investigationRemediationCommandCenter.commandCenterStatus === 'caution' ? 'warning' : 'positive'}`}>human review</span>
+          </div>
+          <p className="empty-state">{investigationRemediationCommandCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Open Investigations" value={formatNumber(investigationRemediationCommandCenter.openInvestigations)} />
+            <MetricCard label="Cases Without Evidence" value={formatNumber(investigationRemediationCommandCenter.casesWithoutEvidence)} />
+            <MetricCard label="Evidence Awaiting Review" value={formatNumber(investigationRemediationCommandCenter.evidenceAwaitingReview)} />
+            <MetricCard label="High-Confidence Evidence Findings" value={formatNumber(investigationRemediationCommandCenter.highConfidenceEvidenceFindings)} />
+            <MetricCard label="Plans Awaiting Approval" value={formatNumber(investigationRemediationCommandCenter.plansAwaitingApproval)} />
+            <MetricCard label="Overdue Remediation Plans" value={formatNumber(investigationRemediationCommandCenter.overdueRemediationPlans)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Administrative Evidence Design</h3>
+              <p className="empty-state">Evidence stores redacted summaries and source references only; no secrets, credentials, tokens, IP addresses, or sensitive session material are copied.</p>
+            </section>
+            <section>
+              <h3>Remediation Planning Design</h3>
+              <p className="empty-state">Plans are recommendations with draft, approval, and execution statuses; no roles, sessions, memberships, invitations, certifications, trades, or broker actions are changed automatically.</p>
+            </section>
+            <section>
+              <h3>Investigation and Remediation Command Center Design</h3>
+              <p className="empty-state">The command center consumes normalized evidence, cases, remediation plans, tenant health, and operator attention outputs without recalculating upstream findings.</p>
+            </section>
+            <section>
+              <h3>Event References</h3>
+              <p className="empty-state">{Object.values(investigationRemediationCommandCenter.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{administrativeEvidence.eventType}</span>
+          <span className="event-line">{remediationPlanning.eventType}</span>
+          <span className="event-line">{investigationRemediationCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
