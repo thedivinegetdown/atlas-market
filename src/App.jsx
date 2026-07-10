@@ -121,6 +121,9 @@ import { evaluatePolicyControlAssuranceCommandCenter } from '../lib/system/polic
 import { evaluatePolicyAttestations } from '../lib/system/policyAttestationEngine.js'
 import { evaluateControlTesting } from '../lib/system/controlTestingEngine.js'
 import { evaluateComplianceReadinessCommandCenter } from '../lib/system/complianceReadinessCommandCenterEngine.js'
+import { prepareComplianceEvidencePackage } from '../lib/system/complianceEvidencePackageEngine.js'
+import { evaluateComplianceReviewWorkflow } from '../lib/system/complianceReviewWorkflowEngine.js'
+import { evaluateComplianceOperationsCommandCenter } from '../lib/system/complianceOperationsCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2083,6 +2086,10 @@ function App() {
       'policy-attestations',
       'control-testing-review',
       'compliance-readiness-health',
+      'compliance-evidence-packages',
+      'compliance-review-workflows',
+      'compliance-review-status-update',
+      'compliance-operations-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2932,6 +2939,45 @@ function App() {
     policyAttestation,
     policyControlAssuranceCommandCenter,
   ])
+  const complianceEvidencePackage = useMemo(() => prepareComplianceEvidencePackage({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    policyGovernance: administrativePolicyGovernance,
+    controlAssurance,
+    policyAttestation,
+    controlTesting,
+    evidenceGovernance,
+    remediationEffectiveness,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:07:00.000Z' }), [
+    administrativePolicyGovernance,
+    controlAssurance,
+    controlTesting,
+    evidenceGovernance,
+    inAppNotificationCenter.tenantAndUserScope,
+    policyAttestation,
+    remediationEffectiveness,
+  ])
+  const complianceReviewWorkflow = useMemo(() => evaluateComplianceReviewWorkflow({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceEvidencePackage,
+    complianceReadinessCommandCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:08:00.000Z' }), [
+    complianceEvidencePackage,
+    complianceReadinessCommandCenter,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceOperationsCommandCenter = useMemo(() => evaluateComplianceOperationsCommandCenter({
+    complianceEvidencePackage,
+    complianceReviewWorkflow,
+    complianceReadinessCommandCenter,
+    policyControlAssuranceCommandCenter,
+    administrativeGovernanceCommandCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:09:00.000Z' }), [
+    administrativeGovernanceCommandCenter,
+    complianceEvidencePackage,
+    complianceReadinessCommandCenter,
+    complianceReviewWorkflow,
+    policyControlAssuranceCommandCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2981,6 +3027,7 @@ function App() {
     { id: 'administrative-governance', label: 'Admin Governance', status: administrativeGovernanceCommandCenter.commandCenterStatus },
     { id: 'policy-control-assurance', label: 'Policy Controls', status: policyControlAssuranceCommandCenter.commandCenterStatus },
     { id: 'compliance-readiness-command', label: 'Compliance Ready', status: complianceReadinessCommandCenter.commandCenterStatus },
+    { id: 'compliance-operations', label: 'Compliance Ops', status: complianceOperationsCommandCenter.commandCenterStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8382,6 +8429,50 @@ function App() {
           <span className="event-line">{policyAttestation.eventType}</span>
           <span className="event-line">{controlTesting.eventType}</span>
           <span className="event-line">{complianceReadinessCommandCenter.eventType}</span>
+        </article>
+
+        <article id="compliance-operations" className={`panel compliance-operations-panel ${complianceOperationsCommandCenter.commandCenterStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Operations Command Center</h2>
+            <span>Evidence packages, review workflows, and readiness operations for human-reviewed compliance support.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Compliance Operations Status</span>
+              <strong>{complianceOperationsCommandCenter.commandCenterStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceOperationsCommandCenter.commandCenterStatus === 'blocked' ? 'danger' : complianceOperationsCommandCenter.commandCenterStatus === 'caution' ? 'warning' : 'positive'}`}>operations only</span>
+          </div>
+          <p className="empty-state">{complianceOperationsCommandCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Packages Ready For Review" value={formatNumber(complianceOperationsCommandCenter.packagesReadyForReview)} />
+            <MetricCard label="Packages Needing Updates" value={formatNumber(complianceOperationsCommandCenter.packagesNeedingUpdates)} />
+            <MetricCard label="Reviewed Packages" value={formatNumber(complianceOperationsCommandCenter.reviewedPackages)} />
+            <MetricCard label="Reviews Queued" value={formatNumber(complianceOperationsCommandCenter.reviewsQueued)} />
+            <MetricCard label="Reviews In Progress" value={formatNumber(complianceOperationsCommandCenter.reviewsInProgress)} />
+            <MetricCard label="Review Changes Requested" value={formatNumber(complianceOperationsCommandCenter.reviewChangesRequested)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Evidence Package Design</h3>
+              <p className="empty-state">Evidence packages preserve references to policies, controls, attestations, tests, exceptions, evidence governance, remediation, and audit records without copying sensitive payloads.</p>
+            </section>
+            <section>
+              <h3>Compliance Review Workflow Design</h3>
+              <p className="empty-state">Review workflows queue human review, track findings and changes requested, and never approve readiness or compliance claims automatically.</p>
+            </section>
+            <section>
+              <h3>Compliance Operations Command Center Design</h3>
+              <p className="empty-state">Operations aggregates package readiness, review workflow state, compliance readiness, policy assurance, and administrative governance health.</p>
+            </section>
+            <section>
+              <h3>Operations Boundary</h3>
+              <p className="empty-state">No automatic evidence export, automatic approval, enforcement actions, live orders, broker execution, secrets, tokens, or sensitive session data are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceEvidencePackage.eventType}</span>
+          <span className="event-line">{complianceReviewWorkflow.eventType}</span>
+          <span className="event-line">{complianceOperationsCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
