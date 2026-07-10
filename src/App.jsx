@@ -133,6 +133,9 @@ import { evaluateComplianceRiskCommandCenter } from '../lib/system/complianceRis
 import { generateComplianceReviewCalendar } from '../lib/system/complianceReviewCalendarEngine.js'
 import { planComplianceAttestationRenewals } from '../lib/system/complianceAttestationRenewalPlannerEngine.js'
 import { prepareComplianceGovernanceReadout } from '../lib/system/complianceGovernanceReadoutEngine.js'
+import { prepareComplianceAuditReadinessPackage } from '../lib/system/complianceAuditReadinessPackageEngine.js'
+import { planComplianceExternalReviews } from '../lib/system/complianceExternalReviewPlannerEngine.js'
+import { recordComplianceGovernanceDecisions } from '../lib/system/complianceGovernanceDecisionLogEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2111,6 +2114,9 @@ function App() {
       'compliance-review-calendar',
       'compliance-attestation-renewals',
       'compliance-governance-readouts',
+      'compliance-audit-readiness-packages',
+      'compliance-external-review-requests',
+      'compliance-governance-decisions',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3106,6 +3112,49 @@ function App() {
     complianceRiskCommandCenter,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceAuditReadinessPackage = useMemo(() => prepareComplianceAuditReadinessPackage({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceEvidencePackage,
+    complianceEvidenceRequestQueue,
+    complianceReviewFindingTracker,
+    complianceRiskCommandCenter,
+    complianceGovernanceReadout,
+    enterpriseAuditTrail,
+    dataLineage,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:19:00.000Z' }), [
+    complianceEvidencePackage,
+    complianceEvidenceRequestQueue,
+    complianceGovernanceReadout,
+    complianceReviewFindingTracker,
+    complianceRiskCommandCenter,
+    dataLineage,
+    enterpriseAuditTrail,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceExternalReviewPlanning = useMemo(() => planComplianceExternalReviews({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceAuditReadinessPackage,
+    complianceGovernanceReadout,
+    complianceReviewCalendar,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:20:00.000Z' }), [
+    complianceAuditReadinessPackage,
+    complianceGovernanceReadout,
+    complianceReviewCalendar,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceGovernanceDecisionLog = useMemo(() => recordComplianceGovernanceDecisions({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceAuditReadinessPackage,
+    complianceExternalReviewPlanning,
+    complianceGovernanceReadout,
+    complianceEscalationPlanning,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:21:00.000Z' }), [
+    complianceAuditReadinessPackage,
+    complianceEscalationPlanning,
+    complianceExternalReviewPlanning,
+    complianceGovernanceReadout,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3159,6 +3208,7 @@ function App() {
     { id: 'compliance-intake-review', label: 'Compliance Intake', status: complianceReviewFindingTracker.trackerStatus },
     { id: 'compliance-risk-command', label: 'Compliance Risk', status: complianceRiskCommandCenter.commandCenterStatus },
     { id: 'compliance-governance-schedule', label: 'Compliance Schedule', status: complianceGovernanceReadout.readoutStatus },
+    { id: 'compliance-audit-external-review', label: 'Audit Review', status: complianceGovernanceDecisionLog.decisionLogStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8736,6 +8786,50 @@ function App() {
           <span className="event-line">{complianceReviewCalendar.eventType}</span>
           <span className="event-line">{complianceAttestationRenewalPlanning.eventType}</span>
           <span className="event-line">{complianceGovernanceReadout.eventType}</span>
+        </article>
+
+        <article id="compliance-audit-external-review" className={`panel compliance-audit-external-review-panel ${complianceGovernanceDecisionLog.decisionLogStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Audit & External Review</h2>
+            <span>Audit readiness packages, external review request planning, and governance decision logging.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Decision Log Status</span>
+              <strong>{complianceGovernanceDecisionLog.decisionLogStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceGovernanceDecisionLog.decisionLogStatus === 'blocked' ? 'danger' : complianceGovernanceDecisionLog.decisionLogStatus === 'caution' ? 'warning' : 'positive'}`}>human review</span>
+          </div>
+          <p className="empty-state">{complianceGovernanceDecisionLog.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Audit Packages Ready" value={formatNumber(complianceAuditReadinessPackage.auditReadinessSummary.readyForReview)} />
+            <MetricCard label="Audit Packages Needing Updates" value={formatNumber(complianceAuditReadinessPackage.auditReadinessSummary.needsUpdates)} />
+            <MetricCard label="External Reviews Planned" value={formatNumber(complianceExternalReviewPlanning.externalReviewSummary.planned)} />
+            <MetricCard label="External Reviews Ready" value={formatNumber(complianceExternalReviewPlanning.externalReviewSummary.readyForReview)} />
+            <MetricCard label="Governance Decisions Draft" value={formatNumber(complianceGovernanceDecisionLog.decisionSummary.draft)} />
+            <MetricCard label="Governance Decisions Recorded" value={formatNumber(complianceGovernanceDecisionLog.decisionSummary.recorded)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Audit Readiness Package Design</h3>
+              <p className="empty-state">Audit readiness packages assemble evidence package, request, finding, risk, readout, audit trail, and lineage references without exporting evidence automatically.</p>
+            </section>
+            <section>
+              <h3>External Review Request Planning Design</h3>
+              <p className="empty-state">External review requests prepare owner/admin review plans for auditor, internal review, diligence, or exam workflows without submission or distribution.</p>
+            </section>
+            <section>
+              <h3>Governance Decision Log Design</h3>
+              <p className="empty-state">Decision logs capture draft or recorded governance outcomes with source references and rationale while leaving approval and enforcement to human operators.</p>
+            </section>
+            <section>
+              <h3>Audit and External Review Boundary</h3>
+              <p className="empty-state">No automatic compliance claims, exports, submissions, distribution, approvals, enforcement actions, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceAuditReadinessPackage.eventType}</span>
+          <span className="event-line">{complianceExternalReviewPlanning.eventType}</span>
+          <span className="event-line">{complianceGovernanceDecisionLog.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
