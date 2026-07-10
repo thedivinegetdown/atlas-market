@@ -85,6 +85,8 @@ import { evaluatePersistenceApiIntegration } from '../lib/system/persistenceApiI
 import { evaluateDatabaseOperations } from '../lib/system/databaseOperationsEngine.js'
 import { evaluateApiReliability } from '../lib/system/apiReliabilityEngine.js'
 import { evaluateAuthorization } from '../lib/auth/authorizationService.js'
+import { resolveWorkspaceAccess } from '../lib/auth/organizationWorkspaceAccess.js'
+import { evaluateIdentityOrganizationOperations } from '../lib/system/identityOrganizationOperationsEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -308,6 +310,7 @@ function getWorkspaceFamily(panelId) {
     'database-operations',
     'api-reliability',
     'identity-authorization',
+    'identity-organization-operations',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1977,6 +1980,10 @@ function App() {
       'session-revoke',
       'protected-workspace-configurations',
       'authorization-health',
+      'current-organization',
+      'organization-memberships',
+      'protected-organization-workspace-configurations',
+      'organization-authorization-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2089,6 +2096,57 @@ function App() {
     apiReliability,
     permissionPlanning,
   ])
+  const identityOrganizationOperations = useMemo(() => {
+    const authenticatedUser = {
+      id: 'local-development:local-operator',
+      provider: 'local-development',
+      role: 'owner',
+      metadata: {
+        ownedWorkspaceIds: ['atlas-paper-operator-workspace'],
+      },
+    }
+    const activeOrganization = {
+      id: 'org-atlas-local',
+      name: 'Atlas Local Organization',
+      status: 'healthy',
+      billingEnabled: false,
+    }
+    const activeMembership = {
+      id: 'membership-org-atlas-local-local-operator',
+      organizationId: activeOrganization.id,
+      userId: authenticatedUser.id,
+      role: 'owner',
+      status: 'active',
+    }
+    const protectedWorkspaceAccess = resolveWorkspaceAccess({
+      user: authenticatedUser,
+      membership: activeMembership,
+      organizationId: activeOrganization.id,
+      requestedOrganizationId: activeOrganization.id,
+      workspaceId: 'atlas-paper-operator-workspace',
+      action: 'write',
+      permissionPlanning,
+      multiUserWorkspacePlanning,
+    }, { emitEvent: false })
+    return evaluateIdentityOrganizationOperations({
+      userIdentity: authenticatedUser,
+      organization: activeOrganization,
+      membership: activeMembership,
+      authorization: protectedWorkspaceAccess.baseAuthorization,
+      session: {
+        id: 'local-session-local-operator',
+        status: 'active',
+        expiresAt: 'local-development-session',
+      },
+      organizationWorkspaceAccess: protectedWorkspaceAccess,
+      organizationEventType: 'system.organization.persisted',
+      membershipEventType: 'system.organizationMembership.updated',
+      sessionEventType: 'system.userSession.updated',
+    }, { emitEvent: false })
+  }, [
+    multiUserWorkspacePlanning,
+    permissionPlanning,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2124,6 +2182,7 @@ function App() {
     { id: 'database-operations', label: 'DB Ops', status: databaseOperations.databaseOperationsStatus },
     { id: 'api-reliability', label: 'API Reliability', status: apiReliability.apiReliabilityStatus },
     { id: 'identity-authorization', label: 'Identity/Auth', status: identityAuthorization.authorizationStatus },
+    { id: 'identity-organization-operations', label: 'Identity Ops', status: identityOrganizationOperations.operationalStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -6893,6 +6952,64 @@ function App() {
           </div>
           <span className="event-line">{identityAuthorization.authenticationEventType}</span>
           <span className="event-line">{identityAuthorization.authorizationEventType}</span>
+        </article>
+
+        <article id="identity-organization-operations" className={`panel identity-organization-operations-panel ${identityOrganizationOperations.operationalStatus}`}>
+          <div className="panel-heading">
+            <h2>Identity &amp; Organization Operations</h2>
+            <span>Operational view of authenticated user, active organization, membership, session, authorization, and protected workspace access.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Operational Status</span>
+              <strong>{identityOrganizationOperations.operationalStatus}</strong>
+            </div>
+            <span className={`decision-pill ${identityOrganizationOperations.operationalStatus === 'blocked' ? 'danger' : identityOrganizationOperations.operationalStatus === 'caution' ? 'warning' : 'positive'}`}>
+              organization scoped
+            </span>
+          </div>
+          <p className="empty-state">{identityOrganizationOperations.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Authenticated User Summary" value={identityOrganizationOperations.authenticatedUserSummary.role} />
+            <MetricCard label="Active Organization Summary" value={identityOrganizationOperations.activeOrganizationSummary.organizationId} />
+            <MetricCard label="Membership Summary" value={identityOrganizationOperations.membershipSummary.role} />
+            <MetricCard label="Authorization Health Summary" value={identityOrganizationOperations.authorizationHealthSummary.status} />
+            <MetricCard label="Session Health Summary" value={identityOrganizationOperations.sessionHealthSummary.status} />
+            <MetricCard label="Protected Workspace Access Summary" value={identityOrganizationOperations.protectedWorkspaceAccessSummary.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Organization Model</h3>
+              <p className="empty-state">
+                {identityOrganizationOperations.activeOrganizationSummary.name} / billing disabled / paper trading only.
+              </p>
+            </section>
+            <section>
+              <h3>Membership and Authorization Design</h3>
+              <p className="empty-state">
+                owner/admin/analyst/viewer roles / final owner protected / duplicate active memberships blocked / default deny when organization context is missing.
+              </p>
+            </section>
+            <section>
+              <h3>Organization-Aware Workspace Access</h3>
+              <p className="empty-state">
+                Workspace {identityOrganizationOperations.protectedWorkspaceAccessSummary.workspaceId} scoped to {identityOrganizationOperations.protectedWorkspaceAccessSummary.organizationId}; cross-organization access denied: {identityOrganizationOperations.protectedWorkspaceAccessSummary.crossOrganizationAccessDenied ? 'yes' : 'no'}.
+              </p>
+            </section>
+            <section>
+              <h3>Organization API Endpoints</h3>
+              <p className="empty-state">current-organization / organization-memberships / protected-organization-workspace-configurations / organization-authorization-health.</p>
+            </section>
+            <section>
+              <h3>Security Improvements</h3>
+              <p className="empty-state">Safe public errors / structured diagnostics / origin validation on writes / CSRF readiness / session revocation awareness / no plaintext tokens or passwords.</p>
+            </section>
+            <section>
+              <h3>Identity Organization Source Events</h3>
+              <p className="empty-state">{Object.values(identityOrganizationOperations.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{identityOrganizationOperations.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">

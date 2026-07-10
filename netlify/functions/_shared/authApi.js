@@ -1,6 +1,8 @@
 import { AppError, ERROR_CODES } from '../../../lib/errors/appError.js'
 import { createLocalDevelopmentAuthAdapter, validateAuthenticatedSession } from '../../../lib/auth/authenticationProvider.js'
 import { createAuthorizationService } from '../../../lib/auth/authorizationService.js'
+import { resolveWorkspaceAccess } from '../../../lib/auth/organizationWorkspaceAccess.js'
+import { createOrganizationMembershipRepository } from '../../../lib/auth/organizationRepository.js'
 import { createPersistenceApiHandler } from './persistenceApi.js'
 
 function getHeader(headers = {}, name) {
@@ -96,4 +98,49 @@ export function createAuthenticatedApiHandler(resolver, {
       session: authentication.session,
     })
   }, options)
+}
+
+export function createOrganizationAuthenticatedApiHandler(resolver, {
+  requiredPermission = 'dashboard.read',
+  organizationMembershipRepository = createOrganizationMembershipRepository(),
+  workspaceAction = 'read',
+  ...options
+} = {}) {
+  return createAuthenticatedApiHandler(async (context) => {
+    const organizationId = context.body?.organizationId ?? context.query?.organizationId
+    const requestedOrganizationId = context.body?.requestedOrganizationId ?? context.query?.requestedOrganizationId ?? organizationId
+    if (!organizationId) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Organization context is required', {
+        statusCode: 403,
+        publicMessage: 'organization context is required',
+      })
+    }
+    const membership = await organizationMembershipRepository?.getMembership?.(organizationId, context.user.id)
+    const workspaceAccess = resolveWorkspaceAccess({
+      user: context.user,
+      membership,
+      organizationId,
+      requestedOrganizationId,
+      workspaceId: context.body?.workspaceId ?? context.query?.workspaceId ?? 'atlas-paper-operator-workspace',
+      action: workspaceAction,
+      requestId: context.requestId,
+      routeId: options.routeId,
+    }, { emitEvent: false })
+    if (!workspaceAccess.workspaceAccessResolver.allowed) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, workspaceAccess.workspaceAccessResolver.reason, {
+        statusCode: 403,
+        publicMessage: 'organization access denied',
+        metadata: { crossOrganizationAccessDenied: workspaceAccess.crossOrganizationAccessDenied },
+      })
+    }
+    return resolver({
+      ...context,
+      organizationId,
+      membership,
+      workspaceAccess,
+    })
+  }, {
+    ...options,
+    requiredPermission,
+  })
 }
