@@ -3,6 +3,8 @@ import { createLocalDevelopmentAuthAdapter, validateAuthenticatedSession } from 
 import { createAuthorizationService } from '../../../lib/auth/authorizationService.js'
 import { resolveWorkspaceAccess } from '../../../lib/auth/organizationWorkspaceAccess.js'
 import { createOrganizationMembershipRepository } from '../../../lib/auth/organizationRepository.js'
+import { createTeamMembershipRepository, createTeamWorkspaceRepository } from '../../../lib/auth/teamWorkspaceRepository.js'
+import { resolveTeamWorkspaceAccess } from '../../../lib/auth/teamWorkspaceAccess.js'
 import { createPersistenceApiHandler } from './persistenceApi.js'
 
 function getHeader(headers = {}, name) {
@@ -142,5 +144,56 @@ export function createOrganizationAuthenticatedApiHandler(resolver, {
   }, {
     ...options,
     requiredPermission,
+  })
+}
+
+export function createTeamAuthenticatedApiHandler(resolver, {
+  teamWorkspaceRepository = createTeamWorkspaceRepository(),
+  teamMembershipRepository = createTeamMembershipRepository(),
+  teamAction = 'read',
+  ...options
+} = {}) {
+  return createOrganizationAuthenticatedApiHandler(async (context) => {
+    const teamWorkspaceId = context.body?.teamWorkspaceId ?? context.query?.teamWorkspaceId
+    const requestedTeamWorkspaceId = context.body?.requestedTeamWorkspaceId ?? context.query?.requestedTeamWorkspaceId ?? teamWorkspaceId
+    if (!teamWorkspaceId) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Team workspace context is required', {
+        statusCode: 403,
+        publicMessage: 'team workspace context is required',
+      })
+    }
+    const teamWorkspace = await teamWorkspaceRepository.getWorkspace?.(teamWorkspaceId)
+      ?? { id: teamWorkspaceId, organizationId: context.organizationId, status: 'active' }
+    const teamMembership = await teamMembershipRepository.getMembership?.(teamWorkspaceId, context.user.id)
+    const teamWorkspaceAccess = resolveTeamWorkspaceAccess({
+      user: context.user,
+      organizationMembership: context.membership,
+      teamMembership,
+      teamWorkspace,
+      requestedOrganizationId: context.body?.requestedOrganizationId ?? context.query?.requestedOrganizationId ?? context.organizationId,
+      requestedTeamWorkspaceId,
+      action: teamAction,
+      requestId: context.requestId,
+      routeId: options.routeId,
+    }, { emitEvent: false })
+    if (!teamWorkspaceAccess.teamWorkspaceAccessResolver.allowed) {
+      throw new AppError(ERROR_CODES.VALIDATION_ERROR, teamWorkspaceAccess.teamWorkspaceAccessResolver.reason, {
+        statusCode: 403,
+        publicMessage: 'team workspace access denied',
+        metadata: {
+          crossOrganizationAccessDenied: teamWorkspaceAccess.crossOrganizationAccessDenied,
+          crossTeamAccessDenied: teamWorkspaceAccess.crossTeamAccessDenied,
+        },
+      })
+    }
+    return resolver({
+      ...context,
+      teamWorkspace,
+      teamMembership,
+      teamWorkspaceAccess,
+    })
+  }, {
+    ...options,
+    workspaceAction: teamAction === 'read' ? 'read' : 'administer',
   })
 }

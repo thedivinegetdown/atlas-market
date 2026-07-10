@@ -87,6 +87,8 @@ import { evaluateApiReliability } from '../lib/system/apiReliabilityEngine.js'
 import { evaluateAuthorization } from '../lib/auth/authorizationService.js'
 import { resolveWorkspaceAccess } from '../lib/auth/organizationWorkspaceAccess.js'
 import { evaluateIdentityOrganizationOperations } from '../lib/system/identityOrganizationOperationsEngine.js'
+import { resolveTeamWorkspaceAccess } from '../lib/auth/teamWorkspaceAccess.js'
+import { evaluateWorkspaceCollaborationOperations } from '../lib/system/workspaceCollaborationOperationsEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -311,6 +313,7 @@ function getWorkspaceFamily(panelId) {
     'api-reliability',
     'identity-authorization',
     'identity-organization-operations',
+    'workspace-collaboration-operations',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1984,6 +1987,14 @@ function App() {
       'organization-memberships',
       'protected-organization-workspace-configurations',
       'organization-authorization-health',
+      'organization-invitations',
+      'team-workspace-invitations',
+      'invitation-acceptance',
+      'invitation-revocation',
+      'current-team-workspace',
+      'team-workspace-memberships',
+      'protected-team-workspace-configurations',
+      'collaboration-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2147,6 +2158,72 @@ function App() {
     multiUserWorkspacePlanning,
     permissionPlanning,
   ])
+  const workspaceCollaborationOperations = useMemo(() => {
+    const user = {
+      id: 'local-development:local-operator',
+      provider: 'local-development',
+      role: 'owner',
+    }
+    const organizationMembership = {
+      id: 'membership-org-atlas-local-local-operator',
+      organizationId: 'org-atlas-local',
+      userId: user.id,
+      role: 'owner',
+      status: 'active',
+    }
+    const teamWorkspace = {
+      id: 'team-atlas-research-desk',
+      organizationId: 'org-atlas-local',
+      name: 'Atlas Research Desk',
+      status: 'active',
+    }
+    const teamMembership = {
+      id: 'team-membership-atlas-research-desk-local-operator',
+      organizationId: 'org-atlas-local',
+      teamWorkspaceId: teamWorkspace.id,
+      userId: user.id,
+      role: 'owner',
+      status: 'active',
+    }
+    const teamWorkspaceAccess = resolveTeamWorkspaceAccess({
+      user,
+      organizationMembership,
+      teamMembership,
+      teamWorkspace,
+      action: 'write',
+      permissionPlanning,
+      multiUserWorkspacePlanning,
+    }, { emitEvent: false })
+    return evaluateWorkspaceCollaborationOperations({
+      teamWorkspaceAccess,
+      activeCollaborators: [
+        teamMembership,
+        {
+          id: 'team-membership-atlas-research-desk-analyst',
+          organizationId: 'org-atlas-local',
+          teamWorkspaceId: teamWorkspace.id,
+          userId: 'future-analyst',
+          role: 'analyst',
+          status: 'active',
+        },
+      ],
+      pendingInvitations: [
+        {
+          id: 'invitation-atlas-research-desk-analyst',
+          organizationId: 'org-atlas-local',
+          teamWorkspaceId: teamWorkspace.id,
+          role: 'analyst',
+          status: 'pending',
+        },
+      ],
+      teamWorkspaceEventType: 'system.teamWorkspace.persisted',
+      teamMembershipEventType: 'system.teamWorkspaceMembership.updated',
+      invitationEventType: 'system.membershipInvitation.updated',
+    }, { emitEvent: false })
+  }, [
+    multiUserWorkspacePlanning,
+    permissionPlanning,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2183,6 +2260,7 @@ function App() {
     { id: 'api-reliability', label: 'API Reliability', status: apiReliability.apiReliabilityStatus },
     { id: 'identity-authorization', label: 'Identity/Auth', status: identityAuthorization.authorizationStatus },
     { id: 'identity-organization-operations', label: 'Identity Ops', status: identityOrganizationOperations.operationalStatus },
+    { id: 'workspace-collaboration-operations', label: 'Collaboration', status: workspaceCollaborationOperations.operationalStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7010,6 +7088,63 @@ function App() {
             </section>
           </div>
           <span className="event-line">{identityOrganizationOperations.eventType}</span>
+        </article>
+
+        <article id="workspace-collaboration-operations" className={`panel workspace-collaboration-operations-panel ${workspaceCollaborationOperations.operationalStatus}`}>
+          <div className="panel-heading">
+            <h2>Workspace Collaboration Operations</h2>
+            <span>Team workspace collaboration controls for shared research, strategy, backtesting, paper trading, and analytics workspaces.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Operational Status</span>
+              <strong>{workspaceCollaborationOperations.operationalStatus}</strong>
+            </div>
+            <span className={`decision-pill ${workspaceCollaborationOperations.operationalStatus === 'blocked' ? 'danger' : workspaceCollaborationOperations.operationalStatus === 'caution' ? 'warning' : 'positive'}`}>
+              team scoped
+            </span>
+          </div>
+          <p className="empty-state">{workspaceCollaborationOperations.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Active Collaborators Summary" value={formatNumber(workspaceCollaborationOperations.activeCollaboratorsSummary.count)} />
+            <MetricCard label="Pending Invitations Summary" value={formatNumber(workspaceCollaborationOperations.pendingInvitationsSummary.count)} />
+            <MetricCard label="Organization / Team Access Health Summary" value={workspaceCollaborationOperations.organizationTeamAccessHealthSummary.status} />
+            <MetricCard label="Cross-Boundary Denial Summary" value={workspaceCollaborationOperations.crossBoundaryDenialSummary.status} />
+            <MetricCard label="Team Workspace Access Resolver" value={workspaceCollaborationOperations.organizationTeamAccessHealthSummary.teamRole} />
+            <MetricCard label="Operational Status" value={workspaceCollaborationOperations.operationalStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Team Workspace Model</h3>
+              <p className="empty-state">Each team workspace belongs to one organization, supports active/archive lifecycle, and remains paper trading only.</p>
+            </section>
+            <section>
+              <h3>Invitation Design</h3>
+              <p className="empty-state">Pending / accepted / expired / revoked states; invitation token hashes only; role assignment cannot exceed inviter privilege.</p>
+            </section>
+            <section>
+              <h3>Collaboration Authorization Design</h3>
+              <p className="empty-state">owner full control / admin manages workspaces and invitations except ownership transfer / analyst assigned workspace usage / viewer read-only assigned workspace access.</p>
+            </section>
+            <section>
+              <h3>Team Collaboration API Endpoints</h3>
+              <p className="empty-state">current-team-workspace / team-workspace-memberships / protected-team-workspace-configurations / collaboration-health / organization-invitations / team-workspace-invitations / invitation-acceptance / invitation-revocation.</p>
+            </section>
+            <section>
+              <h3>Cross-Boundary Denial Summary</h3>
+              <p className="empty-state">
+                Cross-organization denied: {workspaceCollaborationOperations.crossBoundaryDenialSummary.crossOrganizationAccessDenied ? 'yes' : 'no'} / cross-team denied: {workspaceCollaborationOperations.crossBoundaryDenialSummary.crossTeamAccessDenied ? 'yes' : 'no'}.
+              </p>
+            </section>
+            <section>
+              <h3>Workspace Collaboration Source Events</h3>
+              <p className="empty-state">{Object.values(workspaceCollaborationOperations.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">system.teamWorkspace.persisted</span>
+          <span className="event-line">system.teamWorkspaceMembership.updated</span>
+          <span className="event-line">system.membershipInvitation.updated</span>
+          <span className="event-line">{workspaceCollaborationOperations.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
