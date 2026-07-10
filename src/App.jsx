@@ -124,6 +124,9 @@ import { evaluateComplianceReadinessCommandCenter } from '../lib/system/complian
 import { prepareComplianceEvidencePackage } from '../lib/system/complianceEvidencePackageEngine.js'
 import { evaluateComplianceReviewWorkflow } from '../lib/system/complianceReviewWorkflowEngine.js'
 import { evaluateComplianceOperationsCommandCenter } from '../lib/system/complianceOperationsCommandCenterEngine.js'
+import { evaluateComplianceObligationMapping } from '../lib/system/complianceObligationMappingEngine.js'
+import { queueComplianceEvidenceRequests } from '../lib/system/complianceEvidenceRequestQueueEngine.js'
+import { trackComplianceReviewFindings } from '../lib/system/complianceReviewFindingTrackerEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2090,6 +2093,11 @@ function App() {
       'compliance-review-workflows',
       'compliance-review-status-update',
       'compliance-operations-health',
+      'compliance-obligations',
+      'compliance-evidence-requests',
+      'compliance-evidence-request-status-update',
+      'compliance-review-findings',
+      'compliance-review-finding-status-update',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2978,6 +2986,41 @@ function App() {
     complianceReviewWorkflow,
     policyControlAssuranceCommandCenter,
   ])
+  const complianceObligationMapping = useMemo(() => evaluateComplianceObligationMapping({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    policyGovernance: administrativePolicyGovernance,
+    controlAssurance,
+    complianceEvidencePackage,
+    complianceReadinessCommandCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:10:00.000Z' }), [
+    administrativePolicyGovernance,
+    complianceEvidencePackage,
+    complianceReadinessCommandCenter,
+    controlAssurance,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceEvidenceRequestQueue = useMemo(() => queueComplianceEvidenceRequests({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceObligationMapping,
+    complianceEvidencePackage,
+    complianceReviewWorkflow,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:11:00.000Z' }), [
+    complianceEvidencePackage,
+    complianceObligationMapping,
+    complianceReviewWorkflow,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceReviewFindingTracker = useMemo(() => trackComplianceReviewFindings({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceObligationMapping,
+    complianceEvidenceRequestQueue,
+    complianceReviewWorkflow,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:12:00.000Z' }), [
+    complianceEvidenceRequestQueue,
+    complianceObligationMapping,
+    complianceReviewWorkflow,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3028,6 +3071,7 @@ function App() {
     { id: 'policy-control-assurance', label: 'Policy Controls', status: policyControlAssuranceCommandCenter.commandCenterStatus },
     { id: 'compliance-readiness-command', label: 'Compliance Ready', status: complianceReadinessCommandCenter.commandCenterStatus },
     { id: 'compliance-operations', label: 'Compliance Ops', status: complianceOperationsCommandCenter.commandCenterStatus },
+    { id: 'compliance-intake-review', label: 'Compliance Intake', status: complianceReviewFindingTracker.trackerStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8473,6 +8517,50 @@ function App() {
           <span className="event-line">{complianceEvidencePackage.eventType}</span>
           <span className="event-line">{complianceReviewWorkflow.eventType}</span>
           <span className="event-line">{complianceOperationsCommandCenter.eventType}</span>
+        </article>
+
+        <article id="compliance-intake-review" className={`panel compliance-intake-review-panel ${complianceReviewFindingTracker.trackerStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Intake & Review Detail</h2>
+            <span>Obligation mapping, evidence request queue, and review findings for advisory compliance operations.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Compliance Intake Status</span>
+              <strong>{complianceReviewFindingTracker.trackerStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceReviewFindingTracker.trackerStatus === 'blocked' ? 'danger' : complianceReviewFindingTracker.trackerStatus === 'caution' ? 'warning' : 'positive'}`}>human review</span>
+          </div>
+          <p className="empty-state">{complianceReviewFindingTracker.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Mapped Obligations" value={formatNumber(complianceObligationMapping.obligationSummary.mapped)} />
+            <MetricCard label="Needs Evidence" value={formatNumber(complianceObligationMapping.obligationSummary.needsEvidence)} />
+            <MetricCard label="Average Coverage" value={`${(complianceObligationMapping.obligationSummary.averageCoverage * 100).toFixed(0)}%`} />
+            <MetricCard label="Open Evidence Requests" value={formatNumber(complianceEvidenceRequestQueue.requestSummary.open)} />
+            <MetricCard label="High Priority Requests" value={formatNumber(complianceEvidenceRequestQueue.requestSummary.highPriority)} />
+            <MetricCard label="Open Review Findings" value={formatNumber(complianceReviewFindingTracker.findingSummary.open)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Obligation Mapping Design</h3>
+              <p className="empty-state">Obligations map policies, controls, readiness, and evidence packages into advisory coverage summaries without asserting compliance.</p>
+            </section>
+            <section>
+              <h3>Evidence Request Queue Design</h3>
+              <p className="empty-state">Evidence requests track missing coverage and priority for operator follow-up without collecting, exporting, or approving evidence automatically.</p>
+            </section>
+            <section>
+              <h3>Review Finding Tracker Design</h3>
+              <p className="empty-state">Review findings link workflows, obligations, and evidence requests while keeping finding resolution and readiness approval human-reviewed.</p>
+            </section>
+            <section>
+              <h3>Intake Boundary</h3>
+              <p className="empty-state">No automatic attestations, compliance claims, evidence export, finding resolution, enforcement actions, live orders, broker execution, secrets, or token material are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceObligationMapping.eventType}</span>
+          <span className="event-line">{complianceEvidenceRequestQueue.eventType}</span>
+          <span className="event-line">{complianceReviewFindingTracker.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
