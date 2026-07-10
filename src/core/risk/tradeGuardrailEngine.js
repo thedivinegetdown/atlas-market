@@ -122,7 +122,7 @@ function buildChecks({ portfolio, trade, currentRisk, tradeRisk, limits }) {
   }
 }
 
-function buildResult({ portfolio, proposedTrade, validation, currentRisk, limits, timestamp }) {
+function buildResult({ portfolio, validation, currentRisk, limits, timestamp }) {
   const profile = getAssetProfile(validation.trade.assetType)
   const tradeRisk = validation.ok ? calculateTradeRisk(validation.trade, profile) : { notional: 0, dollarRisk: 0, marginRequirement: 0 }
   const checkContext = validation.ok

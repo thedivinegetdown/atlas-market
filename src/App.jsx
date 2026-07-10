@@ -82,6 +82,8 @@ import { evaluateSupportOperationsReadiness } from '../lib/system/supportOperati
 import { reviewLaunchReadiness } from '../lib/system/launchReadinessReviewEngine.js'
 import { summarizeCommercialRelease } from '../lib/system/commercialReleaseSummaryEngine.js'
 import { evaluatePersistenceApiIntegration } from '../lib/system/persistenceApiIntegrationEngine.js'
+import { evaluateDatabaseOperations } from '../lib/system/databaseOperationsEngine.js'
+import { evaluateApiReliability } from '../lib/system/apiReliabilityEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -302,6 +304,8 @@ function getWorkspaceFamily(panelId) {
     'launch-readiness',
     'commercial-release-summary',
     'persistence-api-foundation',
+    'database-operations',
+    'api-reliability',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1981,6 +1985,32 @@ function App() {
     eventObservability,
     workspacePersistence,
   ])
+  const databaseOperations = useMemo(() => evaluateDatabaseOperations({
+    databasePersistence: databasePersistenceFoundation,
+    persistenceApiIntegration,
+    workspacePersistence,
+    enterpriseAuditTrail,
+    eventObservability,
+  }, { emitEvent: false }), [
+    databasePersistenceFoundation,
+    enterpriseAuditTrail,
+    eventObservability,
+    persistenceApiIntegration,
+    workspacePersistence,
+  ])
+  const apiReliability = useMemo(() => evaluateApiReliability({
+    apiFoundation,
+    persistenceApiIntegration,
+    databaseOperations,
+    productionMonitoringPlan,
+    eventObservability,
+  }, { emitEvent: false }), [
+    apiFoundation,
+    databaseOperations,
+    eventObservability,
+    persistenceApiIntegration,
+    productionMonitoringPlan,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2013,6 +2043,8 @@ function App() {
     { id: 'launch-readiness', label: 'Launch', status: launchReadinessReview.launchReadinessStatus },
     { id: 'commercial-release-summary', label: 'Commercial Release', status: commercialReleaseSummary.finalCommercialReleaseStatus },
     { id: 'persistence-api-foundation', label: 'Persistence API', status: persistenceApiIntegration.persistenceReadinessStatus },
+    { id: 'database-operations', label: 'DB Ops', status: databaseOperations.databaseOperationsStatus },
+    { id: 'api-reliability', label: 'API Reliability', status: apiReliability.apiReliabilityStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -6602,6 +6634,115 @@ function App() {
             </section>
           </div>
           <span className="event-line">{persistenceApiIntegration.eventType}</span>
+        </article>
+
+        <article id="database-operations" className={`panel database-operations-panel ${databaseOperations.databaseOperationsStatus}`}>
+          <div className="panel-heading">
+            <h2>Database Operations</h2>
+            <span>Migration coordination, startup readiness, rollback verification, and degraded-mode planning. No production migration execution in tests.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Database Operations Status</span>
+              <strong>{databaseOperations.databaseOperationsStatus}</strong>
+            </div>
+            <span className={`decision-pill ${databaseOperations.databaseOperationsStatus === 'blocked' ? 'danger' : databaseOperations.databaseOperationsStatus === 'caution' ? 'warning' : 'positive'}`}>
+              fallback preserved
+            </span>
+          </div>
+          <p className="empty-state">{databaseOperations.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Migration Execution Coordinator" value={databaseOperations.migrationExecutionCoordinator.status} />
+            <MetricCard label="Migration Status Reporting" value={`${formatNumber(databaseOperations.migrationStatusReporting.appliedCount)} applied`} />
+            <MetricCard label="Schema Version Summary" value={databaseOperations.schemaVersionSummary.currentVersion} />
+            <MetricCard label="Database Startup Readiness Check" value={databaseOperations.databaseStartupReadinessCheck.status} />
+            <MetricCard label="Connection Timeout and Retry Policy" value={`${formatNumber(databaseOperations.connectionTimeoutAndRetryPolicy.connectionTimeoutMs)}ms`} />
+            <MetricCard label="Transaction Rollback Verification" value={databaseOperations.transactionRollbackVerification.status} />
+            <MetricCard label="Repository Degraded-Mode Summary" value={databaseOperations.repositoryDegradedModeSummary.status} />
+            <MetricCard label="Database Operations Status" value={databaseOperations.databaseOperationsStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Migration Status Reporting</h3>
+              <p className="empty-state">
+                {formatNumber(databaseOperations.migrationStatusReporting.appliedCount)} applied / {formatNumber(databaseOperations.migrationStatusReporting.skippedCount)} skipped / {formatNumber(databaseOperations.migrationStatusReporting.pendingCount)} pending.
+              </p>
+            </section>
+            <section>
+              <h3>Connection Timeout and Retry Policy</h3>
+              <p className="empty-state">
+                {formatNumber(databaseOperations.connectionTimeoutAndRetryPolicy.retryPolicy.maxAttempts)} attempts / {databaseOperations.connectionTimeoutAndRetryPolicy.retryPolicy.backoff} backoff / credentials not exposed.
+              </p>
+            </section>
+            <section>
+              <h3>Repository Degraded-Mode Summary</h3>
+              <p className="empty-state">
+                {databaseOperations.repositoryDegradedModeSummary.disabledDatabaseBehavior} / local workspace fallback retained / safe public errors.
+              </p>
+            </section>
+            <section>
+              <h3>Database Operations Source Events</h3>
+              <p className="empty-state">{Object.values(databaseOperations.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{databaseOperations.eventType}</span>
+        </article>
+
+        <article id="api-reliability" className={`panel api-reliability-panel ${apiReliability.apiReliabilityStatus}`}>
+          <div className="panel-heading">
+            <h2>API Reliability</h2>
+            <span>Route registry, request/response contracts, pagination, filtering, errors, and API health aggregation. No live trading endpoints.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>API Reliability Status</span>
+              <strong>{apiReliability.apiReliabilityStatus}</strong>
+            </div>
+            <span className={`decision-pill ${apiReliability.apiReliabilityStatus === 'blocked' ? 'danger' : apiReliability.apiReliabilityStatus === 'caution' ? 'warning' : 'positive'}`}>
+              contract hardened
+            </span>
+          </div>
+          <p className="empty-state">{apiReliability.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="API Route Registry" value={`${formatNumber(apiReliability.apiRouteRegistry.routeCount)} routes`} />
+            <MetricCard label="Request / Response Contract Validation" value={apiReliability.requestResponseContractValidation.status} />
+            <MetricCard label="Pagination Contract" value={`max ${formatNumber(apiReliability.paginationContract.maxLimit)}`} />
+            <MetricCard label="Safe Filtering and Sorting Boundaries" value={apiReliability.safeFilteringAndSortingBoundaries.status} />
+            <MetricCard label="Rate-Limit Readiness Placeholder" value={apiReliability.rateLimitReadinessPlaceholder.status} />
+            <MetricCard label="Idempotency-Key Readiness" value={apiReliability.idempotencyKeyReadiness.status} />
+            <MetricCard label="Structured Error Code Catalog" value={`${formatNumber(apiReliability.structuredErrorCodeCatalog.codes.length)} codes`} />
+            <MetricCard label="API Health Aggregation" value={apiReliability.apiHealthAggregation.status} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>API Route Registry</h3>
+              {apiReliability.apiRouteRegistry.routes.map((route) => (
+                <div key={route.id} className="mini-row">
+                  <span>{route.path}</span>
+                  <strong>{route.methods.join('/')}</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Safe Filtering and Sorting Boundaries</h3>
+              <p className="empty-state">
+                Filters: {apiReliability.safeFilteringAndSortingBoundaries.allowedFilterFields.join(', ')} / sorts: {apiReliability.safeFilteringAndSortingBoundaries.allowedSortFields.join(', ')}.
+              </p>
+            </section>
+            <section>
+              <h3>Structured Error Code Catalog</h3>
+              <p className="empty-state">
+                {apiReliability.structuredErrorCodeCatalog.codes.join(' / ')} / persistence errors stay public-safe.
+              </p>
+            </section>
+            <section>
+              <h3>API Health Aggregation</h3>
+              <p className="empty-state">
+                API {apiReliability.apiHealthAggregation.apiFoundationStatus} / persistence {apiReliability.apiHealthAggregation.persistenceReadinessStatus} / database operations {apiReliability.apiHealthAggregation.databaseOperationsStatus}.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{apiReliability.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">

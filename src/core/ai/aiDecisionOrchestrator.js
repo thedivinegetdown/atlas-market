@@ -221,7 +221,7 @@ function calculateConfidence({ signalQuality, riskApproval, positionSizing, capi
   ))
 }
 
-function buildRationale({ finalDecision, signalQuality, riskApproval, positionSizing, capitalAllocation, drawdownProtection, performanceContext, blockers, cautions }) {
+function buildRationale({ finalDecision, signalQuality, positionSizing, capitalAllocation, drawdownProtection, performanceContext, blockers, cautions }) {
   if (finalDecision === 'reject') {
     return `Reject paper trade: ${blockers[0] ?? 'required approval failed'}.`
   }

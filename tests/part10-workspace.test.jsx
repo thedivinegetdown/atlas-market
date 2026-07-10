@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { act } from 'react-dom/test-utils'
 import { createRoot } from 'react-dom/client'
-import React from 'react'
 import App from '../src/App'
 import { usePortfolio } from '../src/hooks/usePortfolio'
 import { WatchlistPanel } from '../src/components/WatchlistPanel'

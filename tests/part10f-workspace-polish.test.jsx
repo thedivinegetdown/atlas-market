@@ -1,4 +1,3 @@
-import React from 'react'
 import { afterEach, describe, expect, it } from 'vitest'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
