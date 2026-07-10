@@ -5,6 +5,7 @@ import { resolveWorkspaceAccess } from '../../../lib/auth/organizationWorkspaceA
 import { createOrganizationMembershipRepository } from '../../../lib/auth/organizationRepository.js'
 import { createTeamMembershipRepository, createTeamWorkspaceRepository } from '../../../lib/auth/teamWorkspaceRepository.js'
 import { resolveTeamWorkspaceAccess } from '../../../lib/auth/teamWorkspaceAccess.js'
+import { normalizeTenantContext } from '../../../lib/auth/tenantIsolation.js'
 import { createPersistenceApiHandler } from './persistenceApi.js'
 
 function getHeader(headers = {}, name) {
@@ -140,6 +141,11 @@ export function createOrganizationAuthenticatedApiHandler(resolver, {
       organizationId,
       membership,
       workspaceAccess,
+      tenantContext: normalizeTenantContext({
+        user: context.user,
+        organizationMembership: membership,
+        organizationId,
+      }),
     })
   }, {
     ...options,
@@ -191,6 +197,12 @@ export function createTeamAuthenticatedApiHandler(resolver, {
       teamWorkspace,
       teamMembership,
       teamWorkspaceAccess,
+      tenantContext: normalizeTenantContext({
+        user: context.user,
+        organizationMembership: context.membership,
+        teamMembership,
+        teamWorkspace,
+      }),
     })
   }, {
     ...options,

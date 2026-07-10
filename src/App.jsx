@@ -91,6 +91,9 @@ import { resolveTeamWorkspaceAccess } from '../lib/auth/teamWorkspaceAccess.js'
 import { evaluateWorkspaceCollaborationOperations } from '../lib/system/workspaceCollaborationOperationsEngine.js'
 import { evaluateSessionSecurity } from '../lib/auth/sessionSecurityService.js'
 import { evaluateCollaborationGovernance } from '../lib/system/collaborationGovernanceEngine.js'
+import { evaluateTenantIsolation } from '../lib/auth/tenantIsolation.js'
+import { recordAdministrativeChange } from '../lib/system/administrativeAuditService.js'
+import { evaluateAccessReview } from '../lib/system/accessReviewEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2005,6 +2008,7 @@ function App() {
       'revoke-selected-session',
       'revoke-other-sessions',
       'session-security-health',
+      'administrative-audit',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2317,6 +2321,54 @@ function App() {
     operatorActionCenter,
     systemHealthCommandCenter,
   ])
+  const accessReview = useMemo(() => {
+    const tenantIsolation = evaluateTenantIsolation({
+      organizationId: 'org-atlas-local',
+      teamWorkspaceId: 'team-atlas-research-desk',
+      userId: 'local-development:local-operator',
+      role: 'owner',
+    }, { emitEvent: false, timestamp: '2026-07-10T12:10:00.000Z' })
+    const administrativeAudit = recordAdministrativeChange({
+      id: 'admin-audit-demo-workspace-configuration',
+      category: 'workspace configuration',
+      tenantContext: tenantIsolation.tenantContext,
+      before: { visiblePanels: ['risk', 'workspace-collaboration-operations'] },
+      after: { visiblePanels: ['risk', 'workspace-collaboration-operations', 'access-review'] },
+      changeReason: 'operator workspace review placeholder',
+      timestamp: '2026-07-10T12:10:00.000Z',
+    }, { emitEvent: false })
+    void administrativeAudit
+    return evaluateAccessReview({
+      collaborationGovernance,
+      tenantIsolation,
+      sessionSecurity: {
+        eventType: 'system.sessionSecurity.evaluated',
+        activeSessionListing: [
+          { id: 'local-session-local-operator', status: 'active' },
+        ],
+      },
+      enterpriseAuditTrail,
+      operatorActions: operatorActionCenter,
+      organizationMemberships: [
+        { id: 'membership-org-atlas-local-local-operator', organizationId: 'org-atlas-local', userId: 'local-development:local-operator', role: 'owner', status: 'active' },
+        { id: 'membership-org-atlas-local-analyst', organizationId: 'org-atlas-local', userId: 'future-analyst', role: 'analyst', status: 'active' },
+      ],
+      teamMemberships: [
+        { id: 'team-membership-atlas-research-desk-local-operator', organizationId: 'org-atlas-local', teamWorkspaceId: 'team-atlas-research-desk', userId: 'local-development:local-operator', role: 'owner', status: 'active' },
+        { id: 'team-membership-atlas-research-desk-analyst', organizationId: 'org-atlas-local', teamWorkspaceId: 'team-atlas-research-desk', userId: 'future-analyst', role: 'analyst', status: 'active' },
+      ],
+      invitations: [
+        { id: 'invitation-atlas-research-desk-analyst', organizationId: 'org-atlas-local', teamWorkspaceId: 'team-atlas-research-desk', role: 'analyst', status: 'pending' },
+      ],
+      teamWorkspaces: [
+        { id: 'team-atlas-research-desk', organizationId: 'org-atlas-local', status: 'active' },
+      ],
+    }, { emitEvent: false, timestamp: '2026-07-10T12:10:00.000Z' })
+  }, [
+    collaborationGovernance,
+    enterpriseAuditTrail,
+    operatorActionCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2355,6 +2407,7 @@ function App() {
     { id: 'identity-organization-operations', label: 'Identity Ops', status: identityOrganizationOperations.operationalStatus },
     { id: 'workspace-collaboration-operations', label: 'Collaboration', status: workspaceCollaborationOperations.operationalStatus },
     { id: 'collaboration-governance', label: 'Governance', status: collaborationGovernance.governanceStatus },
+    { id: 'access-review', label: 'Access Review', status: accessReview.reviewStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7294,6 +7347,60 @@ function App() {
           <span className="event-line">system.teamWorkspaceAdministration.updated</span>
           <span className="event-line">system.sessionSecurity.evaluated</span>
           <span className="event-line">{collaborationGovernance.eventType}</span>
+        </article>
+
+        <article id="access-review" className={`panel access-review-panel ${accessReview.reviewStatus}`}>
+          <div className="panel-heading">
+            <h2>Access Review</h2>
+            <span>Periodic tenant-scoped access review across memberships, sessions, invitations, and shared workspaces.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Review Status</span>
+              <strong>{accessReview.reviewStatus}</strong>
+            </div>
+            <span className={`decision-pill ${accessReview.reviewStatus === 'blocked' ? 'danger' : accessReview.reviewStatus === 'caution' ? 'warning' : 'positive'}`}>
+              review only
+            </span>
+          </div>
+          <p className="empty-state">{accessReview.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Organization Membership Review" value={formatNumber(accessReview.organizationMembershipReview.count)} />
+            <MetricCard label="Team Membership Review" value={formatNumber(accessReview.teamMembershipReview.count)} />
+            <MetricCard label="Elevated-Role Review" value={formatNumber(accessReview.elevatedRoleReview.count)} />
+            <MetricCard label="Stale Session Review" value={formatNumber(accessReview.staleSessionReview.count)} />
+            <MetricCard label="Pending / Expired Invitation Review" value={formatNumber(accessReview.pendingExpiredInvitationReview.count)} />
+            <MetricCard label="Orphaned Workspace Review" value={formatNumber(accessReview.orphanedWorkspaceReview.count)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Tenant Isolation Design</h3>
+              <p className="empty-state">Tenant context resolves organization, team workspace, user, and role from authenticated membership context before scoped persistence access.</p>
+            </section>
+            <section>
+              <h3>Administrative Audit Design</h3>
+              <p className="empty-state">Administrative audit records store actor, tenant scope, operation category, change reason placeholder, and safe before/after snapshots.</p>
+            </section>
+            <section>
+              <h3>Access Review Design</h3>
+              <p className="empty-state">Review findings are informational, caution, or critical; no automatic role, membership, or session changes are performed.</p>
+            </section>
+            <section>
+              <h3>Administrative Audit Endpoint</h3>
+              <p className="empty-state">administrative-audit supports owner/admin tenant-scoped filtering, pagination, and safe sorting boundaries.</p>
+            </section>
+            <section>
+              <h3>Access Review Source Events</h3>
+              <p className="empty-state">{Object.values(accessReview.sourceEvents).filter(Boolean).join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Review Finding Summary</h3>
+              <p className="empty-state">{accessReview.reviewFindings.map((finding) => `${finding.severity}: ${finding.id}`).join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">system.tenantIsolation.evaluated</span>
+          <span className="event-line">system.administrativeAudit.recorded</span>
+          <span className="event-line">{accessReview.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
