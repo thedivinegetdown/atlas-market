@@ -127,6 +127,9 @@ import { evaluateComplianceOperationsCommandCenter } from '../lib/system/complia
 import { evaluateComplianceObligationMapping } from '../lib/system/complianceObligationMappingEngine.js'
 import { queueComplianceEvidenceRequests } from '../lib/system/complianceEvidenceRequestQueueEngine.js'
 import { trackComplianceReviewFindings } from '../lib/system/complianceReviewFindingTrackerEngine.js'
+import { evaluateComplianceReviewSla } from '../lib/system/complianceReviewSlaEngine.js'
+import { planComplianceEscalations } from '../lib/system/complianceEscalationPlanningEngine.js'
+import { evaluateComplianceRiskCommandCenter } from '../lib/system/complianceRiskCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2098,6 +2101,10 @@ function App() {
       'compliance-evidence-request-status-update',
       'compliance-review-findings',
       'compliance-review-finding-status-update',
+      'compliance-review-sla',
+      'compliance-escalation-plans',
+      'compliance-escalation-status-update',
+      'compliance-risk-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3021,6 +3028,43 @@ function App() {
     complianceReviewWorkflow,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceReviewSla = useMemo(() => evaluateComplianceReviewSla({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceReviewWorkflow,
+    complianceEvidenceRequestQueue,
+    complianceReviewFindingTracker,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:13:00.000Z' }), [
+    complianceEvidenceRequestQueue,
+    complianceReviewFindingTracker,
+    complianceReviewWorkflow,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceEscalationPlanning = useMemo(() => planComplianceEscalations({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceReviewSla,
+    complianceReviewFindingTracker,
+    complianceEvidenceRequestQueue,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:14:00.000Z' }), [
+    complianceEvidenceRequestQueue,
+    complianceReviewFindingTracker,
+    complianceReviewSla,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceRiskCommandCenter = useMemo(() => evaluateComplianceRiskCommandCenter({
+    complianceOperationsCommandCenter,
+    complianceObligationMapping,
+    complianceEvidenceRequestQueue,
+    complianceReviewFindingTracker,
+    complianceReviewSla,
+    complianceEscalationPlanning,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:15:00.000Z' }), [
+    complianceEscalationPlanning,
+    complianceEvidenceRequestQueue,
+    complianceObligationMapping,
+    complianceOperationsCommandCenter,
+    complianceReviewFindingTracker,
+    complianceReviewSla,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3072,6 +3116,7 @@ function App() {
     { id: 'compliance-readiness-command', label: 'Compliance Ready', status: complianceReadinessCommandCenter.commandCenterStatus },
     { id: 'compliance-operations', label: 'Compliance Ops', status: complianceOperationsCommandCenter.commandCenterStatus },
     { id: 'compliance-intake-review', label: 'Compliance Intake', status: complianceReviewFindingTracker.trackerStatus },
+    { id: 'compliance-risk-command', label: 'Compliance Risk', status: complianceRiskCommandCenter.commandCenterStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8561,6 +8606,50 @@ function App() {
           <span className="event-line">{complianceObligationMapping.eventType}</span>
           <span className="event-line">{complianceEvidenceRequestQueue.eventType}</span>
           <span className="event-line">{complianceReviewFindingTracker.eventType}</span>
+        </article>
+
+        <article id="compliance-risk-command" className={`panel compliance-risk-command-panel ${complianceRiskCommandCenter.commandCenterStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance SLA & Escalation Command</h2>
+            <span>Review SLA tracking, escalation planning, and compliance risk summaries for human operator governance.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Compliance Risk Status</span>
+              <strong>{complianceRiskCommandCenter.commandCenterStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceRiskCommandCenter.commandCenterStatus === 'blocked' ? 'danger' : complianceRiskCommandCenter.commandCenterStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceRiskCommandCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="SLA At Risk" value={formatNumber(complianceRiskCommandCenter.slaAtRisk)} />
+            <MetricCard label="SLA Breaches" value={formatNumber(complianceRiskCommandCenter.slaBreaches)} />
+            <MetricCard label="Critical Findings" value={formatNumber(complianceRiskCommandCenter.criticalFindings)} />
+            <MetricCard label="Planned Escalations" value={formatNumber(complianceRiskCommandCenter.plannedEscalations)} />
+            <MetricCard label="Critical Escalations" value={formatNumber(complianceRiskCommandCenter.criticalEscalations)} />
+            <MetricCard label="High Priority Requests" value={formatNumber(complianceRiskCommandCenter.highPriorityEvidenceRequests)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Review SLA Design</h3>
+              <p className="empty-state">SLA review evaluates evidence requests, workflow state, and findings for at-risk or breached follow-up without triggering escalation automatically.</p>
+            </section>
+            <section>
+              <h3>Compliance Escalation Planning Design</h3>
+              <p className="empty-state">Escalation plans recommend owner/admin review paths for SLA and critical finding pressure while preserving human acknowledgement and resolution.</p>
+            </section>
+            <section>
+              <h3>Compliance Risk Command Center Design</h3>
+              <p className="empty-state">The command center aggregates operations, obligations, evidence requests, findings, SLA, and escalation signals into safe advisory status.</p>
+            </section>
+            <section>
+              <h3>SLA and Escalation Boundary</h3>
+              <p className="empty-state">No automatic escalation execution, approvals, compliance claims, enforcement actions, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceReviewSla.eventType}</span>
+          <span className="event-line">{complianceEscalationPlanning.eventType}</span>
+          <span className="event-line">{complianceRiskCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
