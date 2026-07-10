@@ -136,6 +136,9 @@ import { prepareComplianceGovernanceReadout } from '../lib/system/complianceGove
 import { prepareComplianceAuditReadinessPackage } from '../lib/system/complianceAuditReadinessPackageEngine.js'
 import { planComplianceExternalReviews } from '../lib/system/complianceExternalReviewPlannerEngine.js'
 import { recordComplianceGovernanceDecisions } from '../lib/system/complianceGovernanceDecisionLogEngine.js'
+import { reviewComplianceRecordRetention } from '../lib/system/complianceRecordRetentionReviewEngine.js'
+import { evaluateComplianceExamReadiness } from '../lib/system/complianceExamReadinessEngine.js'
+import { prepareComplianceBoardPacket } from '../lib/system/complianceBoardPacketEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2117,6 +2120,9 @@ function App() {
       'compliance-audit-readiness-packages',
       'compliance-external-review-requests',
       'compliance-governance-decisions',
+      'compliance-record-retention-reviews',
+      'compliance-exam-readiness',
+      'compliance-board-packets',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3155,6 +3161,45 @@ function App() {
     complianceGovernanceReadout,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceRecordRetentionReview = useMemo(() => reviewComplianceRecordRetention({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    evidenceGovernance,
+    complianceAuditReadinessPackage,
+    complianceExternalReviewPlanning,
+    complianceGovernanceDecisionLog,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:22:00.000Z' }), [
+    complianceAuditReadinessPackage,
+    complianceExternalReviewPlanning,
+    complianceGovernanceDecisionLog,
+    evidenceGovernance,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceExamReadiness = useMemo(() => evaluateComplianceExamReadiness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceAuditReadinessPackage,
+    complianceExternalReviewPlanning,
+    complianceRecordRetentionReview,
+    complianceRiskCommandCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:23:00.000Z' }), [
+    complianceAuditReadinessPackage,
+    complianceExternalReviewPlanning,
+    complianceRecordRetentionReview,
+    complianceRiskCommandCenter,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceBoardPacket = useMemo(() => prepareComplianceBoardPacket({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceGovernanceReadout,
+    complianceGovernanceDecisionLog,
+    complianceRecordRetentionReview,
+    complianceExamReadiness,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:24:00.000Z' }), [
+    complianceExamReadiness,
+    complianceGovernanceDecisionLog,
+    complianceGovernanceReadout,
+    complianceRecordRetentionReview,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3209,6 +3254,7 @@ function App() {
     { id: 'compliance-risk-command', label: 'Compliance Risk', status: complianceRiskCommandCenter.commandCenterStatus },
     { id: 'compliance-governance-schedule', label: 'Compliance Schedule', status: complianceGovernanceReadout.readoutStatus },
     { id: 'compliance-audit-external-review', label: 'Audit Review', status: complianceGovernanceDecisionLog.decisionLogStatus },
+    { id: 'compliance-exam-board', label: 'Exam Board', status: complianceBoardPacket.boardPacketStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8830,6 +8876,50 @@ function App() {
           <span className="event-line">{complianceAuditReadinessPackage.eventType}</span>
           <span className="event-line">{complianceExternalReviewPlanning.eventType}</span>
           <span className="event-line">{complianceGovernanceDecisionLog.eventType}</span>
+        </article>
+
+        <article id="compliance-exam-board" className={`panel compliance-exam-board-panel ${complianceBoardPacket.boardPacketStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Exam & Board Packet</h2>
+            <span>Record retention review, exam readiness, and board packet preparation for owner/admin governance.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Board Packet Status</span>
+              <strong>{complianceBoardPacket.boardPacketStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceBoardPacket.boardPacketStatus === 'blocked' ? 'danger' : complianceBoardPacket.boardPacketStatus === 'caution' ? 'warning' : 'positive'}`}>advisory packet</span>
+          </div>
+          <p className="empty-state">{complianceBoardPacket.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Retention Reviews Current" value={formatNumber(complianceRecordRetentionReview.retentionReviewSummary.current)} />
+            <MetricCard label="Retention Reviews Due" value={formatNumber(complianceRecordRetentionReview.retentionReviewSummary.reviewDue)} />
+            <MetricCard label="Exam Readiness Score" value={formatNumber(complianceExamReadiness.examReadinessSummary.averageScore)} />
+            <MetricCard label="Exam Evaluations Ready" value={formatNumber(complianceExamReadiness.examReadinessSummary.ready)} />
+            <MetricCard label="Board Packets Ready" value={formatNumber(complianceBoardPacket.boardPacketSummary.readyForReview)} />
+            <MetricCard label="Board Packets Needing Updates" value={formatNumber(complianceBoardPacket.boardPacketSummary.needsUpdates)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Record Retention Review Design</h3>
+              <p className="empty-state">Retention review evaluates evidence, audit readiness, external review, and decision records without deleting, mutating, or archiving data automatically.</p>
+            </section>
+            <section>
+              <h3>Compliance Exam Readiness Design</h3>
+              <p className="empty-state">Exam readiness scores audit readiness, external review plans, retention status, and risk command outputs as an advisory operator review signal.</p>
+            </section>
+            <section>
+              <h3>Compliance Board Packet Design</h3>
+              <p className="empty-state">Board packets assemble governance readouts, decision logs, retention reviews, and exam readiness for human review without distribution or approval automation.</p>
+            </section>
+            <section>
+              <h3>Exam and Board Boundary</h3>
+              <p className="empty-state">No deletions, data mutation, automatic archival, submissions, distribution, approvals, compliance claims, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceRecordRetentionReview.eventType}</span>
+          <span className="event-line">{complianceExamReadiness.eventType}</span>
+          <span className="event-line">{complianceBoardPacket.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
