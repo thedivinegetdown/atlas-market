@@ -112,6 +112,9 @@ import { evaluateOperatorIntelligenceCommandCenter } from '../lib/system/operato
 import { collectAdministrativeEvidence } from '../lib/system/administrativeEvidenceEngine.js'
 import { buildRemediationPlans } from '../lib/system/remediationPlanningEngine.js'
 import { evaluateInvestigationRemediationCommandCenter } from '../lib/system/investigationRemediationCommandCenterEngine.js'
+import { evaluateEvidenceGovernance } from '../lib/system/evidenceGovernanceEngine.js'
+import { evaluateRemediationEffectiveness } from '../lib/system/remediationEffectivenessEngine.js'
+import { evaluateAdministrativeGovernanceCommandCenter } from '../lib/system/administrativeGovernanceCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2059,6 +2062,11 @@ function App() {
       'remediation-plan-approval-update',
       'remediation-plan-status-update',
       'investigation-remediation-health',
+      'evidence-governance-review',
+      'evidence-governance-health',
+      'remediation-effectiveness-review',
+      'remediation-follow-up-review',
+      'administrative-governance-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2804,6 +2812,40 @@ function App() {
     remediationPlanning,
     tenantAdministrationOperations,
   ])
+  const evidenceGovernance = useMemo(() => evaluateEvidenceGovernance({
+    administrativeEvidence,
+    administrativeCases,
+    administrativeAudit: { eventType: 'system.administrativeAudit.recorded', status: 'recorded' },
+  }, { emitEvent: false, timestamp: '2026-07-10T12:58:00.000Z' }), [
+    administrativeCases,
+    administrativeEvidence,
+  ])
+  const remediationEffectiveness = useMemo(() => evaluateRemediationEffectiveness({
+    remediationPlanning,
+    administrativeEvidence,
+    administrativeCases,
+    operatorAttention,
+    administrationWorkflowSla,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:59:00.000Z' }), [
+    administrationWorkflowSla,
+    administrativeCases,
+    administrativeEvidence,
+    operatorAttention,
+    remediationPlanning,
+  ])
+  const administrativeGovernanceCommandCenter = useMemo(() => evaluateAdministrativeGovernanceCommandCenter({
+    evidenceGovernance,
+    remediationEffectiveness,
+    tenantAdministrationOperations,
+    operatorIntelligenceCommandCenter,
+    investigationRemediationCommandCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:00:00.000Z' }), [
+    evidenceGovernance,
+    investigationRemediationCommandCenter,
+    operatorIntelligenceCommandCenter,
+    remediationEffectiveness,
+    tenantAdministrationOperations,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2850,6 +2892,7 @@ function App() {
     { id: 'administration-workflow', label: 'Admin Workflow', status: tenantAdministrationWorkflow.status },
     { id: 'operator-intelligence', label: 'Operator Intel', status: operatorIntelligenceCommandCenter.commandCenterStatus },
     { id: 'investigation-remediation', label: 'Investigations', status: investigationRemediationCommandCenter.commandCenterStatus },
+    { id: 'administrative-governance', label: 'Admin Governance', status: administrativeGovernanceCommandCenter.commandCenterStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8115,6 +8158,52 @@ function App() {
           <span className="event-line">{administrativeEvidence.eventType}</span>
           <span className="event-line">{remediationPlanning.eventType}</span>
           <span className="event-line">{investigationRemediationCommandCenter.eventType}</span>
+        </article>
+
+        <article id="administrative-governance" className={`panel administrative-governance-panel ${administrativeGovernanceCommandCenter.commandCenterStatus}`}>
+          <div className="panel-heading">
+            <h2>Administrative Governance &amp; Effectiveness</h2>
+            <span>Evidence governance, remediation effectiveness, follow-up reviews, and tenant administration health.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Governance Status</span>
+              <strong>{administrativeGovernanceCommandCenter.commandCenterStatus}</strong>
+            </div>
+            <span className={`decision-pill ${administrativeGovernanceCommandCenter.commandCenterStatus === 'blocked' ? 'danger' : administrativeGovernanceCommandCenter.commandCenterStatus === 'caution' ? 'warning' : 'positive'}`}>review only</span>
+          </div>
+          <p className="empty-state">{administrativeGovernanceCommandCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Evidence Requiring Review" value={formatNumber(administrativeGovernanceCommandCenter.evidenceRequiringReview)} />
+            <MetricCard label="Unverified or Disputed Evidence" value={formatNumber(administrativeGovernanceCommandCenter.unverifiedOrDisputedEvidence)} />
+            <MetricCard label="Retention Reviews Due" value={formatNumber(administrativeGovernanceCommandCenter.retentionReviewsDue)} />
+            <MetricCard label="Orphaned Evidence" value={formatNumber(administrativeGovernanceCommandCenter.orphanedEvidence)} />
+            <MetricCard label="Ineffective Remediation Plans" value={formatNumber(administrativeGovernanceCommandCenter.ineffectiveRemediationPlans)} />
+            <MetricCard label="Critical Residual Risk" value={formatNumber(administrativeGovernanceCommandCenter.criticalUnresolvedResidualRisk)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Evidence Governance Design</h3>
+              <p className="empty-state">Governance evaluates integrity, traceability, redaction, retention, review status, age, case linkage, and duplicate references without copying sensitive payloads.</p>
+            </section>
+            <section>
+              <h3>Remediation Effectiveness Design</h3>
+              <p className="empty-state">Effectiveness compares plan state, evidence, cases, workflow references, repeated findings, and residual risk while preserving human-reviewed follow-up only.</p>
+            </section>
+            <section>
+              <h3>Administrative Governance Command Center Design</h3>
+              <p className="empty-state">The command center consumes normalized governance and effectiveness outputs and exposes safe summaries, health status, and human-review indicators.</p>
+            </section>
+            <section>
+              <h3>Effectiveness Distribution</h3>
+              <p className="empty-state">
+                Effective {formatNumber(administrativeGovernanceCommandCenter.remediationEffectivenessDistribution.effective)} / Inconclusive {formatNumber(administrativeGovernanceCommandCenter.remediationEffectivenessDistribution.inconclusive)} / Pending {formatNumber(administrativeGovernanceCommandCenter.remediationEffectivenessDistribution.pendingEvaluation)}
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{evidenceGovernance.eventType}</span>
+          <span className="event-line">{remediationEffectiveness.eventType}</span>
+          <span className="event-line">{administrativeGovernanceCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
