@@ -118,6 +118,9 @@ import { evaluateAdministrativeGovernanceCommandCenter } from '../lib/system/adm
 import { evaluateAdministrativePolicyGovernance } from '../lib/system/administrativePolicyGovernanceEngine.js'
 import { evaluateControlAssurance } from '../lib/system/controlAssuranceEngine.js'
 import { evaluatePolicyControlAssuranceCommandCenter } from '../lib/system/policyControlAssuranceCommandCenterEngine.js'
+import { evaluatePolicyAttestations } from '../lib/system/policyAttestationEngine.js'
+import { evaluateControlTesting } from '../lib/system/controlTestingEngine.js'
+import { evaluateComplianceReadinessCommandCenter } from '../lib/system/complianceReadinessCommandCenterEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2077,6 +2080,9 @@ function App() {
       'policy-exceptions',
       'policy-exception-status-update',
       'policy-control-assurance-health',
+      'policy-attestations',
+      'control-testing-review',
+      'compliance-readiness-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2897,6 +2903,35 @@ function App() {
     operatorIntelligenceCommandCenter,
     tenantAdministrationOperations,
   ])
+  const policyAttestation = useMemo(() => evaluatePolicyAttestations({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    policyGovernance: administrativePolicyGovernance,
+    controlAssurance,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:04:00.000Z' }), [
+    administrativePolicyGovernance,
+    controlAssurance,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const controlTesting = useMemo(() => evaluateControlTesting({
+    policyGovernance: administrativePolicyGovernance,
+    controlAssurance,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:05:00.000Z' }), [
+    administrativePolicyGovernance,
+    controlAssurance,
+  ])
+  const complianceReadinessCommandCenter = useMemo(() => evaluateComplianceReadinessCommandCenter({
+    policyAttestation,
+    controlTesting,
+    policyControlAssuranceCommandCenter,
+    administrativeGovernanceCommandCenter,
+    enterpriseReleaseControl,
+  }, { emitEvent: false, timestamp: '2026-07-10T13:06:00.000Z' }), [
+    administrativeGovernanceCommandCenter,
+    controlTesting,
+    enterpriseReleaseControl,
+    policyAttestation,
+    policyControlAssuranceCommandCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2945,6 +2980,7 @@ function App() {
     { id: 'investigation-remediation', label: 'Investigations', status: investigationRemediationCommandCenter.commandCenterStatus },
     { id: 'administrative-governance', label: 'Admin Governance', status: administrativeGovernanceCommandCenter.commandCenterStatus },
     { id: 'policy-control-assurance', label: 'Policy Controls', status: policyControlAssuranceCommandCenter.commandCenterStatus },
+    { id: 'compliance-readiness-command', label: 'Compliance Ready', status: complianceReadinessCommandCenter.commandCenterStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8302,6 +8338,50 @@ function App() {
           <span className="event-line">{administrativePolicyGovernance.eventType}</span>
           <span className="event-line">{controlAssurance.eventType}</span>
           <span className="event-line">{policyControlAssuranceCommandCenter.eventType}</span>
+        </article>
+
+        <article id="compliance-readiness-command" className={`panel compliance-readiness-panel ${complianceReadinessCommandCenter.commandCenterStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Readiness Command Center</h2>
+            <span>Policy attestations, control testing, and compliance-readiness health without legal claims or enforcement.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Compliance Readiness Status</span>
+              <strong>{complianceReadinessCommandCenter.commandCenterStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceReadinessCommandCenter.commandCenterStatus === 'blocked' ? 'danger' : complianceReadinessCommandCenter.commandCenterStatus === 'caution' ? 'warning' : 'positive'}`}>readiness only</span>
+          </div>
+          <p className="empty-state">{complianceReadinessCommandCenter.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Pending Attestations" value={formatNumber(complianceReadinessCommandCenter.pendingAttestations)} />
+            <MetricCard label="Attested Policies" value={formatNumber(complianceReadinessCommandCenter.attestedPolicies)} />
+            <MetricCard label="Attestations With Exceptions" value={formatNumber(complianceReadinessCommandCenter.attestationsWithExceptions)} />
+            <MetricCard label="Passed Control Tests" value={formatNumber(complianceReadinessCommandCenter.passedControlTests)} />
+            <MetricCard label="Failed Control Tests" value={formatNumber(complianceReadinessCommandCenter.failedControlTests)} />
+            <MetricCard label="Open Policy Exceptions" value={formatNumber(complianceReadinessCommandCenter.openPolicyExceptions)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Policy Attestation Design</h3>
+              <p className="empty-state">Attestations record human-reviewed policy acknowledgement, evidence references, exception references, and expiry without automatic approval.</p>
+            </section>
+            <section>
+              <h3>Control Testing Design</h3>
+              <p className="empty-state">Control testing evaluates assurance evidence and exception state without resolving findings or creating enforcement actions.</p>
+            </section>
+            <section>
+              <h3>Compliance Readiness Command Center Design</h3>
+              <p className="empty-state">Readiness aggregates policy assurance, attestations, control tests, administrative governance, and release health as safe summaries only.</p>
+            </section>
+            <section>
+              <h3>Readiness Boundary</h3>
+              <p className="empty-state">No compliance claims, destructive administration, live orders, broker execution, secrets, tokens, or sensitive session data are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{policyAttestation.eventType}</span>
+          <span className="event-line">{controlTesting.eventType}</span>
+          <span className="event-line">{complianceReadinessCommandCenter.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
