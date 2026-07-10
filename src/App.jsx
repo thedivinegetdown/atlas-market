@@ -81,6 +81,7 @@ import { evaluateCustomerOnboardingReadiness } from '../lib/system/customerOnboa
 import { evaluateSupportOperationsReadiness } from '../lib/system/supportOperationsReadinessEngine.js'
 import { reviewLaunchReadiness } from '../lib/system/launchReadinessReviewEngine.js'
 import { summarizeCommercialRelease } from '../lib/system/commercialReleaseSummaryEngine.js'
+import { evaluatePersistenceApiIntegration } from '../lib/system/persistenceApiIntegrationEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -300,6 +301,7 @@ function getWorkspaceFamily(panelId) {
     'support-operations',
     'launch-readiness',
     'commercial-release-summary',
+    'persistence-api-foundation',
     'event-timeline',
   ].includes(panelId)) return 'system'
   return 'workspace'
@@ -1930,6 +1932,55 @@ function App() {
     releaseReadiness,
     supportOperationsReadiness,
   ])
+  const databasePersistenceFoundation = useMemo(() => ({
+    eventType: 'system.databasePersistence.initialized',
+    status: 'caution',
+    connected: false,
+    localFallback: true,
+    databaseHealthCheck: {
+      status: 'disabled',
+      connected: false,
+      localFallback: true,
+    },
+    migrationSummary: {
+      ok: true,
+      applied: [],
+      skipped: ['202607090001_phase26_persistence_foundation'],
+      repeatable: true,
+    },
+    repositoryStores: [
+      'workspaceConfigurations',
+      'workspaceSessions',
+      'systemEvents',
+      'enterpriseAuditRecords',
+      'operatorActions',
+    ],
+    parameterizedQueriesEnforced: true,
+    transactionHelperAvailable: true,
+  }), [])
+  const apiFoundation = useMemo(() => ({
+    eventType: 'system.apiFoundation.initialized',
+    status: 'ready',
+    endpoints: [
+      'database-health',
+      'workspace-configurations',
+      'system-events',
+      'operator-actions',
+    ],
+  }), [])
+  const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
+    databasePersistence: databasePersistenceFoundation,
+    apiFoundation,
+    workspacePersistence,
+    enterpriseAuditTrail,
+    eventObservability,
+  }, { emitEvent: false }), [
+    apiFoundation,
+    databasePersistenceFoundation,
+    enterpriseAuditTrail,
+    eventObservability,
+    workspacePersistence,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -1961,6 +2012,7 @@ function App() {
     { id: 'support-operations', label: 'Support', status: supportOperationsReadiness.supportReadinessStatus },
     { id: 'launch-readiness', label: 'Launch', status: launchReadinessReview.launchReadinessStatus },
     { id: 'commercial-release-summary', label: 'Commercial Release', status: commercialReleaseSummary.finalCommercialReleaseStatus },
+    { id: 'persistence-api-foundation', label: 'Persistence API', status: persistenceApiIntegration.persistenceReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -6494,6 +6546,62 @@ function App() {
             </section>
           </div>
           <span className="event-line">{commercialReleaseSummary.eventType}</span>
+        </article>
+
+        <article id="persistence-api-foundation" className={`panel persistence-api-foundation-panel ${persistenceApiIntegration.persistenceReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Persistence &amp; API Foundation</h2>
+            <span>PostgreSQL repository, Netlify API, and degraded-mode validation. Local workspace persistence remains the fallback.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Persistence Readiness Status</span>
+              <strong>{persistenceApiIntegration.persistenceReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${persistenceApiIntegration.persistenceReadinessStatus === 'blocked' ? 'danger' : persistenceApiIntegration.persistenceReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>
+              paper-mode API
+            </span>
+          </div>
+          <p className="empty-state">{persistenceApiIntegration.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Database Health Check" value={persistenceApiIntegration.apiDatabaseHealthAggregation.databaseHealth.status} />
+            <MetricCard label="Migration Validation" value={persistenceApiIntegration.migrationValidation.status} />
+            <MetricCard label="Repository Contract Tests" value={persistenceApiIntegration.repositoryContractValidation.status} />
+            <MetricCard label="Netlify Function Handler Tests" value={persistenceApiIntegration.functionHandlerValidation.status} />
+            <MetricCard label="API / Database Health Aggregation" value={persistenceApiIntegration.apiDatabaseHealthAggregation.status} />
+            <MetricCard label="Persistence Readiness Status" value={persistenceApiIntegration.persistenceReadinessStatus} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Initial Persistence Models</h3>
+              {databasePersistenceFoundation.repositoryStores.map((store) => (
+                <div key={store} className="mini-row">
+                  <span>{store}</span>
+                  <strong>repository</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>API Endpoints Added</h3>
+              {apiFoundation.endpoints.map((endpoint) => (
+                <div key={endpoint} className="mini-row">
+                  <span>{endpoint}</span>
+                  <strong>safe</strong>
+                </div>
+              ))}
+            </section>
+            <section>
+              <h3>Security Improvements</h3>
+              <p className="empty-state">Parameterized queries / sanitized IDs / safe public errors / no secrets exposed / no trading or broker execution endpoints.</p>
+            </section>
+            <section>
+              <h3>Degraded-Mode Handling</h3>
+              <p className="empty-state">
+                Local fallback preserved / production database not required for tests / migrations repeatable and safe.
+              </p>
+            </section>
+          </div>
+          <span className="event-line">{persistenceApiIntegration.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">

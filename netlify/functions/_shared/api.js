@@ -11,11 +11,11 @@ import {
 } from '../../../lib/security/requestGuards.js'
 import { TRADING_EVENTS } from '../../../lib/observability/eventLogger.js'
 
-function createRequestId() {
+export function createRequestId() {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
 }
 
-function getCorsHeaders() {
+export function getCorsHeaders() {
   return {
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
@@ -85,7 +85,7 @@ function normalizeMethod(event) {
   return String(event?.httpMethod ?? 'GET').toUpperCase()
 }
 
-function assertMethod(event, allowedMethods) {
+export function assertMethod(event, allowedMethods) {
   const method = normalizeMethod(event)
   if (method === 'OPTIONS') return { ok: true, method }
 
