@@ -100,6 +100,9 @@ import { evaluateAccessCertification } from '../lib/system/accessCertificationEn
 import { normalizeUserProfile, validateUserProfile } from '../lib/auth/userAccountService.js'
 import { normalizeNotificationPreferences } from '../lib/system/notificationPreferenceService.js'
 import { evaluateTenantAdministrationOperations } from '../lib/system/tenantAdministrationOperationsEngine.js'
+import { evaluateNotificationPreference, normalizeInAppNotification } from '../lib/system/inAppNotificationService.js'
+import { evaluateUserActivityTimeline } from '../lib/system/userActivityTimelineService.js'
+import { evaluateTenantAdministrationWorkflow } from '../lib/system/tenantAdministrationWorkflowEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2023,6 +2026,14 @@ function App() {
       'account-health',
       'notification-preferences',
       'notification-preferences-update',
+      'in-app-notifications',
+      'notification-status-update',
+      'notification-center-health',
+      'current-user-activity',
+      'tenant-administrative-activity',
+      'tenant-administration-workflows',
+      'workflow-status-update',
+      'administration-workflow-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -2545,6 +2556,101 @@ function App() {
     tenantOperationsHealth,
     userAccount,
   ])
+  const inAppNotificationCenter = useMemo(() => {
+    const tenantContext = {
+      organizationId: 'org-atlas-local',
+      teamWorkspaceId: 'team-atlas-research-desk',
+      userId: 'local-development:local-operator',
+      role: 'owner',
+    }
+    const preferences = notificationPreferences.normalizedNotificationPreferenceModel
+    const notifications = [
+      normalizeInAppNotification({
+        id: 'notification-security-session-review',
+        tenantContext,
+        userId: tenantContext.userId,
+        category: 'security',
+        severity: 'critical',
+        title: 'Session security review',
+        message: 'Critical security notification remains visible during quiet hours.',
+        sourceEventReference: { eventType: 'system.sessionSecurity.evaluated', id: 'session-security' },
+        createdAt: '2026-07-10T12:45:00.000Z',
+      }),
+      normalizeInAppNotification({
+        id: 'notification-access-certification',
+        tenantContext,
+        userId: tenantContext.userId,
+        category: 'access review',
+        severity: 'caution',
+        title: 'Access certification review',
+        message: 'Pending invitation and elevated role review available for owner/admin certification.',
+        sourceEventReference: { eventType: accessCertification.eventType, id: 'access-certification' },
+        operatorActionReference: operatorActionCenter.prioritizedOperatorActionList?.[0]?.id ?? null,
+        createdAt: '2026-07-10T12:46:00.000Z',
+      }),
+    ].map((notification) => evaluateNotificationPreference(notification, preferences, { now: new Date('2026-07-10T12:45:00.000Z') }).notification)
+    return {
+      eventType: 'system.inAppNotification.created',
+      updateEventType: 'system.inAppNotification.updated',
+      timestamp: '2026-07-10T12:45:00.000Z',
+      normalizedNotificationModel: notifications[0],
+      notifications,
+      notificationCategories: Object.keys(preferences.categories),
+      severityModel: ['informational', 'caution', 'high', 'critical'],
+      statusModel: ['unread', 'read', 'archived'],
+      tenantAndUserScope: tenantContext,
+      unreadCount: notifications.filter((notification) => notification.status === 'unread').length,
+      archivedCount: notifications.filter((notification) => notification.status === 'archived').length,
+      quietHourDeferredCount: notifications.filter((notification) => notification.deferredByQuietHours).length,
+      criticalSecurityVisible: notifications.some((notification) => notification.category === 'security' && notification.severity === 'critical' && notification.visible),
+      externalDelivery: false,
+      sensitiveMaterialExcluded: true,
+      healthStatus: 'healthy',
+      paperTrading: true,
+      liveOrders: false,
+      brokerExecution: false,
+    }
+  }, [accessCertification.eventType, notificationPreferences, operatorActionCenter.prioritizedOperatorActionList])
+  const userActivityTimeline = useMemo(() => evaluateUserActivityTimeline({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    requester: { id: 'local-development:local-operator', role: 'owner' },
+    targetUserId: 'local-development:local-operator',
+    query: { limit: 6 },
+    administrativeAuditRecords: [{
+      id: 'admin-audit-account-profile',
+      category: 'workspace configuration',
+      actor: 'local-development:local-operator',
+      tenantScope: inAppNotificationCenter.tenantAndUserScope,
+      eventType: 'system.administrativeAudit.recorded',
+      timestamp: '2026-07-10T12:44:00.000Z',
+      before: { preferredWorkspace: 'atlas-paper-operator-workspace' },
+      after: { preferredWorkspace: userAccount.profile.preferredWorkspace },
+    }],
+    sessions: [{ id: 'local-session-local-operator', userId: 'local-development:local-operator', status: 'active', lastSeenAt: '2026-07-10T12:43:00.000Z', ipAddress: 'redacted-by-service' }],
+    notifications: inAppNotificationCenter.notifications,
+    operatorActions: operatorActionCenter.prioritizedOperatorActionList,
+    systemEvents: [{ id: 'event-notification-center', eventType: inAppNotificationCenter.eventType, timestamp: inAppNotificationCenter.timestamp }],
+  }, { emitEvent: false, timestamp: '2026-07-10T12:47:00.000Z' }), [
+    inAppNotificationCenter,
+    operatorActionCenter.prioritizedOperatorActionList,
+    userAccount.profile.preferredWorkspace,
+  ])
+  const tenantAdministrationWorkflow = useMemo(() => evaluateTenantAdministrationWorkflow({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accessReview,
+    accessCertification,
+    collaborationGovernance,
+    tenantOperationsHealth,
+    notifications: inAppNotificationCenter.notifications,
+    operatorActions: operatorActionCenter,
+  }, { emitEvent: false, timestamp: '2026-07-10T12:48:00.000Z' }), [
+    accessCertification,
+    accessReview,
+    collaborationGovernance,
+    inAppNotificationCenter,
+    operatorActionCenter,
+    tenantOperationsHealth,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -2588,6 +2694,7 @@ function App() {
     { id: 'tenant-backup-recovery', label: 'Recovery Plan', status: tenantBackupRecovery.backupReadinessStatus },
     { id: 'access-certification', label: 'Certification', status: accessCertification.certificationStatus },
     { id: 'tenant-administration', label: 'Tenant Admin', status: tenantAdministrationOperations.operationalStatus },
+    { id: 'administration-workflow', label: 'Admin Workflow', status: tenantAdministrationWorkflow.status },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -7717,6 +7824,51 @@ function App() {
           <span className="event-line">system.userAccount.updated</span>
           <span className="event-line">system.notificationPreferences.updated</span>
           <span className="event-line">{tenantAdministrationOperations.eventType}</span>
+        </article>
+
+        <article id="administration-workflow" className={`panel administration-workflow-panel ${tenantAdministrationWorkflow.status}`}>
+          <div className="panel-heading">
+            <h2>Administration Workflow</h2>
+            <span>Human-review workflows across in-app notifications, user activity, access certification, tenant health, and operator findings.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Workflow Status</span>
+              <strong>{tenantAdministrationWorkflow.status}</strong>
+            </div>
+            <span className={`decision-pill ${tenantAdministrationWorkflow.status === 'blocked' ? 'danger' : tenantAdministrationWorkflow.status === 'caution' ? 'warning' : 'positive'}`}>human review</span>
+          </div>
+          <p className="empty-state">{tenantAdministrationWorkflow.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="In-App Notification Center" value={`${formatNumber(inAppNotificationCenter.unreadCount)} unread`} />
+            <MetricCard label="Critical Security Visibility" value={inAppNotificationCenter.criticalSecurityVisible ? 'visible' : 'blocked'} />
+            <MetricCard label="User Activity Timeline" value={`${formatNumber(userActivityTimeline.pagination.returned)} records`} />
+            <MetricCard label="Tenant Administrative Activity" value={userActivityTimeline.access.ownerAdminTenantActivity ? 'owner/admin' : 'blocked'} />
+            <MetricCard label="Workflow Summary and Priorities" value={`${formatNumber(tenantAdministrationWorkflow.workflowSummary.total)} workflows`} />
+            <MetricCard label="Notification Quiet-Hour Deferrals" value={formatNumber(inAppNotificationCenter.quietHourDeferredCount)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>In-App Notification Design</h3>
+              <p className="empty-state">Notifications are tenant/user scoped, preference-gated, quiet-hour aware, and in-app only; no email or webhook delivery is configured.</p>
+            </section>
+            <section>
+              <h3>Activity Timeline Design</h3>
+              <p className="empty-state">Activity records are composed from audit, session, notification, operator action, and system event sources with token, hash, secret, IP, and device redaction.</p>
+            </section>
+            <section>
+              <h3>Administration Workflow Design</h3>
+              <p className="empty-state">Workflow actions are open, acknowledged, resolved, or dismissed; no automatic role, membership, invitation, or session mutation occurs.</p>
+            </section>
+            <section>
+              <h3>Workflow Categories</h3>
+              <p className="empty-state">{tenantAdministrationWorkflow.workflowCategories.join(' / ')}</p>
+            </section>
+          </div>
+          <span className="event-line">{inAppNotificationCenter.eventType}</span>
+          <span className="event-line">{inAppNotificationCenter.updateEventType}</span>
+          <span className="event-line">{userActivityTimeline.eventType}</span>
+          <span className="event-line">{tenantAdministrationWorkflow.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
