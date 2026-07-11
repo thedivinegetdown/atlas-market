@@ -26,6 +26,10 @@ export default defineConfig({
               test: /src[\\/]core[\\/](risk|execution|accounting|journal|ai)[\\/]/,
             },
             {
+              name: 'compliance-system',
+              test: /lib[\\/]system[\\/]compliance/,
+            },
+            {
               name: 'market-research-system',
               test: /lib[\\/](market|research|signals|system|brokers|assets)[\\/]/,
             },

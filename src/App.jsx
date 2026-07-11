@@ -151,6 +151,9 @@ import { assessComplianceMaturity } from '../lib/system/complianceMaturityAssess
 import { evaluateComplianceBenchmarkComparison } from '../lib/system/complianceBenchmarkComparisonEngine.js'
 import { evaluateComplianceScenarioPlanning } from '../lib/system/complianceScenarioPlanningEngine.js'
 import { evaluateComplianceResourcePlanning } from '../lib/system/complianceResourcePlanningEngine.js'
+import { evaluateComplianceTrainingReadiness } from '../lib/system/complianceTrainingReadinessEngine.js'
+import { evaluateComplianceThirdPartyOversight } from '../lib/system/complianceThirdPartyOversightEngine.js'
+import { evaluateComplianceContinuityReadiness } from '../lib/system/complianceContinuityReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2147,6 +2150,9 @@ function App() {
       'compliance-benchmark-comparisons',
       'compliance-scenario-plans',
       'compliance-resource-plans',
+      'compliance-training-readiness',
+      'compliance-third-party-oversight',
+      'compliance-continuity-readiness',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3356,6 +3362,35 @@ function App() {
     complianceScenarioPlanning,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceTrainingReadiness = useMemo(() => evaluateComplianceTrainingReadiness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceResourcePlanning,
+    complianceProgramHealth,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:12:00.000Z' }), [
+    complianceProgramHealth,
+    complianceResourcePlanning,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceThirdPartyOversight = useMemo(() => evaluateComplianceThirdPartyOversight({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    productionSecurityReadiness,
+    dataLineage,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:13:00.000Z' }), [
+    dataLineage,
+    inAppNotificationCenter.tenantAndUserScope,
+    productionSecurityReadiness,
+  ])
+  const complianceContinuityReadiness = useMemo(() => evaluateComplianceContinuityReadiness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceTrainingReadiness,
+    complianceThirdPartyOversight,
+    productionOperationsRunbook,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:14:00.000Z' }), [
+    complianceThirdPartyOversight,
+    complianceTrainingReadiness,
+    inAppNotificationCenter.tenantAndUserScope,
+    productionOperationsRunbook,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3415,6 +3450,7 @@ function App() {
     { id: 'compliance-executive-reporting', label: 'Exec Reporting', status: complianceExecutiveDashboard.executiveDashboardStatus },
     { id: 'compliance-trend-forecast', label: 'Trend Forecast', status: complianceMaturityAssessment.maturityAssessmentStatus },
     { id: 'compliance-planning-analytics', label: 'Planning Analytics', status: complianceResourcePlanning.resourcePlanningStatus },
+    { id: 'compliance-operational-readiness', label: 'Operational Ready', status: complianceContinuityReadiness.continuityReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9256,6 +9292,50 @@ function App() {
           <span className="event-line">{complianceBenchmarkComparison.eventType}</span>
           <span className="event-line">{complianceScenarioPlanning.eventType}</span>
           <span className="event-line">{complianceResourcePlanning.eventType}</span>
+        </article>
+
+        <article id="compliance-operational-readiness" className={`panel compliance-operational-readiness-panel ${complianceContinuityReadiness.continuityReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Operational Readiness</h2>
+            <span>Training, third-party oversight, and continuity readiness for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Continuity Readiness Status</span>
+              <strong>{complianceContinuityReadiness.continuityReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceContinuityReadiness.continuityReadinessStatus === 'blocked' ? 'danger' : complianceContinuityReadiness.continuityReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceContinuityReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Training Score" value={formatNumber(complianceTrainingReadiness.trainingSummary.averageTrainingScore)} />
+            <MetricCard label="Training Caution" value={formatNumber(complianceTrainingReadiness.trainingSummary.caution)} />
+            <MetricCard label="Oversight Score" value={formatNumber(complianceThirdPartyOversight.oversightSummary.averageOversightScore)} />
+            <MetricCard label="Elevated Vendors" value={formatNumber(complianceThirdPartyOversight.oversightSummary.elevated)} />
+            <MetricCard label="Continuity Score" value={formatNumber(complianceContinuityReadiness.continuitySummary.averageContinuityScore)} />
+            <MetricCard label="Blocked Continuity" value={formatNumber(complianceContinuityReadiness.continuitySummary.blocked)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Training Readiness Design</h3>
+              <p className="empty-state">Training readiness references program health and resource planning so operators can review coverage posture without assigning training automatically.</p>
+            </section>
+            <section>
+              <h3>Third-Party Oversight Design</h3>
+              <p className="empty-state">Third-party oversight summarizes security readiness and data lineage posture for vendor dependency review without vendor actions or external claims.</p>
+            </section>
+            <section>
+              <h3>Compliance Continuity Readiness Design</h3>
+              <p className="empty-state">Continuity readiness combines training posture, third-party oversight, and operations runbook handoff into advisory continuity status.</p>
+            </section>
+            <section>
+              <h3>Operational Readiness Boundary</h3>
+              <p className="empty-state">No automatic training assignment, vendor action, failover, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceTrainingReadiness.eventType}</span>
+          <span className="event-line">{complianceThirdPartyOversight.eventType}</span>
+          <span className="event-line">{complianceContinuityReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
