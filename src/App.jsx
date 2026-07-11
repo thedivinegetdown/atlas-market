@@ -148,6 +148,9 @@ import { evaluateComplianceExecutiveDashboard } from '../lib/system/complianceEx
 import { evaluateComplianceTrendAnalytics } from '../lib/system/complianceTrendAnalyticsEngine.js'
 import { evaluateComplianceRiskForecast } from '../lib/system/complianceRiskForecastEngine.js'
 import { assessComplianceMaturity } from '../lib/system/complianceMaturityAssessmentEngine.js'
+import { evaluateComplianceBenchmarkComparison } from '../lib/system/complianceBenchmarkComparisonEngine.js'
+import { evaluateComplianceScenarioPlanning } from '../lib/system/complianceScenarioPlanningEngine.js'
+import { evaluateComplianceResourcePlanning } from '../lib/system/complianceResourcePlanningEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2141,6 +2144,9 @@ function App() {
       'compliance-trend-analytics',
       'compliance-risk-forecasts',
       'compliance-maturity-assessments',
+      'compliance-benchmark-comparisons',
+      'compliance-scenario-plans',
+      'compliance-resource-plans',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3323,6 +3329,33 @@ function App() {
     complianceTrendAnalytics,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceBenchmarkComparison = useMemo(() => evaluateComplianceBenchmarkComparison({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceMaturityAssessment,
+    complianceTrendAnalytics,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:09:00.000Z' }), [
+    complianceMaturityAssessment,
+    complianceTrendAnalytics,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceScenarioPlanning = useMemo(() => evaluateComplianceScenarioPlanning({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceRiskForecast,
+    complianceBenchmarkComparison,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:10:00.000Z' }), [
+    complianceBenchmarkComparison,
+    complianceRiskForecast,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceResourcePlanning = useMemo(() => evaluateComplianceResourcePlanning({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceScenarioPlanning,
+    complianceGovernanceActionItems,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:11:00.000Z' }), [
+    complianceGovernanceActionItems,
+    complianceScenarioPlanning,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3381,6 +3414,7 @@ function App() {
     { id: 'compliance-program-health', label: 'Program Health', status: complianceProgramHealth.programHealthStatus },
     { id: 'compliance-executive-reporting', label: 'Exec Reporting', status: complianceExecutiveDashboard.executiveDashboardStatus },
     { id: 'compliance-trend-forecast', label: 'Trend Forecast', status: complianceMaturityAssessment.maturityAssessmentStatus },
+    { id: 'compliance-planning-analytics', label: 'Planning Analytics', status: complianceResourcePlanning.resourcePlanningStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9178,6 +9212,50 @@ function App() {
           <span className="event-line">{complianceTrendAnalytics.eventType}</span>
           <span className="event-line">{complianceRiskForecast.eventType}</span>
           <span className="event-line">{complianceMaturityAssessment.eventType}</span>
+        </article>
+
+        <article id="compliance-planning-analytics" className={`panel compliance-planning-analytics-panel ${complianceResourcePlanning.resourcePlanningStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Planning Analytics</h2>
+            <span>Benchmark comparison, scenario planning, and resource planning for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Resource Planning Status</span>
+              <strong>{complianceResourcePlanning.resourcePlanningStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceResourcePlanning.resourcePlanningStatus === 'blocked' ? 'danger' : complianceResourcePlanning.resourcePlanningStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceResourcePlanning.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Benchmark Score" value={formatNumber(complianceBenchmarkComparison.benchmarkSummary.averageBenchmarkScore)} />
+            <MetricCard label="Below Benchmark" value={formatNumber(complianceBenchmarkComparison.benchmarkSummary.belowBenchmark)} />
+            <MetricCard label="Scenario Score" value={formatNumber(complianceScenarioPlanning.scenarioSummary.averageScenarioScore)} />
+            <MetricCard label="Strained Scenarios" value={formatNumber(complianceScenarioPlanning.scenarioSummary.strained)} />
+            <MetricCard label="Resource Score" value={formatNumber(complianceResourcePlanning.resourceSummary.averageResourceScore)} />
+            <MetricCard label="Constrained Plans" value={formatNumber(complianceResourcePlanning.resourceSummary.constrained)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Benchmark Comparison Design</h3>
+              <p className="empty-state">Benchmark comparison evaluates internal maturity and trend posture against advisory targets without external claims or certification assertions.</p>
+            </section>
+            <section>
+              <h3>Compliance Scenario Planning Design</h3>
+              <p className="empty-state">Scenario planning combines benchmark posture and risk forecast pressure into human-reviewed operating scenarios without remediation automation.</p>
+            </section>
+            <section>
+              <h3>Compliance Resource Planning Design</h3>
+              <p className="empty-state">Resource planning summarizes scenario pressure and governance action item load into advisory capacity posture without assignments or budget actions.</p>
+            </section>
+            <section>
+              <h3>Planning Analytics Boundary</h3>
+              <p className="empty-state">No automatic approvals, assignments, budget actions, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceBenchmarkComparison.eventType}</span>
+          <span className="event-line">{complianceScenarioPlanning.eventType}</span>
+          <span className="event-line">{complianceResourcePlanning.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
