@@ -142,6 +142,9 @@ import { prepareComplianceBoardPacket } from '../lib/system/complianceBoardPacke
 import { recordComplianceMeetingMinutes } from '../lib/system/complianceMeetingMinutesEngine.js'
 import { trackComplianceGovernanceActionItems } from '../lib/system/complianceGovernanceActionItemEngine.js'
 import { evaluateComplianceProgramHealth } from '../lib/system/complianceProgramHealthEngine.js'
+import { captureComplianceMetricsSnapshot } from '../lib/system/complianceMetricsSnapshotEngine.js'
+import { prepareComplianceExecutiveSummary } from '../lib/system/complianceExecutiveSummaryEngine.js'
+import { evaluateComplianceExecutiveDashboard } from '../lib/system/complianceExecutiveDashboardEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2129,6 +2132,9 @@ function App() {
       'compliance-meeting-minutes',
       'compliance-governance-action-items',
       'compliance-program-health',
+      'compliance-metrics-snapshots',
+      'compliance-executive-summaries',
+      'compliance-executive-dashboard',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3243,6 +3249,43 @@ function App() {
     complianceRiskCommandCenter,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceMetricsSnapshot = useMemo(() => captureComplianceMetricsSnapshot({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceProgramHealth,
+    complianceGovernanceActionItems,
+    complianceExamReadiness,
+    complianceMeetingMinutes,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:03:00.000Z' }), [
+    complianceExamReadiness,
+    complianceGovernanceActionItems,
+    complianceMeetingMinutes,
+    complianceProgramHealth,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceExecutiveSummary = useMemo(() => prepareComplianceExecutiveSummary({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceMetricsSnapshot,
+    complianceProgramHealth,
+    complianceBoardPacket,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:04:00.000Z' }), [
+    complianceBoardPacket,
+    complianceMetricsSnapshot,
+    complianceProgramHealth,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceExecutiveDashboard = useMemo(() => evaluateComplianceExecutiveDashboard({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceMetricsSnapshot,
+    complianceExecutiveSummary,
+    complianceProgramHealth,
+    complianceRiskCommandCenter,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:05:00.000Z' }), [
+    complianceExecutiveSummary,
+    complianceMetricsSnapshot,
+    complianceProgramHealth,
+    complianceRiskCommandCenter,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3299,6 +3342,7 @@ function App() {
     { id: 'compliance-audit-external-review', label: 'Audit Review', status: complianceGovernanceDecisionLog.decisionLogStatus },
     { id: 'compliance-exam-board', label: 'Exam Board', status: complianceBoardPacket.boardPacketStatus },
     { id: 'compliance-program-health', label: 'Program Health', status: complianceProgramHealth.programHealthStatus },
+    { id: 'compliance-executive-reporting', label: 'Exec Reporting', status: complianceExecutiveDashboard.executiveDashboardStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9008,6 +9052,50 @@ function App() {
           <span className="event-line">{complianceMeetingMinutes.eventType}</span>
           <span className="event-line">{complianceGovernanceActionItems.eventType}</span>
           <span className="event-line">{complianceProgramHealth.eventType}</span>
+        </article>
+
+        <article id="compliance-executive-reporting" className={`panel compliance-executive-reporting-panel ${complianceExecutiveDashboard.executiveDashboardStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Executive Reporting</h2>
+            <span>Metrics snapshot, executive summary, and executive dashboard for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Executive Dashboard Status</span>
+              <strong>{complianceExecutiveDashboard.executiveDashboardStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceExecutiveDashboard.executiveDashboardStatus === 'blocked' ? 'danger' : complianceExecutiveDashboard.executiveDashboardStatus === 'caution' ? 'warning' : 'positive'}`}>reporting only</span>
+          </div>
+          <p className="empty-state">{complianceExecutiveDashboard.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Metrics Health Score" value={formatNumber(complianceMetricsSnapshot.metricsSnapshotSummary.averageHealthScore)} />
+            <MetricCard label="Snapshot Open Actions" value={formatNumber(complianceMetricsSnapshot.metricsSnapshotSummary.openActionItems)} />
+            <MetricCard label="Executive Summaries Ready" value={formatNumber(complianceExecutiveSummary.executiveSummarySummary.readyForReview)} />
+            <MetricCard label="Executive Summaries Needing Updates" value={formatNumber(complianceExecutiveSummary.executiveSummarySummary.needsUpdates)} />
+            <MetricCard label="Executive Dashboard Score" value={formatNumber(complianceExecutiveDashboard.executiveDashboardSummary.averageScore)} />
+            <MetricCard label="Healthy Dashboards" value={formatNumber(complianceExecutiveDashboard.executiveDashboardSummary.healthy)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Metrics Snapshot Design</h3>
+              <p className="empty-state">Metrics snapshots collect program health, action item, exam readiness, and meeting minute summaries without exporting or distributing records.</p>
+            </section>
+            <section>
+              <h3>Compliance Executive Summary Design</h3>
+              <p className="empty-state">Executive summaries package metrics, program health, and board packet context for owner/admin review without approval or compliance claim automation.</p>
+            </section>
+            <section>
+              <h3>Compliance Executive Dashboard Design</h3>
+              <p className="empty-state">Executive dashboards evaluate reporting posture from snapshots, summaries, program health, and risk command outputs without recalculating upstream controls.</p>
+            </section>
+            <section>
+              <h3>Executive Reporting Boundary</h3>
+              <p className="empty-state">No automatic distribution, approvals, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceMetricsSnapshot.eventType}</span>
+          <span className="event-line">{complianceExecutiveSummary.eventType}</span>
+          <span className="event-line">{complianceExecutiveDashboard.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
