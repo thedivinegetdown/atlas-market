@@ -145,6 +145,9 @@ import { evaluateComplianceProgramHealth } from '../lib/system/complianceProgram
 import { captureComplianceMetricsSnapshot } from '../lib/system/complianceMetricsSnapshotEngine.js'
 import { prepareComplianceExecutiveSummary } from '../lib/system/complianceExecutiveSummaryEngine.js'
 import { evaluateComplianceExecutiveDashboard } from '../lib/system/complianceExecutiveDashboardEngine.js'
+import { evaluateComplianceTrendAnalytics } from '../lib/system/complianceTrendAnalyticsEngine.js'
+import { evaluateComplianceRiskForecast } from '../lib/system/complianceRiskForecastEngine.js'
+import { assessComplianceMaturity } from '../lib/system/complianceMaturityAssessmentEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2135,6 +2138,9 @@ function App() {
       'compliance-metrics-snapshots',
       'compliance-executive-summaries',
       'compliance-executive-dashboard',
+      'compliance-trend-analytics',
+      'compliance-risk-forecasts',
+      'compliance-maturity-assessments',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3286,6 +3292,37 @@ function App() {
     complianceRiskCommandCenter,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceTrendAnalytics = useMemo(() => evaluateComplianceTrendAnalytics({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceMetricsSnapshot,
+    complianceExecutiveDashboard,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:06:00.000Z' }), [
+    complianceExecutiveDashboard,
+    complianceMetricsSnapshot,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceRiskForecast = useMemo(() => evaluateComplianceRiskForecast({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceTrendAnalytics,
+    complianceProgramHealth,
+    complianceGovernanceActionItems,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:07:00.000Z' }), [
+    complianceGovernanceActionItems,
+    complianceProgramHealth,
+    complianceTrendAnalytics,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceMaturityAssessment = useMemo(() => assessComplianceMaturity({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceExecutiveDashboard,
+    complianceTrendAnalytics,
+    complianceRiskForecast,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:08:00.000Z' }), [
+    complianceExecutiveDashboard,
+    complianceRiskForecast,
+    complianceTrendAnalytics,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3343,6 +3380,7 @@ function App() {
     { id: 'compliance-exam-board', label: 'Exam Board', status: complianceBoardPacket.boardPacketStatus },
     { id: 'compliance-program-health', label: 'Program Health', status: complianceProgramHealth.programHealthStatus },
     { id: 'compliance-executive-reporting', label: 'Exec Reporting', status: complianceExecutiveDashboard.executiveDashboardStatus },
+    { id: 'compliance-trend-forecast', label: 'Trend Forecast', status: complianceMaturityAssessment.maturityAssessmentStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9096,6 +9134,50 @@ function App() {
           <span className="event-line">{complianceMetricsSnapshot.eventType}</span>
           <span className="event-line">{complianceExecutiveSummary.eventType}</span>
           <span className="event-line">{complianceExecutiveDashboard.eventType}</span>
+        </article>
+
+        <article id="compliance-trend-forecast" className={`panel compliance-trend-forecast-panel ${complianceMaturityAssessment.maturityAssessmentStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Trend Forecast</h2>
+            <span>Trend analytics, risk forecasting, and maturity assessment for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Maturity Assessment Status</span>
+              <strong>{complianceMaturityAssessment.maturityAssessmentStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceMaturityAssessment.maturityAssessmentStatus === 'blocked' ? 'danger' : complianceMaturityAssessment.maturityAssessmentStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceMaturityAssessment.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Trend Score" value={formatNumber(complianceTrendAnalytics.trendSummary.averageTrendScore)} />
+            <MetricCard label="Improving Trends" value={formatNumber(complianceTrendAnalytics.trendSummary.improving)} />
+            <MetricCard label="Forecast Score" value={formatNumber(complianceRiskForecast.forecastSummary.averageForecastScore)} />
+            <MetricCard label="Elevated Forecasts" value={formatNumber(complianceRiskForecast.forecastSummary.elevated)} />
+            <MetricCard label="Maturity Score" value={formatNumber(complianceMaturityAssessment.maturitySummary.averageMaturityScore)} />
+            <MetricCard label="Advanced Maturity" value={formatNumber(complianceMaturityAssessment.maturitySummary.advanced)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Trend Analytics Design</h3>
+              <p className="empty-state">Trend analytics compares executive dashboard and metrics snapshot summaries without recalculating source controls or changing workflow state.</p>
+            </section>
+            <section>
+              <h3>Compliance Risk Forecast Design</h3>
+              <p className="empty-state">Risk forecasts project advisory compliance risk from trends, program health, and governance action items without automatic remediation.</p>
+            </section>
+            <section>
+              <h3>Compliance Maturity Assessment Design</h3>
+              <p className="empty-state">Maturity assessment summarizes dashboard posture, trend quality, and forecast pressure into human-reviewed maturity levels.</p>
+            </section>
+            <section>
+              <h3>Trend and Forecast Boundary</h3>
+              <p className="empty-state">No automatic remediation, approvals, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceTrendAnalytics.eventType}</span>
+          <span className="event-line">{complianceRiskForecast.eventType}</span>
+          <span className="event-line">{complianceMaturityAssessment.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
