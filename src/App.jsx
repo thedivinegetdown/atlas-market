@@ -154,6 +154,9 @@ import { evaluateComplianceResourcePlanning } from '../lib/system/complianceReso
 import { evaluateComplianceTrainingReadiness } from '../lib/system/complianceTrainingReadinessEngine.js'
 import { evaluateComplianceThirdPartyOversight } from '../lib/system/complianceThirdPartyOversightEngine.js'
 import { evaluateComplianceContinuityReadiness } from '../lib/system/complianceContinuityReadinessEngine.js'
+import { evaluateComplianceRegulatoryChangeIntake } from '../lib/system/complianceRegulatoryChangeIntakeEngine.js'
+import { assessComplianceChangeImpact } from '../lib/system/complianceChangeImpactAssessmentEngine.js'
+import { prepareComplianceImplementationPlan } from '../lib/system/complianceImplementationPlanningEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2153,6 +2156,9 @@ function App() {
       'compliance-training-readiness',
       'compliance-third-party-oversight',
       'compliance-continuity-readiness',
+      'compliance-regulatory-change-intake',
+      'compliance-change-impact-assessments',
+      'compliance-implementation-plans',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3391,6 +3397,35 @@ function App() {
     inAppNotificationCenter.tenantAndUserScope,
     productionOperationsRunbook,
   ])
+  const complianceRegulatoryChangeIntake = useMemo(() => evaluateComplianceRegulatoryChangeIntake({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceContinuityReadiness,
+    policyControlPlanning,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:15:00.000Z' }), [
+    complianceContinuityReadiness,
+    inAppNotificationCenter.tenantAndUserScope,
+    policyControlPlanning,
+  ])
+  const complianceChangeImpactAssessment = useMemo(() => assessComplianceChangeImpact({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceRegulatoryChangeIntake,
+    complianceObligationMapping,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:16:00.000Z' }), [
+    complianceObligationMapping,
+    complianceRegulatoryChangeIntake,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceImplementationPlanning = useMemo(() => prepareComplianceImplementationPlan({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceChangeImpactAssessment,
+    complianceResourcePlanning,
+    complianceContinuityReadiness,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:17:00.000Z' }), [
+    complianceChangeImpactAssessment,
+    complianceContinuityReadiness,
+    complianceResourcePlanning,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3451,6 +3486,7 @@ function App() {
     { id: 'compliance-trend-forecast', label: 'Trend Forecast', status: complianceMaturityAssessment.maturityAssessmentStatus },
     { id: 'compliance-planning-analytics', label: 'Planning Analytics', status: complianceResourcePlanning.resourcePlanningStatus },
     { id: 'compliance-operational-readiness', label: 'Operational Ready', status: complianceContinuityReadiness.continuityReadinessStatus },
+    { id: 'compliance-regulatory-change', label: 'Regulatory Change', status: complianceImplementationPlanning.implementationPlanningStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9336,6 +9372,50 @@ function App() {
           <span className="event-line">{complianceTrainingReadiness.eventType}</span>
           <span className="event-line">{complianceThirdPartyOversight.eventType}</span>
           <span className="event-line">{complianceContinuityReadiness.eventType}</span>
+        </article>
+
+        <article id="compliance-regulatory-change" className={`panel compliance-regulatory-change-panel ${complianceImplementationPlanning.implementationPlanningStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Regulatory Change Management</h2>
+            <span>Regulatory change intake, impact assessment, and implementation planning for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Implementation Planning Status</span>
+              <strong>{complianceImplementationPlanning.implementationPlanningStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceImplementationPlanning.implementationPlanningStatus === 'blocked' ? 'danger' : complianceImplementationPlanning.implementationPlanningStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceImplementationPlanning.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Change Priority" value={formatNumber(complianceRegulatoryChangeIntake.changeSummary.averageChangePriorityScore)} />
+            <MetricCard label="Urgent Changes" value={formatNumber(complianceRegulatoryChangeIntake.changeSummary.urgent)} />
+            <MetricCard label="Impact Score" value={formatNumber(complianceChangeImpactAssessment.impactSummary.averageImpactScore)} />
+            <MetricCard label="High Impact" value={formatNumber(complianceChangeImpactAssessment.impactSummary.high)} />
+            <MetricCard label="Implementation Score" value={formatNumber(complianceImplementationPlanning.implementationSummary.averageImplementationScore)} />
+            <MetricCard label="Blocked Plans" value={formatNumber(complianceImplementationPlanning.implementationSummary.blocked)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Regulatory Change Intake Design</h3>
+              <p className="empty-state">Regulatory change intake records advisory change posture from continuity readiness and policy planning without regulatory claims or policy updates.</p>
+            </section>
+            <section>
+              <h3>Compliance Change Impact Design</h3>
+              <p className="empty-state">Impact assessment maps change priority against obligation context for owner/admin review without altering obligations or policies.</p>
+            </section>
+            <section>
+              <h3>Implementation Planning Design</h3>
+              <p className="empty-state">Implementation planning summarizes impact pressure, resource capacity, and continuity posture without executing changes automatically.</p>
+            </section>
+            <section>
+              <h3>Regulatory Change Boundary</h3>
+              <p className="empty-state">No automatic regulatory claims, policy updates, implementation, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceRegulatoryChangeIntake.eventType}</span>
+          <span className="event-line">{complianceChangeImpactAssessment.eventType}</span>
+          <span className="event-line">{complianceImplementationPlanning.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
