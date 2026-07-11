@@ -139,6 +139,9 @@ import { recordComplianceGovernanceDecisions } from '../lib/system/complianceGov
 import { reviewComplianceRecordRetention } from '../lib/system/complianceRecordRetentionReviewEngine.js'
 import { evaluateComplianceExamReadiness } from '../lib/system/complianceExamReadinessEngine.js'
 import { prepareComplianceBoardPacket } from '../lib/system/complianceBoardPacketEngine.js'
+import { recordComplianceMeetingMinutes } from '../lib/system/complianceMeetingMinutesEngine.js'
+import { trackComplianceGovernanceActionItems } from '../lib/system/complianceGovernanceActionItemEngine.js'
+import { evaluateComplianceProgramHealth } from '../lib/system/complianceProgramHealthEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2123,6 +2126,9 @@ function App() {
       'compliance-record-retention-reviews',
       'compliance-exam-readiness',
       'compliance-board-packets',
+      'compliance-meeting-minutes',
+      'compliance-governance-action-items',
+      'compliance-program-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3200,6 +3206,43 @@ function App() {
     complianceRecordRetentionReview,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceMeetingMinutes = useMemo(() => recordComplianceMeetingMinutes({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceBoardPacket,
+    complianceGovernanceDecisionLog,
+    complianceExamReadiness,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:00:00.000Z' }), [
+    complianceBoardPacket,
+    complianceExamReadiness,
+    complianceGovernanceDecisionLog,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceGovernanceActionItems = useMemo(() => trackComplianceGovernanceActionItems({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceMeetingMinutes,
+    complianceRecordRetentionReview,
+    complianceExamReadiness,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:01:00.000Z' }), [
+    complianceExamReadiness,
+    complianceMeetingMinutes,
+    complianceRecordRetentionReview,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceProgramHealth = useMemo(() => evaluateComplianceProgramHealth({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceRiskCommandCenter,
+    complianceExamReadiness,
+    complianceBoardPacket,
+    complianceMeetingMinutes,
+    complianceGovernanceActionItems,
+  }, { emitEvent: false, timestamp: '2026-07-11T09:02:00.000Z' }), [
+    complianceBoardPacket,
+    complianceExamReadiness,
+    complianceGovernanceActionItems,
+    complianceMeetingMinutes,
+    complianceRiskCommandCenter,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3255,6 +3298,7 @@ function App() {
     { id: 'compliance-governance-schedule', label: 'Compliance Schedule', status: complianceGovernanceReadout.readoutStatus },
     { id: 'compliance-audit-external-review', label: 'Audit Review', status: complianceGovernanceDecisionLog.decisionLogStatus },
     { id: 'compliance-exam-board', label: 'Exam Board', status: complianceBoardPacket.boardPacketStatus },
+    { id: 'compliance-program-health', label: 'Program Health', status: complianceProgramHealth.programHealthStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -8920,6 +8964,50 @@ function App() {
           <span className="event-line">{complianceRecordRetentionReview.eventType}</span>
           <span className="event-line">{complianceExamReadiness.eventType}</span>
           <span className="event-line">{complianceBoardPacket.eventType}</span>
+        </article>
+
+        <article id="compliance-program-health" className={`panel compliance-program-health-panel ${complianceProgramHealth.programHealthStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Program Health</h2>
+            <span>Meeting minutes, governance action items, and compliance program health for owner/admin oversight.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Program Health Status</span>
+              <strong>{complianceProgramHealth.programHealthStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceProgramHealth.programHealthStatus === 'blocked' ? 'danger' : complianceProgramHealth.programHealthStatus === 'caution' ? 'warning' : 'positive'}`}>advisory health</span>
+          </div>
+          <p className="empty-state">{complianceProgramHealth.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Minutes Ready" value={formatNumber(complianceMeetingMinutes.meetingMinutesSummary.readyForReview)} />
+            <MetricCard label="Minutes Recorded" value={formatNumber(complianceMeetingMinutes.meetingMinutesSummary.recorded)} />
+            <MetricCard label="Open Action Items" value={formatNumber(complianceGovernanceActionItems.actionItemSummary.open)} />
+            <MetricCard label="High Priority Actions" value={formatNumber(complianceGovernanceActionItems.actionItemSummary.highPriority)} />
+            <MetricCard label="Program Health Score" value={formatNumber(complianceProgramHealth.programHealthSummary.averageScore)} />
+            <MetricCard label="Healthy Evaluations" value={formatNumber(complianceProgramHealth.programHealthSummary.healthy)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Compliance Meeting Minutes Design</h3>
+              <p className="empty-state">Meeting minutes reference board packets, governance decisions, and exam readiness without automatic distribution, approval, or compliance claims.</p>
+            </section>
+            <section>
+              <h3>Compliance Governance Action Item Design</h3>
+              <p className="empty-state">Action items track compliance follow-up from minutes, retention, and exam readiness without automatic assignment or resolution.</p>
+            </section>
+            <section>
+              <h3>Compliance Program Health Design</h3>
+              <p className="empty-state">Program health summarizes risk, exam readiness, board packets, meeting minutes, and action items without recalculating upstream control evidence.</p>
+            </section>
+            <section>
+              <h3>Program Health Boundary</h3>
+              <p className="empty-state">No automatic approvals, action resolution, assignments, distribution, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceMeetingMinutes.eventType}</span>
+          <span className="event-line">{complianceGovernanceActionItems.eventType}</span>
+          <span className="event-line">{complianceProgramHealth.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
