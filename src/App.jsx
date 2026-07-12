@@ -163,6 +163,8 @@ import { prepareComplianceChangeClosureReadiness } from '../lib/system/complianc
 import { reviewCompliancePostImplementation } from '../lib/system/compliancePostImplementationReviewEngine.js'
 import { captureComplianceLessonsLearned } from '../lib/system/complianceLessonsLearnedEngine.js'
 import { summarizeComplianceChangeGovernance } from '../lib/system/complianceChangeGovernanceSummaryEngine.js'
+import { identifyComplianceImprovementOpportunities } from '../lib/system/complianceImprovementOpportunityEngine.js'
+import { evaluateComplianceAdoptionReadiness } from '../lib/system/complianceAdoptionReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2171,6 +2173,8 @@ function App() {
       'compliance-post-implementation-reviews',
       'compliance-lessons-learned',
       'compliance-change-governance-summaries',
+      'compliance-improvement-opportunities',
+      'compliance-adoption-readiness',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3494,6 +3498,26 @@ function App() {
     complianceLessonsLearned,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceImprovementOpportunity = useMemo(() => identifyComplianceImprovementOpportunities({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceLessonsLearned,
+    complianceChangeGovernanceSummary,
+  }, { emitEvent: false, timestamp: '2026-07-12T09:24:00.000Z' }), [
+    complianceChangeGovernanceSummary,
+    complianceLessonsLearned,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceAdoptionReadiness = useMemo(() => evaluateComplianceAdoptionReadiness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceImprovementOpportunity,
+    complianceResourcePlanning,
+    complianceTrainingReadiness,
+  }, { emitEvent: false, timestamp: '2026-07-12T09:25:00.000Z' }), [
+    complianceImprovementOpportunity,
+    complianceResourcePlanning,
+    complianceTrainingReadiness,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3557,6 +3581,7 @@ function App() {
     { id: 'compliance-regulatory-change', label: 'Regulatory Change', status: complianceImplementationPlanning.implementationPlanningStatus },
     { id: 'compliance-change-followthrough', label: 'Change Followthrough', status: complianceChangeClosureReadiness.changeClosureReadinessStatus },
     { id: 'compliance-change-governance-learning', label: 'Change Learning', status: complianceChangeGovernanceSummary.changeGovernanceSummaryStatus },
+    { id: 'compliance-improvement-adoption', label: 'Improvement Adoption', status: complianceAdoptionReadiness.adoptionReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9574,6 +9599,43 @@ function App() {
           <span className="event-line">{compliancePostImplementationReview.eventType}</span>
           <span className="event-line">{complianceLessonsLearned.eventType}</span>
           <span className="event-line">{complianceChangeGovernanceSummary.eventType}</span>
+        </article>
+
+        <article id="compliance-improvement-adoption" className={`panel compliance-improvement-adoption-panel ${complianceAdoptionReadiness.adoptionReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Improvement Adoption</h2>
+            <span>Improvement opportunity identification and adoption readiness for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Adoption Readiness Status</span>
+              <strong>{complianceAdoptionReadiness.adoptionReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceAdoptionReadiness.adoptionReadinessStatus === 'blocked' ? 'danger' : complianceAdoptionReadiness.adoptionReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceAdoptionReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Opportunity Score" value={formatNumber(complianceImprovementOpportunity.opportunitySummary.averageOpportunityScore)} />
+            <MetricCard label="Opportunities Needing Review" value={formatNumber(complianceImprovementOpportunity.opportunitySummary.needsReview)} />
+            <MetricCard label="Adoption Score" value={formatNumber(complianceAdoptionReadiness.adoptionSummary.averageAdoptionScore)} />
+            <MetricCard label="Blocked Adoption Items" value={formatNumber(complianceAdoptionReadiness.adoptionSummary.blocked)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Improvement Opportunity Design</h3>
+              <p className="empty-state">Improvement opportunities are derived from lessons learned and change governance summaries without remediation, policy update, assignment, or compliance claim automation.</p>
+            </section>
+            <section>
+              <h3>Adoption Readiness Design</h3>
+              <p className="empty-state">Adoption readiness combines opportunity, resource planning, and training readiness context for human review only.</p>
+            </section>
+            <section>
+              <h3>Improvement Adoption Boundary</h3>
+              <p className="empty-state">No automatic adoption, remediation, policy updates, training assignments, approvals, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceImprovementOpportunity.eventType}</span>
+          <span className="event-line">{complianceAdoptionReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
