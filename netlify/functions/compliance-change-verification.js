@@ -1,0 +1,24 @@
+import { AppError, ERROR_CODES } from '../../lib/errors/appError.js'
+import { createComplianceChangeVerificationRepository, reviewComplianceChangeVerification } from '../../lib/system/complianceChangeVerificationEngine.js'
+import { apiFoundationEvent } from './_shared/persistenceApi.js'
+import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
+
+function assertOwnerAdmin(membership) {
+  if (!['owner', 'admin'].includes(membership?.role)) throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'compliance change verification access denied', { statusCode: 403, publicMessage: 'compliance change verification access denied' })
+}
+
+export function createComplianceChangeVerificationHandler(options = {}) {
+  return createOrganizationAuthenticatedApiHandler(async ({ requestId, body, query, membership, tenantContext, event }) => {
+    assertOwnerAdmin(membership)
+    const repository = options.complianceChangeVerificationRepository ?? createComplianceChangeVerificationRepository(options)
+    if (String(event.httpMethod ?? 'GET').toUpperCase() === 'POST') {
+      const response = await repository.create({ ...body.verification, tenantContext, evaluatedByUserId: tenantContext.userId })
+      return { event: apiFoundationEvent({ requestId, endpoint: 'compliance-change-verification', status: response.ok ? 'reviewed' : 'blocked' }), verification: response.verification, automaticVerification: false, automaticApproval: false, paperTrading: true, liveOrders: false, brokerExecution: false }
+    }
+    const existing = await repository.list?.({ tenantContext, verificationStatus: query.verificationStatus, limit: query.limit }) ?? []
+    const complianceChangeVerification = reviewComplianceChangeVerification({ tenantContext, complianceChangeVerifications: existing, complianceImplementationProgress: options.complianceImplementationProgress, complianceEvidenceRequestQueue: options.complianceEvidenceRequestQueue }, { emitEvent: false })
+    return { event: apiFoundationEvent({ requestId, endpoint: 'compliance-change-verification', status: complianceChangeVerification.changeVerificationStatus }), complianceChangeVerification, automaticVerification: false, automaticApproval: false, paperTrading: true, liveOrders: false, brokerExecution: false }
+  }, { allowedMethods: ['GET', 'POST'], requiredPermission: 'workspace.admin', workspaceAction: 'administer', routeId: 'compliance-change-verification', ...options })
+}
+
+export const handler = createComplianceChangeVerificationHandler()

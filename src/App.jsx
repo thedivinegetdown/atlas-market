@@ -157,6 +157,9 @@ import { evaluateComplianceContinuityReadiness } from '../lib/system/complianceC
 import { evaluateComplianceRegulatoryChangeIntake } from '../lib/system/complianceRegulatoryChangeIntakeEngine.js'
 import { assessComplianceChangeImpact } from '../lib/system/complianceChangeImpactAssessmentEngine.js'
 import { prepareComplianceImplementationPlan } from '../lib/system/complianceImplementationPlanningEngine.js'
+import { trackComplianceImplementationProgress } from '../lib/system/complianceImplementationProgressEngine.js'
+import { reviewComplianceChangeVerification } from '../lib/system/complianceChangeVerificationEngine.js'
+import { prepareComplianceChangeClosureReadiness } from '../lib/system/complianceChangeClosureReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2159,6 +2162,9 @@ function App() {
       'compliance-regulatory-change-intake',
       'compliance-change-impact-assessments',
       'compliance-implementation-plans',
+      'compliance-implementation-progress',
+      'compliance-change-verification',
+      'compliance-change-closure-readiness',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3426,6 +3432,33 @@ function App() {
     complianceResourcePlanning,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceImplementationProgress = useMemo(() => trackComplianceImplementationProgress({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceImplementationPlanning,
+    complianceGovernanceActionItems,
+  }, { emitEvent: false, timestamp: '2026-07-12T09:18:00.000Z' }), [
+    complianceGovernanceActionItems,
+    complianceImplementationPlanning,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceChangeVerification = useMemo(() => reviewComplianceChangeVerification({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceImplementationProgress,
+    complianceEvidenceRequestQueue,
+  }, { emitEvent: false, timestamp: '2026-07-12T09:19:00.000Z' }), [
+    complianceEvidenceRequestQueue,
+    complianceImplementationProgress,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceChangeClosureReadiness = useMemo(() => prepareComplianceChangeClosureReadiness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceChangeVerification,
+    complianceChangeImpactAssessment,
+  }, { emitEvent: false, timestamp: '2026-07-12T09:20:00.000Z' }), [
+    complianceChangeImpactAssessment,
+    complianceChangeVerification,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3487,6 +3520,7 @@ function App() {
     { id: 'compliance-planning-analytics', label: 'Planning Analytics', status: complianceResourcePlanning.resourcePlanningStatus },
     { id: 'compliance-operational-readiness', label: 'Operational Ready', status: complianceContinuityReadiness.continuityReadinessStatus },
     { id: 'compliance-regulatory-change', label: 'Regulatory Change', status: complianceImplementationPlanning.implementationPlanningStatus },
+    { id: 'compliance-change-followthrough', label: 'Change Followthrough', status: complianceChangeClosureReadiness.changeClosureReadinessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9416,6 +9450,50 @@ function App() {
           <span className="event-line">{complianceRegulatoryChangeIntake.eventType}</span>
           <span className="event-line">{complianceChangeImpactAssessment.eventType}</span>
           <span className="event-line">{complianceImplementationPlanning.eventType}</span>
+        </article>
+
+        <article id="compliance-change-followthrough" className={`panel compliance-change-followthrough-panel ${complianceChangeClosureReadiness.changeClosureReadinessStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Change Followthrough</h2>
+            <span>Implementation progress, verification review, and closure readiness for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Closure Readiness Status</span>
+              <strong>{complianceChangeClosureReadiness.changeClosureReadinessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceChangeClosureReadiness.changeClosureReadinessStatus === 'blocked' ? 'danger' : complianceChangeClosureReadiness.changeClosureReadinessStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceChangeClosureReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Progress Score" value={formatNumber(complianceImplementationProgress.progressSummary.averageProgressScore)} />
+            <MetricCard label="Stalled Changes" value={formatNumber(complianceImplementationProgress.progressSummary.stalled)} />
+            <MetricCard label="Verification Score" value={formatNumber(complianceChangeVerification.verificationSummary.averageVerificationScore)} />
+            <MetricCard label="Needs Review" value={formatNumber(complianceChangeVerification.verificationSummary.needsReview)} />
+            <MetricCard label="Closure Score" value={formatNumber(complianceChangeClosureReadiness.closureSummary.averageClosureScore)} />
+            <MetricCard label="Blocked Closures" value={formatNumber(complianceChangeClosureReadiness.closureSummary.blocked)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Implementation Progress Design</h3>
+              <p className="empty-state">Implementation progress tracks plan posture and governance action pressure without automatic implementation or status changes.</p>
+            </section>
+            <section>
+              <h3>Change Verification Design</h3>
+              <p className="empty-state">Change verification reviews implementation progress and evidence request posture without automatic verification or approval.</p>
+            </section>
+            <section>
+              <h3>Change Closure Readiness Design</h3>
+              <p className="empty-state">Closure readiness packages verification and impact context for human review without closing changes automatically.</p>
+            </section>
+            <section>
+              <h3>Followthrough Boundary</h3>
+              <p className="empty-state">No automatic implementation, status changes, verification, approval, closure, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceImplementationProgress.eventType}</span>
+          <span className="event-line">{complianceChangeVerification.eventType}</span>
+          <span className="event-line">{complianceChangeClosureReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
