@@ -165,6 +165,8 @@ import { captureComplianceLessonsLearned } from '../lib/system/complianceLessons
 import { summarizeComplianceChangeGovernance } from '../lib/system/complianceChangeGovernanceSummaryEngine.js'
 import { identifyComplianceImprovementOpportunities } from '../lib/system/complianceImprovementOpportunityEngine.js'
 import { evaluateComplianceAdoptionReadiness } from '../lib/system/complianceAdoptionReadinessEngine.js'
+import { prioritizeComplianceImprovementBacklog } from '../lib/system/complianceImprovementBacklogEngine.js'
+import { evaluateComplianceAdoptionMonitoring } from '../lib/system/complianceAdoptionMonitoringEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2175,6 +2177,8 @@ function App() {
       'compliance-change-governance-summaries',
       'compliance-improvement-opportunities',
       'compliance-adoption-readiness',
+      'compliance-improvement-backlog',
+      'compliance-adoption-monitoring',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3518,6 +3522,26 @@ function App() {
     complianceTrainingReadiness,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceImprovementBacklog = useMemo(() => prioritizeComplianceImprovementBacklog({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceImprovementOpportunity,
+    complianceAdoptionReadiness,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:26:00.000Z' }), [
+    complianceAdoptionReadiness,
+    complianceImprovementOpportunity,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceAdoptionMonitoring = useMemo(() => evaluateComplianceAdoptionMonitoring({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceImprovementBacklog,
+    complianceProgramHealth,
+    complianceExecutiveDashboard,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:27:00.000Z' }), [
+    complianceExecutiveDashboard,
+    complianceImprovementBacklog,
+    complianceProgramHealth,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3582,6 +3606,7 @@ function App() {
     { id: 'compliance-change-followthrough', label: 'Change Followthrough', status: complianceChangeClosureReadiness.changeClosureReadinessStatus },
     { id: 'compliance-change-governance-learning', label: 'Change Learning', status: complianceChangeGovernanceSummary.changeGovernanceSummaryStatus },
     { id: 'compliance-improvement-adoption', label: 'Improvement Adoption', status: complianceAdoptionReadiness.adoptionReadinessStatus },
+    { id: 'compliance-improvement-monitoring', label: 'Improvement Monitor', status: complianceAdoptionMonitoring.adoptionMonitoringStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9636,6 +9661,43 @@ function App() {
           </div>
           <span className="event-line">{complianceImprovementOpportunity.eventType}</span>
           <span className="event-line">{complianceAdoptionReadiness.eventType}</span>
+        </article>
+
+        <article id="compliance-improvement-monitoring" className={`panel compliance-improvement-monitoring-panel ${complianceAdoptionMonitoring.adoptionMonitoringStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Improvement Monitoring</h2>
+            <span>Improvement backlog prioritization and adoption monitoring for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Adoption Monitoring Status</span>
+              <strong>{complianceAdoptionMonitoring.adoptionMonitoringStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceAdoptionMonitoring.adoptionMonitoringStatus === 'blocked' ? 'danger' : complianceAdoptionMonitoring.adoptionMonitoringStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceAdoptionMonitoring.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Backlog Score" value={formatNumber(complianceImprovementBacklog.backlogSummary.averageBacklogScore)} />
+            <MetricCard label="High Priority Items" value={formatNumber(complianceImprovementBacklog.backlogSummary.highPriority)} />
+            <MetricCard label="Monitoring Score" value={formatNumber(complianceAdoptionMonitoring.monitoringSummary.averageMonitoringScore)} />
+            <MetricCard label="Blocked Monitoring Items" value={formatNumber(complianceAdoptionMonitoring.monitoringSummary.blocked)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Improvement Backlog Design</h3>
+              <p className="empty-state">Improvement backlog prioritizes reviewed opportunities and adoption readiness without automatic assignment, remediation, or policy updates.</p>
+            </section>
+            <section>
+              <h3>Adoption Monitoring Design</h3>
+              <p className="empty-state">Adoption monitoring combines backlog, program health, and executive dashboard context without taking monitoring actions automatically.</p>
+            </section>
+            <section>
+              <h3>Monitoring Boundary</h3>
+              <p className="empty-state">No automatic monitoring actions, adoption, remediation, assignments, policy updates, approvals, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceImprovementBacklog.eventType}</span>
+          <span className="event-line">{complianceAdoptionMonitoring.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
