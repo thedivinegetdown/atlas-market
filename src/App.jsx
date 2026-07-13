@@ -167,6 +167,8 @@ import { identifyComplianceImprovementOpportunities } from '../lib/system/compli
 import { evaluateComplianceAdoptionReadiness } from '../lib/system/complianceAdoptionReadinessEngine.js'
 import { prioritizeComplianceImprovementBacklog } from '../lib/system/complianceImprovementBacklogEngine.js'
 import { evaluateComplianceAdoptionMonitoring } from '../lib/system/complianceAdoptionMonitoringEngine.js'
+import { reviewComplianceImprovementOutcomes } from '../lib/system/complianceImprovementOutcomeReviewEngine.js'
+import { summarizeComplianceBenefitRealization } from '../lib/system/complianceBenefitRealizationEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2179,6 +2181,8 @@ function App() {
       'compliance-adoption-readiness',
       'compliance-improvement-backlog',
       'compliance-adoption-monitoring',
+      'compliance-improvement-outcome-reviews',
+      'compliance-benefit-realizations',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3542,6 +3546,24 @@ function App() {
     complianceProgramHealth,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceImprovementOutcomeReview = useMemo(() => reviewComplianceImprovementOutcomes({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceAdoptionMonitoring,
+    complianceImprovementBacklog,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:28:00.000Z' }), [
+    complianceAdoptionMonitoring,
+    complianceImprovementBacklog,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceBenefitRealization = useMemo(() => summarizeComplianceBenefitRealization({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceImprovementOutcomeReview,
+    complianceMaturityAssessment,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:29:00.000Z' }), [
+    complianceImprovementOutcomeReview,
+    complianceMaturityAssessment,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3607,6 +3629,7 @@ function App() {
     { id: 'compliance-change-governance-learning', label: 'Change Learning', status: complianceChangeGovernanceSummary.changeGovernanceSummaryStatus },
     { id: 'compliance-improvement-adoption', label: 'Improvement Adoption', status: complianceAdoptionReadiness.adoptionReadinessStatus },
     { id: 'compliance-improvement-monitoring', label: 'Improvement Monitor', status: complianceAdoptionMonitoring.adoptionMonitoringStatus },
+    { id: 'compliance-outcome-benefits', label: 'Outcome Benefits', status: complianceBenefitRealization.benefitRealizationStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9698,6 +9721,43 @@ function App() {
           </div>
           <span className="event-line">{complianceImprovementBacklog.eventType}</span>
           <span className="event-line">{complianceAdoptionMonitoring.eventType}</span>
+        </article>
+
+        <article id="compliance-outcome-benefits" className={`panel compliance-outcome-benefits-panel ${complianceBenefitRealization.benefitRealizationStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Outcome Benefits</h2>
+            <span>Improvement outcome review and benefit realization summary for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Benefit Realization Status</span>
+              <strong>{complianceBenefitRealization.benefitRealizationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceBenefitRealization.benefitRealizationStatus === 'blocked' ? 'danger' : complianceBenefitRealization.benefitRealizationStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceBenefitRealization.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Outcome Score" value={formatNumber(complianceImprovementOutcomeReview.outcomeSummary.averageOutcomeScore)} />
+            <MetricCard label="Outcomes Needing Review" value={formatNumber(complianceImprovementOutcomeReview.outcomeSummary.needsReview)} />
+            <MetricCard label="Benefit Score" value={formatNumber(complianceBenefitRealization.benefitSummary.averageBenefitScore)} />
+            <MetricCard label="Benefits Needing Review" value={formatNumber(complianceBenefitRealization.benefitSummary.needsReview)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Improvement Outcome Review Design</h3>
+              <p className="empty-state">Outcome review compares adoption monitoring and backlog context without outcome claims, closure automation, or remediation actions.</p>
+            </section>
+            <section>
+              <h3>Benefit Realization Design</h3>
+              <p className="empty-state">Benefit realization summarizes outcome review and maturity context without benefit claims or executive distribution automation.</p>
+            </section>
+            <section>
+              <h3>Outcome Benefit Boundary</h3>
+              <p className="empty-state">No automatic outcome claims, benefit claims, closure, remediation, executive distribution, approvals, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceImprovementOutcomeReview.eventType}</span>
+          <span className="event-line">{complianceBenefitRealization.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
