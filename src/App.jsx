@@ -44,6 +44,9 @@ import { normalizeMarketDataContracts } from '../lib/market/marketDataContractEn
 import { prepareMarketDataCache } from '../lib/market/marketDataCacheEngine.js'
 import { prepareMarketDataStreaming } from '../lib/market/marketDataStreamingEngine.js'
 import { evaluateMarketDataProviderFailover } from '../lib/market/marketDataProviderFailoverEngine.js'
+import { evaluateMarketDataStreamingSession } from '../lib/market/marketDataStreamingSessionEngine.js'
+import { evaluateMarketDataFreshnessGapRecovery } from '../lib/market/marketDataFreshnessGapRecoveryEngine.js'
+import { evaluateMarketDataStreamingOperations } from '../lib/market/marketDataStreamingOperationsEngine.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2251,6 +2254,9 @@ function App() {
       'market-data-cache',
       'market-data-streaming',
       'market-data-provider-failover',
+      'market-data-streaming-sessions',
+      'market-data-freshness',
+      'market-data-streaming-operations',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3978,6 +3984,42 @@ function App() {
     marketDataCache,
     marketDataStreaming,
   ])
+  const marketDataStreamingSession = useMemo(() => evaluateMarketDataStreamingSession({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataStreaming,
+    marketDataProviderFailover,
+    reconnectState: { reconnectAttempts: 0 },
+    heartbeatMonitoring: { missedHeartbeats: 0 },
+    backpressureStatus: { status: 'healthy', queuedMessages: 0, maxQueueDepth: 1000 },
+  }, { emitEvent: false, timestamp: '2026-07-13T10:04:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataProviderFailover,
+    marketDataStreaming,
+  ])
+  const marketDataGapRecovery = useMemo(() => evaluateMarketDataFreshnessGapRecovery({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataCache,
+    historicalReplay,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:05:00.000Z' }), [
+    historicalReplay,
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataCache,
+  ])
+  const marketDataStreamingOperations = useMemo(() => evaluateMarketDataStreamingOperations({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataStreamingSession,
+    marketDataProviderFailover,
+    marketDataStreaming,
+    marketDataGapRecovery,
+    marketDataCache,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:06:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataCache,
+    marketDataGapRecovery,
+    marketDataProviderFailover,
+    marketDataStreaming,
+    marketDataStreamingSession,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4209,6 +4251,48 @@ function App() {
           <span className="event-line">{marketDataCache.eventType}</span>
           <span className="event-line">{marketDataStreaming.eventType}</span>
           <span className="event-line">{marketDataProviderFailover.eventType}</span>
+        </article>
+
+        <article id="market-data-streaming-operations" className={`panel market-data-streaming-operations-panel ${marketDataStreamingOperations.operationalStatus}`}>
+          <div className="panel-heading">
+            <h2>Streaming Operations</h2>
+            <span>Streaming sessions, provider failover, freshness, reconnects, subscriptions, gap recovery, and local cache fallback.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Streaming Operations Status</span>
+              <strong>{marketDataStreamingOperations.operationalStatus}</strong>
+            </div>
+            <span className={`decision-pill ${marketDataStreamingOperations.operationalStatus === 'healthy' ? 'positive' : marketDataStreamingOperations.operationalStatus === 'blocked' ? 'danger' : 'warning'}`}>paper data only</span>
+          </div>
+          <p className="empty-state">{marketDataStreamingOperations.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Active Sessions" value={formatNumber(marketDataStreamingOperations.activeSessionSummary.activeSessions)} />
+            <MetricCard label="Reconnect Attempts" value={formatNumber(marketDataStreamingOperations.reconnectSummary.totalReconnectAttempts)} />
+            <MetricCard label="Subscriptions" value={formatNumber(marketDataStreamingOperations.subscriptionSummary.totalSubscriptions)} />
+            <MetricCard label="Healthy Providers" value={formatNumber(marketDataStreamingOperations.providerHealthSummary.healthyProviders)} />
+            <MetricCard label="Sequence Gaps" value={formatNumber(marketDataStreamingOperations.gapRecoverySummary.sequenceGaps)} />
+            <MetricCard label="Duplicate Events" value={formatNumber(marketDataStreamingOperations.gapRecoverySummary.duplicateEvents)} />
+            <MetricCard label="Out-of-Order Events" value={formatNumber(marketDataStreamingOperations.gapRecoverySummary.outOfOrderEvents)} />
+            <MetricCard label="Cache Fallback" value={formatNumber(marketDataStreamingOperations.localCacheFallbackSummary.cachedEntries)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Streaming Session Coordinator</h3>
+              <p className="empty-state">{marketDataStreamingSession.marketDataStreamingSessionStatus} / {formatNumber(marketDataStreamingSession.marketDataStreamingSessionSummary.totalSubscriptions)} subscriptions / bounded reconnects.</p>
+            </section>
+            <section>
+              <h3>Freshness &amp; Gap Recovery</h3>
+              <p className="empty-state">{marketDataGapRecovery.marketDataGapRecoveryStatus} / {formatNumber(marketDataGapRecovery.marketDataGapRecoverySummary.sequenceGaps)} gaps / {formatNumber(marketDataGapRecovery.marketDataGapRecoverySummary.duplicateEvents)} duplicates.</p>
+            </section>
+            <section>
+              <h3>Provider Health &amp; Failover</h3>
+              <p className="empty-state">{marketDataProviderFailover.marketDataProviderFailovers[0]?.activeProviderId} active with {marketDataProviderFailover.marketDataProviderFailovers[0]?.fallbackProviderId} fallback.</p>
+            </section>
+          </div>
+          <span className="event-line">{marketDataStreamingSession.eventType}</span>
+          <span className="event-line">{marketDataGapRecovery.eventType}</span>
+          <span className="event-line">{marketDataStreamingOperations.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>

@@ -34,8 +34,16 @@ export default defineConfig({
               test: /lib[\\/]system[\\/]compliance/,
             },
             {
+              name: 'market-data-system',
+              test: /lib[\\/]market[\\/]/,
+            },
+            {
+              name: 'system-operations',
+              test: /lib[\\/]system[\\/](?!compliance|institutionalChart)/,
+            },
+            {
               name: 'market-research-system',
-              test: /lib[\\/](market|research|signals|system|brokers|assets)[\\/]/,
+              test: /lib[\\/](research|signals|brokers|assets)[\\/]/,
             },
           ],
         },
