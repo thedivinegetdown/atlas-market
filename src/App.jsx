@@ -189,6 +189,8 @@ import { evaluateAiDecisionGovernanceReadiness } from '../lib/system/aiDecisionG
 import { prepareAiDecisionExplainability } from '../lib/system/aiDecisionExplainabilityEngine.js'
 import { prepareAiTradingCopilotContext } from '../lib/system/aiTradingCopilotContextEngine.js'
 import { prepareAiTradingCopilotResponse } from '../lib/system/aiTradingCopilotResponseEngine.js'
+import { explainAiTradingCopilotTradeSignal } from '../lib/system/aiTradingCopilotTradeSignalExplanationEngine.js'
+import { generateAiTradingCopilotPortfolioInsights } from '../lib/system/aiTradingCopilotPortfolioInsightEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2223,6 +2225,8 @@ function App() {
       'ai-decision-explainability-records',
       'ai-trading-copilot-contexts',
       'ai-trading-copilot-responses',
+      'ai-trading-copilot-trade-signal-explanations',
+      'ai-trading-copilot-portfolio-insights',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3835,6 +3839,42 @@ function App() {
     inAppNotificationCenter.tenantAndUserScope,
     operatorActionCenter,
   ])
+  const aiTradingCopilotTradeSignalExplanation = useMemo(() => explainAiTradingCopilotTradeSignal({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    aiDecision,
+    strategySignalComposition,
+    aiTradingCopilotContext,
+    aiTradingCopilotResponse,
+    tradeGuardrail: guardrails[0]?.result,
+    positionSizing,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:50:00.000Z' }), [
+    aiDecision,
+    aiTradingCopilotContext,
+    aiTradingCopilotResponse,
+    guardrails,
+    inAppNotificationCenter.tenantAndUserScope,
+    positionSizing,
+    strategySignalComposition,
+  ])
+  const aiTradingCopilotPortfolioInsight = useMemo(() => generateAiTradingCopilotPortfolioInsights({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    strategySignalComposition,
+    strategyAttribution,
+    strategyBacktestPerformance,
+    portfolioAnalytics,
+    portfolioOptimization,
+    portfolioRisk: risk,
+    aiTradingCopilotTradeSignalExplanation,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:51:00.000Z' }), [
+    aiTradingCopilotTradeSignalExplanation,
+    inAppNotificationCenter.tenantAndUserScope,
+    portfolioAnalytics,
+    portfolioOptimization,
+    risk,
+    strategyAttribution,
+    strategyBacktestPerformance,
+    strategySignalComposition,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3910,7 +3950,7 @@ function App() {
     { id: 'compliance-strategic-learning', label: 'Strategic Learn', status: complianceStrategicLearningSummary.strategicLearningStatus },
     { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
     { id: 'ai-decision-governance', label: 'AI Governance', status: aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus },
-    { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotResponse.aiTradingCopilotResponseStatus },
+    { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsightStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4339,6 +4379,8 @@ function App() {
             <MetricCard label="Context Cautions" value={formatNumber(aiTradingCopilotContext.aiTradingCopilotContextSummary.caution)} />
             <MetricCard label="Response Score" value={formatNumber(aiTradingCopilotResponse.aiTradingCopilotResponseSummary.averageResponseScore)} />
             <MetricCard label="Response Reviews" value={formatNumber(aiTradingCopilotResponse.aiTradingCopilotResponseSummary.needsReview)} />
+            <MetricCard label="Explanation Score" value={formatNumber(aiTradingCopilotTradeSignalExplanation.aiTradingCopilotTradeSignalExplanationSummary.averageExplanationScore)} />
+            <MetricCard label="Insight Score" value={formatNumber(aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsightSummary.averageInsightScore)} />
             <MetricCard label="External AI" value={aiTradingCopilotResponse.externalAiProvider ? 'enabled' : 'disabled'} />
             <MetricCard label="Order Automation" value={aiTradingCopilotResponse.automaticOrderPlacement ? 'enabled' : 'disabled'} />
           </div>
@@ -4352,15 +4394,26 @@ function App() {
               <p className="empty-state">Copilot responses prepare safe review prompts and operator action references without placing orders or overriding decisions.</p>
             </section>
             <section>
+              <h3>Trade Signal Explanation</h3>
+              <p className="empty-state">{aiTradingCopilotTradeSignalExplanation.aiTradingCopilotTradeSignalExplanations[0]?.confidenceReasoningSummary}</p>
+            </section>
+            <section>
+              <h3>Portfolio Insight Review</h3>
+              <p className="empty-state">{aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsights[0]?.portfolioInsightSummary}</p>
+            </section>
+            <section>
               <h3>Copilot Safety Boundary</h3>
               <p className="empty-state">No external AI provider, automatic order placement, broker execution, decision override, destructive automation, live orders, secrets, tokens, or sensitive session payloads are introduced.</p>
             </section>
           </div>
           <ul className="warning-list">
             {(aiTradingCopilotResponse.aiTradingCopilotResponses[0]?.suggestedQuestions ?? []).map((question) => <li key={question}>{question}</li>)}
+            {(aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsights[0]?.naturalLanguageResearchPrompts ?? []).map((prompt) => <li key={prompt}>{prompt}</li>)}
           </ul>
           <span className="event-line">{aiTradingCopilotContext.eventType}</span>
           <span className="event-line">{aiTradingCopilotResponse.eventType}</span>
+          <span className="event-line">{aiTradingCopilotTradeSignalExplanation.eventType}</span>
+          <span className="event-line">{aiTradingCopilotPortfolioInsight.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
