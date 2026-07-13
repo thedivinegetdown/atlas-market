@@ -193,6 +193,8 @@ import { explainAiTradingCopilotTradeSignal } from '../lib/system/aiTradingCopil
 import { generateAiTradingCopilotPortfolioInsights } from '../lib/system/aiTradingCopilotPortfolioInsightEngine.js'
 import { prepareAiTradingCopilotConversation } from '../lib/system/aiTradingCopilotConversationEngine.js'
 import { prepareAiTradingCopilotWorkflowAssistance } from '../lib/system/aiTradingCopilotWorkflowAssistanceEngine.js'
+import { prepareInstitutionalChartWorkspace } from '../lib/system/institutionalChartWorkspaceEngine.js'
+import { synchronizeInstitutionalChartLayout } from '../lib/system/institutionalChartLayoutEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2231,6 +2233,8 @@ function App() {
       'ai-trading-copilot-portfolio-insights',
       'ai-trading-copilot-conversations',
       'ai-trading-copilot-workflow-assistance',
+      'institutional-chart-workspaces',
+      'institutional-chart-layouts',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3912,6 +3916,26 @@ function App() {
     operatorActionCenter,
     workspaceCommandPalette,
   ])
+  const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    symbol: 'SPY',
+    assetType: 'etf',
+    marketDataAdapterHealth,
+    historicalReplay,
+    workspacePersistence,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:54:00.000Z' }), [
+    historicalReplay,
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataAdapterHealth,
+    workspacePersistence,
+  ])
+  const institutionalChartLayout = useMemo(() => synchronizeInstitutionalChartLayout({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartWorkspace,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:55:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartWorkspace,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3988,6 +4012,7 @@ function App() {
     { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
     { id: 'ai-decision-governance', label: 'AI Governance', status: aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus },
     { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotWorkflowAssistance.aiTradingCopilotWorkflowAssistanceStatus },
+    { id: 'institutional-charting', label: 'Charting', status: institutionalChartLayout.institutionalChartLayoutStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4464,6 +4489,57 @@ function App() {
           <span className="event-line">{aiTradingCopilotPortfolioInsight.eventType}</span>
           <span className="event-line">{aiTradingCopilotConversation.eventType}</span>
           <span className="event-line">{aiTradingCopilotWorkflowAssistance.eventType}</span>
+        </article>
+
+        <article id="institutional-charting" className={`panel institutional-charting-panel ${institutionalChartLayout.institutionalChartLayoutStatus}`}>
+          <div className="panel-heading">
+            <h2>Institutional Charting</h2>
+            <span>Chart workspace foundation, multi-chart layouts, timeframe synchronization, drawings, indicators, and state persistence.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Chart Layout Status</span>
+              <strong>{institutionalChartLayout.institutionalChartLayoutStatus}</strong>
+            </div>
+            <span className={`decision-pill ${institutionalChartLayout.institutionalChartLayoutStatus === 'ready' ? 'positive' : institutionalChartLayout.institutionalChartLayoutStatus === 'blocked' ? 'danger' : 'warning'}`}>charting only</span>
+          </div>
+          <p className="empty-state">{institutionalChartLayout.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Workspace Score" value={formatNumber(institutionalChartWorkspace.institutionalChartWorkspaceSummary.averageWorkspaceScore)} />
+            <MetricCard label="Chart Panes" value={formatNumber(institutionalChartWorkspace.institutionalChartWorkspaceSummary.totalChartPanes)} />
+            <MetricCard label="Layout Score" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.averageLayoutScore)} />
+            <MetricCard label="Layout Cells" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.totalLayoutCells)} />
+            <MetricCard label="Sync Groups" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.synchronizedGroups)} />
+            <MetricCard label="Live Orders" value={institutionalChartLayout.liveOrders ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Chart Workspace Architecture</h3>
+              <p className="empty-state">{institutionalChartWorkspace.institutionalChartWorkspaces[0]?.workspaceName} / {institutionalChartWorkspace.institutionalChartWorkspaces[0]?.supportedTimeframes.join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Multi-Chart Layout</h3>
+              <p className="empty-state">{institutionalChartLayout.institutionalChartLayouts[0]?.layoutTemplate} layout with {formatNumber(institutionalChartLayout.institutionalChartLayouts[0]?.layoutCells.length)} chart cells.</p>
+            </section>
+            <section>
+              <h3>Timeframe Synchronization</h3>
+              <p className="empty-state">{institutionalChartLayout.institutionalChartLayouts[0]?.timeframeSynchronizationSummary.primaryTimeframe} primary timeframe / {institutionalChartLayout.institutionalChartLayouts[0]?.timeframeSynchronizationSummary.compatible ? 'compatible' : 'needs review'}.</p>
+            </section>
+            <section>
+              <h3>Drawing Tools</h3>
+              <p className="empty-state">{institutionalChartWorkspace.institutionalChartWorkspaces[0]?.drawingToolFoundation.tools.join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Indicator Framework</h3>
+              <p className="empty-state">{institutionalChartWorkspace.institutionalChartWorkspaces[0]?.indicatorFramework.indicators.join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Chart State Persistence</h3>
+              <p className="empty-state">{institutionalChartWorkspace.institutionalChartWorkspaces[0]?.statePersistenceSummary.chartStateVersion} / tenant-scoped PostgreSQL-ready state model.</p>
+            </section>
+          </div>
+          <span className="event-line">{institutionalChartWorkspace.eventType}</span>
+          <span className="event-line">{institutionalChartLayout.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
