@@ -179,6 +179,8 @@ import { evaluateComplianceStrategicStakeholderAlignment } from '../lib/system/c
 import { prepareComplianceStrategicCommunicationPlan } from '../lib/system/complianceStrategicCommunicationPlanEngine.js'
 import { evaluateComplianceStrategicFeedbackIntake } from '../lib/system/complianceStrategicFeedbackIntakeEngine.js'
 import { reviewComplianceStrategicCommunicationEffectiveness } from '../lib/system/complianceStrategicCommunicationEffectivenessEngine.js'
+import { prioritizeComplianceStrategicRefinementBacklog } from '../lib/system/complianceStrategicRefinementBacklogEngine.js'
+import { evaluateComplianceStrategicAdaptationReadiness } from '../lib/system/complianceStrategicAdaptationReadinessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2203,6 +2205,8 @@ function App() {
       'compliance-strategic-communication-plans',
       'compliance-strategic-feedback-intake',
       'compliance-strategic-communication-effectiveness',
+      'compliance-strategic-refinement-backlog',
+      'compliance-strategic-adaptation-readiness',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3694,6 +3698,28 @@ function App() {
     complianceStrategicKpis,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceStrategicRefinementBacklog = useMemo(() => prioritizeComplianceStrategicRefinementBacklog({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicFeedbackIntake,
+    complianceStrategicCommunicationEffectiveness,
+    operatorActionCenter,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:40:00.000Z' }), [
+    complianceStrategicCommunicationEffectiveness,
+    complianceStrategicFeedbackIntake,
+    operatorActionCenter,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceStrategicAdaptationReadiness = useMemo(() => evaluateComplianceStrategicAdaptationReadiness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicRefinementBacklog,
+    complianceStrategicCommunicationEffectiveness,
+    complianceExecutiveStrategyPlan,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:41:00.000Z' }), [
+    complianceExecutiveStrategyPlan,
+    complianceStrategicCommunicationEffectiveness,
+    complianceStrategicRefinementBacklog,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3765,6 +3791,7 @@ function App() {
     { id: 'compliance-strategic-execution', label: 'Strategic Execute', status: complianceStrategicKpis.strategicKpiStatus },
     { id: 'compliance-strategic-alignment', label: 'Strategic Align', status: complianceStrategicCommunicationPlan.strategicCommunicationStatus },
     { id: 'compliance-strategic-feedback', label: 'Strategic Feedback', status: complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus },
+    { id: 'compliance-strategic-adaptation', label: 'Strategic Adapt', status: complianceStrategicAdaptationReadiness.strategicAdaptationStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -10078,6 +10105,43 @@ function App() {
           </div>
           <span className="event-line">{complianceStrategicFeedbackIntake.eventType}</span>
           <span className="event-line">{complianceStrategicCommunicationEffectiveness.eventType}</span>
+        </article>
+
+        <article id="compliance-strategic-adaptation" className={`panel compliance-strategic-adaptation-panel ${complianceStrategicAdaptationReadiness.strategicAdaptationStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Strategic Adaptation</h2>
+            <span>Strategic refinement backlog and adaptation readiness for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Strategic Adaptation Status</span>
+              <strong>{complianceStrategicAdaptationReadiness.strategicAdaptationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceStrategicAdaptationReadiness.strategicAdaptationStatus === 'blocked' ? 'danger' : complianceStrategicAdaptationReadiness.strategicAdaptationStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceStrategicAdaptationReadiness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Refinement Score" value={formatNumber(complianceStrategicRefinementBacklog.strategicRefinementSummary.averageRefinementScore)} />
+            <MetricCard label="Refinement Watch Items" value={formatNumber(complianceStrategicRefinementBacklog.strategicRefinementSummary.watch)} />
+            <MetricCard label="Adaptation Score" value={formatNumber(complianceStrategicAdaptationReadiness.strategicAdaptationSummary.averageAdaptationScore)} />
+            <MetricCard label="Adaptation Cautions" value={formatNumber(complianceStrategicAdaptationReadiness.strategicAdaptationSummary.caution)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Strategic Refinement Backlog Design</h3>
+              <p className="empty-state">Strategic refinement backlog prioritizes feedback, effectiveness, and operator action context without refinement or assignment automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Adaptation Readiness Design</h3>
+              <p className="empty-state">Strategic adaptation readiness reviews refinement, communication effectiveness, and executive strategy context without strategy change automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Adaptation Boundary</h3>
+              <p className="empty-state">No automatic refinement, adaptation, strategy changes, approvals, assignments, remediation, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceStrategicRefinementBacklog.eventType}</span>
+          <span className="event-line">{complianceStrategicAdaptationReadiness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
