@@ -171,6 +171,8 @@ import { reviewComplianceImprovementOutcomes } from '../lib/system/complianceImp
 import { summarizeComplianceBenefitRealization } from '../lib/system/complianceBenefitRealizationEngine.js'
 import { evaluateComplianceContinuousImprovementProgram } from '../lib/system/complianceContinuousImprovementProgramEngine.js'
 import { planComplianceOptimizationRoadmap } from '../lib/system/complianceOptimizationRoadmapEngine.js'
+import { evaluateComplianceStrategicInitiativePortfolio } from '../lib/system/complianceStrategicInitiativePortfolioEngine.js'
+import { prepareComplianceExecutiveStrategyPlan } from '../lib/system/complianceExecutiveStrategyPlanEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2187,6 +2189,8 @@ function App() {
       'compliance-benefit-realizations',
       'compliance-continuous-improvement-programs',
       'compliance-optimization-roadmaps',
+      'compliance-strategic-initiative-portfolios',
+      'compliance-executive-strategy-plans',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3590,6 +3594,28 @@ function App() {
     complianceResourcePlanning,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceStrategicInitiativePortfolio = useMemo(() => evaluateComplianceStrategicInitiativePortfolio({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceOptimizationRoadmap,
+    complianceContinuousImprovementProgram,
+    complianceResourcePlanning,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:32:00.000Z' }), [
+    complianceContinuousImprovementProgram,
+    complianceOptimizationRoadmap,
+    complianceResourcePlanning,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceExecutiveStrategyPlan = useMemo(() => prepareComplianceExecutiveStrategyPlan({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicInitiativePortfolio,
+    complianceExecutiveDashboard,
+    complianceGovernanceReadout,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:33:00.000Z' }), [
+    complianceExecutiveDashboard,
+    complianceGovernanceReadout,
+    complianceStrategicInitiativePortfolio,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3657,6 +3683,7 @@ function App() {
     { id: 'compliance-improvement-monitoring', label: 'Improvement Monitor', status: complianceAdoptionMonitoring.adoptionMonitoringStatus },
     { id: 'compliance-outcome-benefits', label: 'Outcome Benefits', status: complianceBenefitRealization.benefitRealizationStatus },
     { id: 'compliance-continuous-optimization', label: 'Continuous Optimize', status: complianceOptimizationRoadmap.optimizationRoadmapStatus },
+    { id: 'compliance-strategic-planning', label: 'Strategic Plan', status: complianceExecutiveStrategyPlan.executiveStrategyStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9822,6 +9849,43 @@ function App() {
           </div>
           <span className="event-line">{complianceContinuousImprovementProgram.eventType}</span>
           <span className="event-line">{complianceOptimizationRoadmap.eventType}</span>
+        </article>
+
+        <article id="compliance-strategic-planning" className={`panel compliance-strategic-planning-panel ${complianceExecutiveStrategyPlan.executiveStrategyStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Strategic Planning</h2>
+            <span>Strategic initiative portfolio and executive strategy plan for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Executive Strategy Status</span>
+              <strong>{complianceExecutiveStrategyPlan.executiveStrategyStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceExecutiveStrategyPlan.executiveStrategyStatus === 'blocked' ? 'danger' : complianceExecutiveStrategyPlan.executiveStrategyStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceExecutiveStrategyPlan.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Initiative Score" value={formatNumber(complianceStrategicInitiativePortfolio.initiativePortfolioSummary.averageInitiativeScore)} />
+            <MetricCard label="Initiatives Needing Review" value={formatNumber(complianceStrategicInitiativePortfolio.initiativePortfolioSummary.needsReview)} />
+            <MetricCard label="Strategy Score" value={formatNumber(complianceExecutiveStrategyPlan.executiveStrategySummary.averageStrategyScore)} />
+            <MetricCard label="Blocked Strategy Plans" value={formatNumber(complianceExecutiveStrategyPlan.executiveStrategySummary.blocked)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Strategic Initiative Portfolio Design</h3>
+              <p className="empty-state">Strategic initiative portfolios package optimization roadmap, continuous improvement, and resource planning context without approvals, funding, or assignments.</p>
+            </section>
+            <section>
+              <h3>Executive Strategy Plan Design</h3>
+              <p className="empty-state">Executive strategy plans summarize strategic initiative, dashboard, and governance readout context without executive approval or distribution automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Planning Boundary</h3>
+              <p className="empty-state">No automatic initiative approval, funding action, executive approval, distribution, assignments, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceStrategicInitiativePortfolio.eventType}</span>
+          <span className="event-line">{complianceExecutiveStrategyPlan.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
