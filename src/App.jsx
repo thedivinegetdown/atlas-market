@@ -50,6 +50,9 @@ import { evaluateMarketDataStreamingOperations } from '../lib/market/marketDataS
 import { evaluateMarketDataWebSocketAdapter } from '../lib/market/marketDataWebSocketAdapterEngine.js'
 import { createMockWebSocketProviderAdapter, createReferenceWebSocketProviderAdapter } from '../lib/market/marketDataStreamingProviderAdapters.js'
 import { routeMarketDataStreamingEvents } from '../lib/market/marketDataStreamingEventRouter.js'
+import { evaluateRealtimeScanner } from '../lib/scanners/realTimeScannerOrchestrator.js'
+import { evaluateRealtimeSignals } from '../lib/signals/realTimeSignalEvaluationEngine.js'
+import { createRealtimeAlerts } from '../lib/alerts/realTimeAlertPipeline.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2263,6 +2266,11 @@ function App() {
       'market-data-provider-capabilities',
       'market-data-provider-adapter-health',
       'market-data-streaming-routing-health',
+      'realtime-scanner-status',
+      'realtime-signal-evaluations',
+      'realtime-alerts',
+      'realtime-alert-status-update',
+      'realtime-scanner-alert-operations-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4067,6 +4075,49 @@ function App() {
     marketDataWebSocketAdapter,
     mockWebSocketProviderAdapter,
   ])
+  const realtimeScanner = useMemo(() => evaluateRealtimeScanner({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataStreamingRouting,
+    scannerSubscriptions: [{
+      id: 'realtime-momentum-scanner',
+      name: 'Real-Time Momentum Scanner',
+      assetType: 'etf',
+      symbols: ['SPY'],
+      criteria: [{ type: 'price_above', threshold: 1 }, { type: 'risk_acceptable' }],
+    }],
+    debouncePolicy: { maxEventsPerEvaluation: 100, debounceMs: 250, throttleMs: 1000 },
+  }, { emitEvent: false, timestamp: '2026-07-13T10:23:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataStreamingRouting,
+  ])
+  const realtimeSignals = useMemo(() => evaluateRealtimeSignals({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    realtimeScanner,
+    researchSignalScore,
+    marketRegimeClassification,
+    portfolioRisk: risk,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+    multiTimeframeResearchContext,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:24:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketRegimeClassification,
+    multiTimeframeResearchContext,
+    realtimeScanner,
+    researchSignalScore,
+    risk,
+    strategyRuleEvaluation,
+    strategySignalComposition,
+  ])
+  const realtimeAlerts = useMemo(() => createRealtimeAlerts({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    realtimeSignals,
+    notificationPreferences,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:25:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    notificationPreferences,
+    realtimeSignals,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4381,6 +4432,48 @@ function App() {
           </div>
           <span className="event-line">{marketDataWebSocketAdapter.eventType}</span>
           <span className="event-line">{marketDataStreamingRouting.eventType}</span>
+        </article>
+
+        <article id="realtime-scanner-alerts" className={`panel realtime-scanner-alerts-panel ${realtimeScanner.scannerStatus}`}>
+          <div className="panel-heading">
+            <h2>Real-Time Scanner &amp; Alerts</h2>
+            <span>Routed streaming events feed scanner candidates, signal evaluation, and operator alert creation without live execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Real-Time Scanner Status</span>
+              <strong>{realtimeScanner.scannerStatus}</strong>
+            </div>
+            <span className={`decision-pill ${realtimeSignals.signalEvaluationStatus === 'qualified' ? 'positive' : realtimeSignals.signalEvaluationStatus === 'rejected' ? 'danger' : 'warning'}`}>{realtimeSignals.signalEvaluationStatus}</span>
+          </div>
+          <p className="empty-state">{realtimeScanner.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Subscriptions" value={formatNumber(realtimeScanner.realtimeScannerSummary.subscriptions)} />
+            <MetricCard label="Evaluated Events" value={formatNumber(realtimeScanner.realtimeScannerSummary.evaluatedEvents)} />
+            <MetricCard label="Candidates" value={formatNumber(realtimeScanner.realtimeScannerSummary.candidates)} />
+            <MetricCard label="Stale Blocked" value={formatNumber(realtimeScanner.realtimeScannerSummary.staleBlocked)} />
+            <MetricCard label="Qualified Signals" value={formatNumber(realtimeSignals.realtimeSignalSummary.qualified)} />
+            <MetricCard label="Watchlist Signals" value={formatNumber(realtimeSignals.realtimeSignalSummary.watchlist)} />
+            <MetricCard label="Alerts Created" value={formatNumber(realtimeAlerts.realtimeAlertSummary.total)} />
+            <MetricCard label="Cooldown" value={`${formatNumber(realtimeAlerts.alertPolicy.cooldownMs / 1000)}s`} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Real-Time Scanner Orchestrator</h3>
+              <p className="empty-state">{formatNumber(realtimeScanner.scannerDebounceThrottlePolicy.maxEventsPerEvaluation)} max events / {formatNumber(realtimeScanner.scannerDebounceThrottlePolicy.debounceMs)}ms debounce / duplicate suppression enabled.</p>
+            </section>
+            <section>
+              <h3>Real-Time Signal Evaluation</h3>
+              <p className="empty-state">{realtimeSignals.summary}</p>
+            </section>
+            <section>
+              <h3>Real-Time Alert Pipeline</h3>
+              <p className="empty-state">{realtimeAlerts.summary}</p>
+            </section>
+          </div>
+          <span className="event-line">{realtimeScanner.eventType}</span>
+          <span className="event-line">{realtimeSignals.eventType}</span>
+          <span className="event-line">{realtimeAlerts.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
