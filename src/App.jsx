@@ -183,6 +183,8 @@ import { prioritizeComplianceStrategicRefinementBacklog } from '../lib/system/co
 import { evaluateComplianceStrategicAdaptationReadiness } from '../lib/system/complianceStrategicAdaptationReadinessEngine.js'
 import { reviewComplianceStrategicOutcomes } from '../lib/system/complianceStrategicOutcomeReviewEngine.js'
 import { captureComplianceStrategicLearningSummary } from '../lib/system/complianceStrategicLearningSummaryEngine.js'
+import { updateComplianceStrategicKnowledgeBase } from '../lib/system/complianceStrategicKnowledgeBaseEngine.js'
+import { archiveComplianceStrategicDecisions } from '../lib/system/complianceStrategicDecisionArchiveEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2211,6 +2213,8 @@ function App() {
       'compliance-strategic-adaptation-readiness',
       'compliance-strategic-outcome-reviews',
       'compliance-strategic-learning-summaries',
+      'compliance-strategic-knowledge-base',
+      'compliance-strategic-decision-archives',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3746,6 +3750,28 @@ function App() {
     complianceStrategicOutcomeReview,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceStrategicKnowledgeBase = useMemo(() => updateComplianceStrategicKnowledgeBase({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicLearningSummary,
+    complianceStrategicOutcomeReview,
+    complianceLessonsLearned,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:44:00.000Z' }), [
+    complianceLessonsLearned,
+    complianceStrategicLearningSummary,
+    complianceStrategicOutcomeReview,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceStrategicDecisionArchive = useMemo(() => archiveComplianceStrategicDecisions({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicKnowledgeBase,
+    complianceGovernanceDecisionLog,
+    complianceExecutiveStrategyPlan,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:45:00.000Z' }), [
+    complianceExecutiveStrategyPlan,
+    complianceGovernanceDecisionLog,
+    complianceStrategicKnowledgeBase,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3819,6 +3845,7 @@ function App() {
     { id: 'compliance-strategic-feedback', label: 'Strategic Feedback', status: complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus },
     { id: 'compliance-strategic-adaptation', label: 'Strategic Adapt', status: complianceStrategicAdaptationReadiness.strategicAdaptationStatus },
     { id: 'compliance-strategic-learning', label: 'Strategic Learn', status: complianceStrategicLearningSummary.strategicLearningStatus },
+    { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -10206,6 +10233,43 @@ function App() {
           </div>
           <span className="event-line">{complianceStrategicOutcomeReview.eventType}</span>
           <span className="event-line">{complianceStrategicLearningSummary.eventType}</span>
+        </article>
+
+        <article id="compliance-strategic-archive" className={`panel compliance-strategic-archive-panel ${complianceStrategicDecisionArchive.strategicDecisionArchiveStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Strategic Archive</h2>
+            <span>Strategic knowledge base and decision archive for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Strategic Archive Status</span>
+              <strong>{complianceStrategicDecisionArchive.strategicDecisionArchiveStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceStrategicDecisionArchive.strategicDecisionArchiveStatus === 'blocked' ? 'danger' : complianceStrategicDecisionArchive.strategicDecisionArchiveStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceStrategicDecisionArchive.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Knowledge Score" value={formatNumber(complianceStrategicKnowledgeBase.strategicKnowledgeSummary.averageKnowledgeScore)} />
+            <MetricCard label="Knowledge Reviews" value={formatNumber(complianceStrategicKnowledgeBase.strategicKnowledgeSummary.needsReview)} />
+            <MetricCard label="Archive Score" value={formatNumber(complianceStrategicDecisionArchive.strategicDecisionArchiveSummary.averageArchiveScore)} />
+            <MetricCard label="Archive Reviews" value={formatNumber(complianceStrategicDecisionArchive.strategicDecisionArchiveSummary.needsReview)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Strategic Knowledge Base Design</h3>
+              <p className="empty-state">Strategic knowledge base updates combine learning, outcome, and lessons-learned context without knowledge claims or policy update automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Decision Archive Design</h3>
+              <p className="empty-state">Strategic decision archives preserve knowledge, governance decision, and strategy context without decision approval or distribution automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Archive Boundary</h3>
+              <p className="empty-state">No automatic knowledge claims, policy updates, strategy changes, decision approvals, distribution, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceStrategicKnowledgeBase.eventType}</span>
+          <span className="event-line">{complianceStrategicDecisionArchive.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
