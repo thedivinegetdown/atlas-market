@@ -169,6 +169,8 @@ import { prioritizeComplianceImprovementBacklog } from '../lib/system/compliance
 import { evaluateComplianceAdoptionMonitoring } from '../lib/system/complianceAdoptionMonitoringEngine.js'
 import { reviewComplianceImprovementOutcomes } from '../lib/system/complianceImprovementOutcomeReviewEngine.js'
 import { summarizeComplianceBenefitRealization } from '../lib/system/complianceBenefitRealizationEngine.js'
+import { evaluateComplianceContinuousImprovementProgram } from '../lib/system/complianceContinuousImprovementProgramEngine.js'
+import { planComplianceOptimizationRoadmap } from '../lib/system/complianceOptimizationRoadmapEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2183,6 +2185,8 @@ function App() {
       'compliance-adoption-monitoring',
       'compliance-improvement-outcome-reviews',
       'compliance-benefit-realizations',
+      'compliance-continuous-improvement-programs',
+      'compliance-optimization-roadmaps',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3564,6 +3568,28 @@ function App() {
     complianceMaturityAssessment,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceContinuousImprovementProgram = useMemo(() => evaluateComplianceContinuousImprovementProgram({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceBenefitRealization,
+    complianceImprovementOutcomeReview,
+    complianceProgramHealth,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:30:00.000Z' }), [
+    complianceBenefitRealization,
+    complianceImprovementOutcomeReview,
+    complianceProgramHealth,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceOptimizationRoadmap = useMemo(() => planComplianceOptimizationRoadmap({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceContinuousImprovementProgram,
+    complianceBenchmarkComparison,
+    complianceResourcePlanning,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:31:00.000Z' }), [
+    complianceBenchmarkComparison,
+    complianceContinuousImprovementProgram,
+    complianceResourcePlanning,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3630,6 +3656,7 @@ function App() {
     { id: 'compliance-improvement-adoption', label: 'Improvement Adoption', status: complianceAdoptionReadiness.adoptionReadinessStatus },
     { id: 'compliance-improvement-monitoring', label: 'Improvement Monitor', status: complianceAdoptionMonitoring.adoptionMonitoringStatus },
     { id: 'compliance-outcome-benefits', label: 'Outcome Benefits', status: complianceBenefitRealization.benefitRealizationStatus },
+    { id: 'compliance-continuous-optimization', label: 'Continuous Optimize', status: complianceOptimizationRoadmap.optimizationRoadmapStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9758,6 +9785,43 @@ function App() {
           </div>
           <span className="event-line">{complianceImprovementOutcomeReview.eventType}</span>
           <span className="event-line">{complianceBenefitRealization.eventType}</span>
+        </article>
+
+        <article id="compliance-continuous-optimization" className={`panel compliance-continuous-optimization-panel ${complianceOptimizationRoadmap.optimizationRoadmapStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Continuous Optimization</h2>
+            <span>Continuous improvement program evaluation and optimization roadmap planning for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Optimization Roadmap Status</span>
+              <strong>{complianceOptimizationRoadmap.optimizationRoadmapStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceOptimizationRoadmap.optimizationRoadmapStatus === 'blocked' ? 'danger' : complianceOptimizationRoadmap.optimizationRoadmapStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceOptimizationRoadmap.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Program Score" value={formatNumber(complianceContinuousImprovementProgram.continuousImprovementSummary.averageProgramScore)} />
+            <MetricCard label="Programs Needing Review" value={formatNumber(complianceContinuousImprovementProgram.continuousImprovementSummary.caution)} />
+            <MetricCard label="Roadmap Score" value={formatNumber(complianceOptimizationRoadmap.optimizationRoadmapSummary.averageRoadmapScore)} />
+            <MetricCard label="Blocked Roadmaps" value={formatNumber(complianceOptimizationRoadmap.optimizationRoadmapSummary.blocked)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Continuous Improvement Program Design</h3>
+              <p className="empty-state">Continuous improvement evaluates benefit realization, outcome review, and program health without program changes or remediation automation.</p>
+            </section>
+            <section>
+              <h3>Optimization Roadmap Design</h3>
+              <p className="empty-state">Optimization roadmaps combine continuous improvement, benchmark, and resource planning context as recommendations only.</p>
+            </section>
+            <section>
+              <h3>Continuous Optimization Boundary</h3>
+              <p className="empty-state">No automatic optimization, program changes, assignments, remediation, approvals, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceContinuousImprovementProgram.eventType}</span>
+          <span className="event-line">{complianceOptimizationRoadmap.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
