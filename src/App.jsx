@@ -181,6 +181,8 @@ import { evaluateComplianceStrategicFeedbackIntake } from '../lib/system/complia
 import { reviewComplianceStrategicCommunicationEffectiveness } from '../lib/system/complianceStrategicCommunicationEffectivenessEngine.js'
 import { prioritizeComplianceStrategicRefinementBacklog } from '../lib/system/complianceStrategicRefinementBacklogEngine.js'
 import { evaluateComplianceStrategicAdaptationReadiness } from '../lib/system/complianceStrategicAdaptationReadinessEngine.js'
+import { reviewComplianceStrategicOutcomes } from '../lib/system/complianceStrategicOutcomeReviewEngine.js'
+import { captureComplianceStrategicLearningSummary } from '../lib/system/complianceStrategicLearningSummaryEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2207,6 +2209,8 @@ function App() {
       'compliance-strategic-communication-effectiveness',
       'compliance-strategic-refinement-backlog',
       'compliance-strategic-adaptation-readiness',
+      'compliance-strategic-outcome-reviews',
+      'compliance-strategic-learning-summaries',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3720,6 +3724,28 @@ function App() {
     complianceStrategicRefinementBacklog,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceStrategicOutcomeReview = useMemo(() => reviewComplianceStrategicOutcomes({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicAdaptationReadiness,
+    complianceStrategicRefinementBacklog,
+    complianceStrategicCommunicationEffectiveness,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:42:00.000Z' }), [
+    complianceStrategicAdaptationReadiness,
+    complianceStrategicCommunicationEffectiveness,
+    complianceStrategicRefinementBacklog,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceStrategicLearningSummary = useMemo(() => captureComplianceStrategicLearningSummary({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicOutcomeReview,
+    complianceStrategicAdaptationReadiness,
+    complianceStrategicFeedbackIntake,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:43:00.000Z' }), [
+    complianceStrategicAdaptationReadiness,
+    complianceStrategicFeedbackIntake,
+    complianceStrategicOutcomeReview,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3792,6 +3818,7 @@ function App() {
     { id: 'compliance-strategic-alignment', label: 'Strategic Align', status: complianceStrategicCommunicationPlan.strategicCommunicationStatus },
     { id: 'compliance-strategic-feedback', label: 'Strategic Feedback', status: complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus },
     { id: 'compliance-strategic-adaptation', label: 'Strategic Adapt', status: complianceStrategicAdaptationReadiness.strategicAdaptationStatus },
+    { id: 'compliance-strategic-learning', label: 'Strategic Learn', status: complianceStrategicLearningSummary.strategicLearningStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -10142,6 +10169,43 @@ function App() {
           </div>
           <span className="event-line">{complianceStrategicRefinementBacklog.eventType}</span>
           <span className="event-line">{complianceStrategicAdaptationReadiness.eventType}</span>
+        </article>
+
+        <article id="compliance-strategic-learning" className={`panel compliance-strategic-learning-panel ${complianceStrategicLearningSummary.strategicLearningStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Strategic Learning</h2>
+            <span>Strategic outcome review and learning summary for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Strategic Learning Status</span>
+              <strong>{complianceStrategicLearningSummary.strategicLearningStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceStrategicLearningSummary.strategicLearningStatus === 'blocked' ? 'danger' : complianceStrategicLearningSummary.strategicLearningStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceStrategicLearningSummary.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Outcome Score" value={formatNumber(complianceStrategicOutcomeReview.strategicOutcomeSummary.averageOutcomeScore)} />
+            <MetricCard label="Outcome Reviews" value={formatNumber(complianceStrategicOutcomeReview.strategicOutcomeSummary.needsReview)} />
+            <MetricCard label="Learning Score" value={formatNumber(complianceStrategicLearningSummary.strategicLearningSummary.averageLearningScore)} />
+            <MetricCard label="Learning Reviews" value={formatNumber(complianceStrategicLearningSummary.strategicLearningSummary.needsReview)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Strategic Outcome Review Design</h3>
+              <p className="empty-state">Strategic outcome review combines adaptation, refinement, and communication effectiveness context without outcome claims or strategy changes.</p>
+            </section>
+            <section>
+              <h3>Strategic Learning Summary Design</h3>
+              <p className="empty-state">Strategic learning summaries capture outcome, adaptation, and feedback context without learning claims or policy update automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Learning Boundary</h3>
+              <p className="empty-state">No automatic outcome claims, learning claims, policy updates, strategy changes, approvals, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceStrategicOutcomeReview.eventType}</span>
+          <span className="event-line">{complianceStrategicLearningSummary.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
