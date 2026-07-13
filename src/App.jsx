@@ -177,6 +177,8 @@ import { planComplianceStrategicMilestones } from '../lib/system/complianceStrat
 import { evaluateComplianceStrategicKpis } from '../lib/system/complianceStrategicKpiTrackerEngine.js'
 import { evaluateComplianceStrategicStakeholderAlignment } from '../lib/system/complianceStrategicStakeholderAlignmentEngine.js'
 import { prepareComplianceStrategicCommunicationPlan } from '../lib/system/complianceStrategicCommunicationPlanEngine.js'
+import { evaluateComplianceStrategicFeedbackIntake } from '../lib/system/complianceStrategicFeedbackIntakeEngine.js'
+import { reviewComplianceStrategicCommunicationEffectiveness } from '../lib/system/complianceStrategicCommunicationEffectivenessEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2199,6 +2201,8 @@ function App() {
       'compliance-strategic-kpi-evaluations',
       'compliance-strategic-stakeholder-alignments',
       'compliance-strategic-communication-plans',
+      'compliance-strategic-feedback-intake',
+      'compliance-strategic-communication-effectiveness',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3668,6 +3672,28 @@ function App() {
     complianceStrategicStakeholderAlignment,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceStrategicFeedbackIntake = useMemo(() => evaluateComplianceStrategicFeedbackIntake({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicCommunicationPlan,
+    complianceStrategicStakeholderAlignment,
+    operatorActionCenter,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:38:00.000Z' }), [
+    complianceStrategicCommunicationPlan,
+    complianceStrategicStakeholderAlignment,
+    operatorActionCenter,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceStrategicCommunicationEffectiveness = useMemo(() => reviewComplianceStrategicCommunicationEffectiveness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicFeedbackIntake,
+    complianceStrategicCommunicationPlan,
+    complianceStrategicKpis,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:39:00.000Z' }), [
+    complianceStrategicCommunicationPlan,
+    complianceStrategicFeedbackIntake,
+    complianceStrategicKpis,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3738,6 +3764,7 @@ function App() {
     { id: 'compliance-strategic-planning', label: 'Strategic Plan', status: complianceExecutiveStrategyPlan.executiveStrategyStatus },
     { id: 'compliance-strategic-execution', label: 'Strategic Execute', status: complianceStrategicKpis.strategicKpiStatus },
     { id: 'compliance-strategic-alignment', label: 'Strategic Align', status: complianceStrategicCommunicationPlan.strategicCommunicationStatus },
+    { id: 'compliance-strategic-feedback', label: 'Strategic Feedback', status: complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -10014,6 +10041,43 @@ function App() {
           </div>
           <span className="event-line">{complianceStrategicStakeholderAlignment.eventType}</span>
           <span className="event-line">{complianceStrategicCommunicationPlan.eventType}</span>
+        </article>
+
+        <article id="compliance-strategic-feedback" className={`panel compliance-strategic-feedback-panel ${complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Strategic Feedback</h2>
+            <span>Strategic feedback intake and communication effectiveness review for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Communication Effectiveness Status</span>
+              <strong>{complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus === 'blocked' ? 'danger' : complianceStrategicCommunicationEffectiveness.communicationEffectivenessStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceStrategicCommunicationEffectiveness.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Feedback Score" value={formatNumber(complianceStrategicFeedbackIntake.strategicFeedbackSummary.averageFeedbackScore)} />
+            <MetricCard label="Feedback Reviews" value={formatNumber(complianceStrategicFeedbackIntake.strategicFeedbackSummary.needsReview)} />
+            <MetricCard label="Effectiveness Score" value={formatNumber(complianceStrategicCommunicationEffectiveness.communicationEffectivenessSummary.averageEffectivenessScore)} />
+            <MetricCard label="Effectiveness Reviews" value={formatNumber(complianceStrategicCommunicationEffectiveness.communicationEffectivenessSummary.needsReview)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Strategic Feedback Intake Design</h3>
+              <p className="empty-state">Strategic feedback intake combines communication, stakeholder alignment, and operator action context without feedback collection or escalation automation.</p>
+            </section>
+            <section>
+              <h3>Communication Effectiveness Design</h3>
+              <p className="empty-state">Communication effectiveness reviews feedback, communication planning, and KPI context without effectiveness claims or remediation automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Feedback Boundary</h3>
+              <p className="empty-state">No automatic feedback collection, escalation, effectiveness claims, remediation, distribution, assignments, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceStrategicFeedbackIntake.eventType}</span>
+          <span className="event-line">{complianceStrategicCommunicationEffectiveness.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
