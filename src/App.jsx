@@ -185,6 +185,8 @@ import { reviewComplianceStrategicOutcomes } from '../lib/system/complianceStrat
 import { captureComplianceStrategicLearningSummary } from '../lib/system/complianceStrategicLearningSummaryEngine.js'
 import { updateComplianceStrategicKnowledgeBase } from '../lib/system/complianceStrategicKnowledgeBaseEngine.js'
 import { archiveComplianceStrategicDecisions } from '../lib/system/complianceStrategicDecisionArchiveEngine.js'
+import { evaluateAiDecisionGovernanceReadiness } from '../lib/system/aiDecisionGovernanceReadinessEngine.js'
+import { prepareAiDecisionExplainability } from '../lib/system/aiDecisionExplainabilityEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2215,6 +2217,8 @@ function App() {
       'compliance-strategic-learning-summaries',
       'compliance-strategic-knowledge-base',
       'compliance-strategic-decision-archives',
+      'ai-decision-governance-readiness',
+      'ai-decision-explainability-records',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3772,6 +3776,32 @@ function App() {
     complianceStrategicKnowledgeBase,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const aiDecisionGovernanceReadiness = useMemo(() => evaluateAiDecisionGovernanceReadiness({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    aiDecision,
+    researchEnhancedDecision,
+    enterpriseReleaseControl,
+    enterpriseAuditTrail,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:46:00.000Z' }), [
+    aiDecision,
+    enterpriseAuditTrail,
+    enterpriseReleaseControl,
+    inAppNotificationCenter.tenantAndUserScope,
+    researchEnhancedDecision,
+  ])
+  const aiDecisionExplainability = useMemo(() => prepareAiDecisionExplainability({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    aiDecisionGovernanceReadiness,
+    aiDecision,
+    researchEnhancedDecision,
+    complianceStrategicKnowledgeBase,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:47:00.000Z' }), [
+    aiDecision,
+    aiDecisionGovernanceReadiness,
+    complianceStrategicKnowledgeBase,
+    inAppNotificationCenter.tenantAndUserScope,
+    researchEnhancedDecision,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3846,6 +3876,7 @@ function App() {
     { id: 'compliance-strategic-adaptation', label: 'Strategic Adapt', status: complianceStrategicAdaptationReadiness.strategicAdaptationStatus },
     { id: 'compliance-strategic-learning', label: 'Strategic Learn', status: complianceStrategicLearningSummary.strategicLearningStatus },
     { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
+    { id: 'ai-decision-governance', label: 'AI Governance', status: aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4215,6 +4246,45 @@ function App() {
             <p className="empty-state">Research stack confirms the paper decision context.</p>
           )}
           <span className="event-line">{researchEnhancedDecision.eventType}</span>
+        </article>
+
+        <article id="ai-decision-governance" className={`panel ai-decision-governance-panel ${aiDecisionExplainability.aiDecisionExplainabilityStatus}`}>
+          <div className="panel-heading">
+            <h2>AI Decision Governance</h2>
+            <span>Governance readiness and explainability package for paper-only AI decision support.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>AI Governance Status</span>
+              <strong>{aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus}</strong>
+            </div>
+            <span className={`decision-pill ${aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus === 'blocked' ? 'danger' : aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus === 'caution' ? 'warning' : 'positive'}`}>human review</span>
+          </div>
+          <p className="empty-state">{aiDecisionExplainability.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Governance Score" value={formatNumber(aiDecisionGovernanceReadiness.aiDecisionGovernanceSummary.averageGovernanceScore)} />
+            <MetricCard label="Governance Cautions" value={formatNumber(aiDecisionGovernanceReadiness.aiDecisionGovernanceSummary.caution)} />
+            <MetricCard label="Explainability Score" value={formatNumber(aiDecisionExplainability.aiDecisionExplainabilitySummary.averageExplainabilityScore)} />
+            <MetricCard label="Explainability Reviews" value={formatNumber(aiDecisionExplainability.aiDecisionExplainabilitySummary.needsReview)} />
+            <MetricCard label="AI Decision" value={aiDecision.finalDecision} />
+            <MetricCard label="Research Decision" value={researchEnhancedDecision.finalResearchAwareDecisionSummary.finalDecision} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>AI Governance Readiness Design</h3>
+              <p className="empty-state">AI governance readiness references the orchestrated decision, research-enhanced decision, release control, and audit trail without model approval or policy enforcement automation.</p>
+            </section>
+            <section>
+              <h3>AI Explainability Design</h3>
+              <p className="empty-state">AI explainability packages governance, decision rationale, research influence, and strategic knowledge context without explanation claims or decision overrides.</p>
+            </section>
+            <section>
+              <h3>AI Governance Boundary</h3>
+              <p className="empty-state">No automatic model approval, policy enforcement, decision override, explanation claims, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{aiDecisionGovernanceReadiness.eventType}</span>
+          <span className="event-line">{aiDecisionExplainability.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
