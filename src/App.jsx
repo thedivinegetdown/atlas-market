@@ -195,6 +195,8 @@ import { prepareAiTradingCopilotConversation } from '../lib/system/aiTradingCopi
 import { prepareAiTradingCopilotWorkflowAssistance } from '../lib/system/aiTradingCopilotWorkflowAssistanceEngine.js'
 import { prepareInstitutionalChartWorkspace } from '../lib/system/institutionalChartWorkspaceEngine.js'
 import { synchronizeInstitutionalChartLayout } from '../lib/system/institutionalChartLayoutEngine.js'
+import { prepareInstitutionalChartDrawingInteraction } from '../lib/system/institutionalChartDrawingInteractionEngine.js'
+import { prepareInstitutionalChartIndicatorTemplate } from '../lib/system/institutionalChartIndicatorTemplateEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2235,6 +2237,8 @@ function App() {
       'ai-trading-copilot-workflow-assistance',
       'institutional-chart-workspaces',
       'institutional-chart-layouts',
+      'institutional-chart-drawing-interactions',
+      'institutional-chart-indicator-templates',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3936,6 +3940,24 @@ function App() {
     inAppNotificationCenter.tenantAndUserScope,
     institutionalChartWorkspace,
   ])
+  const institutionalChartDrawingInteraction = useMemo(() => prepareInstitutionalChartDrawingInteraction({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartWorkspace,
+    institutionalChartLayout,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:56:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartLayout,
+    institutionalChartWorkspace,
+  ])
+  const institutionalChartIndicatorTemplate = useMemo(() => prepareInstitutionalChartIndicatorTemplate({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartWorkspace,
+    institutionalChartDrawingInteraction,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:57:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartDrawingInteraction,
+    institutionalChartWorkspace,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -4012,7 +4034,7 @@ function App() {
     { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
     { id: 'ai-decision-governance', label: 'AI Governance', status: aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus },
     { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotWorkflowAssistance.aiTradingCopilotWorkflowAssistanceStatus },
-    { id: 'institutional-charting', label: 'Charting', status: institutionalChartLayout.institutionalChartLayoutStatus },
+    { id: 'institutional-charting', label: 'Charting', status: institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplateStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4510,6 +4532,10 @@ function App() {
             <MetricCard label="Layout Score" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.averageLayoutScore)} />
             <MetricCard label="Layout Cells" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.totalLayoutCells)} />
             <MetricCard label="Sync Groups" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.synchronizedGroups)} />
+            <MetricCard label="Drawing Tools" value={formatNumber(institutionalChartDrawingInteraction.institutionalChartDrawingInteractionSummary.totalDrawingTools)} />
+            <MetricCard label="Interaction Modes" value={formatNumber(institutionalChartDrawingInteraction.institutionalChartDrawingInteractionSummary.totalInteractionModes)} />
+            <MetricCard label="Indicators" value={formatNumber(institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplateSummary.totalIndicators)} />
+            <MetricCard label="Templates" value={formatNumber(institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplateSummary.totalTemplates)} />
             <MetricCard label="Live Orders" value={institutionalChartLayout.liveOrders ? 'enabled' : 'disabled'} />
           </div>
           <div className="analytics-columns">
@@ -4527,19 +4553,29 @@ function App() {
             </section>
             <section>
               <h3>Drawing Tools</h3>
-              <p className="empty-state">{institutionalChartWorkspace.institutionalChartWorkspaces[0]?.drawingToolFoundation.tools.join(' / ')}</p>
+              <p className="empty-state">{institutionalChartDrawingInteraction.institutionalChartDrawingInteractions[0]?.drawingTools.map((tool) => tool.label).join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Chart Interaction</h3>
+              <p className="empty-state">{institutionalChartDrawingInteraction.institutionalChartDrawingInteractions[0]?.interactionModes.map((mode) => mode.type).join(' / ')} with synchronized crosshair, zoom, and pan state.</p>
             </section>
             <section>
               <h3>Indicator Framework</h3>
-              <p className="empty-state">{institutionalChartWorkspace.institutionalChartWorkspaces[0]?.indicatorFramework.indicators.join(' / ')}</p>
+              <p className="empty-state">{institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplates[0]?.indicatorDefinitions.map((indicator) => indicator.label).join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Chart Templates</h3>
+              <p className="empty-state">{institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplates[0]?.chartTemplates.map((template) => template.name).join(' / ')}</p>
             </section>
             <section>
               <h3>Chart State Persistence</h3>
-              <p className="empty-state">{institutionalChartWorkspace.institutionalChartWorkspaces[0]?.statePersistenceSummary.chartStateVersion} / tenant-scoped PostgreSQL-ready state model.</p>
+              <p className="empty-state">{institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplates[0]?.templatePersistenceSummary.templateStateVersion} / drawing, interaction, template, and layout state remain tenant scoped.</p>
             </section>
           </div>
           <span className="event-line">{institutionalChartWorkspace.eventType}</span>
           <span className="event-line">{institutionalChartLayout.eventType}</span>
+          <span className="event-line">{institutionalChartDrawingInteraction.eventType}</span>
+          <span className="event-line">{institutionalChartIndicatorTemplate.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
