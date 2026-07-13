@@ -191,6 +191,8 @@ import { prepareAiTradingCopilotContext } from '../lib/system/aiTradingCopilotCo
 import { prepareAiTradingCopilotResponse } from '../lib/system/aiTradingCopilotResponseEngine.js'
 import { explainAiTradingCopilotTradeSignal } from '../lib/system/aiTradingCopilotTradeSignalExplanationEngine.js'
 import { generateAiTradingCopilotPortfolioInsights } from '../lib/system/aiTradingCopilotPortfolioInsightEngine.js'
+import { prepareAiTradingCopilotConversation } from '../lib/system/aiTradingCopilotConversationEngine.js'
+import { prepareAiTradingCopilotWorkflowAssistance } from '../lib/system/aiTradingCopilotWorkflowAssistanceEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2227,6 +2229,8 @@ function App() {
       'ai-trading-copilot-responses',
       'ai-trading-copilot-trade-signal-explanations',
       'ai-trading-copilot-portfolio-insights',
+      'ai-trading-copilot-conversations',
+      'ai-trading-copilot-workflow-assistance',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3875,6 +3879,39 @@ function App() {
     strategyBacktestPerformance,
     strategySignalComposition,
   ])
+  const aiTradingCopilotConversation = useMemo(() => prepareAiTradingCopilotConversation({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    operatorQuestion: 'What should I know about the current portfolio and research context?',
+    aiTradingCopilotPortfolioInsight,
+    aiTradingCopilotTradeSignalExplanation,
+    marketIntelligence,
+    researchEnhancedDecision,
+    portfolioAnalytics,
+    portfolioRisk: risk,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:52:00.000Z' }), [
+    aiTradingCopilotPortfolioInsight,
+    aiTradingCopilotTradeSignalExplanation,
+    inAppNotificationCenter.tenantAndUserScope,
+    marketIntelligence,
+    portfolioAnalytics,
+    researchEnhancedDecision,
+    risk,
+  ])
+  const aiTradingCopilotWorkflowAssistance = useMemo(() => prepareAiTradingCopilotWorkflowAssistance({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    aiTradingCopilotConversation,
+    aiTradingCopilotPortfolioInsight,
+    aiTradingCopilotTradeSignalExplanation,
+    operatorActionCenter,
+    workspaceCommandPalette,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:53:00.000Z' }), [
+    aiTradingCopilotConversation,
+    aiTradingCopilotPortfolioInsight,
+    aiTradingCopilotTradeSignalExplanation,
+    inAppNotificationCenter.tenantAndUserScope,
+    operatorActionCenter,
+    workspaceCommandPalette,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3950,7 +3987,7 @@ function App() {
     { id: 'compliance-strategic-learning', label: 'Strategic Learn', status: complianceStrategicLearningSummary.strategicLearningStatus },
     { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
     { id: 'ai-decision-governance', label: 'AI Governance', status: aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus },
-    { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsightStatus },
+    { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotWorkflowAssistance.aiTradingCopilotWorkflowAssistanceStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4381,6 +4418,8 @@ function App() {
             <MetricCard label="Response Reviews" value={formatNumber(aiTradingCopilotResponse.aiTradingCopilotResponseSummary.needsReview)} />
             <MetricCard label="Explanation Score" value={formatNumber(aiTradingCopilotTradeSignalExplanation.aiTradingCopilotTradeSignalExplanationSummary.averageExplanationScore)} />
             <MetricCard label="Insight Score" value={formatNumber(aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsightSummary.averageInsightScore)} />
+            <MetricCard label="Conversation Score" value={formatNumber(aiTradingCopilotConversation.aiTradingCopilotConversationSummary.averageConversationScore)} />
+            <MetricCard label="Workflow Steps" value={formatNumber(aiTradingCopilotWorkflowAssistance.aiTradingCopilotWorkflowAssistanceSummary.openSteps)} />
             <MetricCard label="External AI" value={aiTradingCopilotResponse.externalAiProvider ? 'enabled' : 'disabled'} />
             <MetricCard label="Order Automation" value={aiTradingCopilotResponse.automaticOrderPlacement ? 'enabled' : 'disabled'} />
           </div>
@@ -4402,6 +4441,14 @@ function App() {
               <p className="empty-state">{aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsights[0]?.portfolioInsightSummary}</p>
             </section>
             <section>
+              <h3>Conversational Portfolio Analysis</h3>
+              <p className="empty-state">{aiTradingCopilotConversation.aiTradingCopilotConversations[0]?.portfolioAnalysisSummary}</p>
+            </section>
+            <section>
+              <h3>Workflow Assistance</h3>
+              <p className="empty-state">{aiTradingCopilotWorkflowAssistance.aiTradingCopilotWorkflowAssistanceRecords[0]?.nextBestActionSummary}</p>
+            </section>
+            <section>
               <h3>Copilot Safety Boundary</h3>
               <p className="empty-state">No external AI provider, automatic order placement, broker execution, decision override, destructive automation, live orders, secrets, tokens, or sensitive session payloads are introduced.</p>
             </section>
@@ -4409,11 +4456,14 @@ function App() {
           <ul className="warning-list">
             {(aiTradingCopilotResponse.aiTradingCopilotResponses[0]?.suggestedQuestions ?? []).map((question) => <li key={question}>{question}</li>)}
             {(aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsights[0]?.naturalLanguageResearchPrompts ?? []).map((prompt) => <li key={prompt}>{prompt}</li>)}
+            {(aiTradingCopilotConversation.aiTradingCopilotConversations[0]?.followUpQuestions ?? []).map((question) => <li key={question}>{question}</li>)}
           </ul>
           <span className="event-line">{aiTradingCopilotContext.eventType}</span>
           <span className="event-line">{aiTradingCopilotResponse.eventType}</span>
           <span className="event-line">{aiTradingCopilotTradeSignalExplanation.eventType}</span>
           <span className="event-line">{aiTradingCopilotPortfolioInsight.eventType}</span>
+          <span className="event-line">{aiTradingCopilotConversation.eventType}</span>
+          <span className="event-line">{aiTradingCopilotWorkflowAssistance.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
