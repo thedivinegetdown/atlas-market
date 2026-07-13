@@ -173,6 +173,8 @@ import { evaluateComplianceContinuousImprovementProgram } from '../lib/system/co
 import { planComplianceOptimizationRoadmap } from '../lib/system/complianceOptimizationRoadmapEngine.js'
 import { evaluateComplianceStrategicInitiativePortfolio } from '../lib/system/complianceStrategicInitiativePortfolioEngine.js'
 import { prepareComplianceExecutiveStrategyPlan } from '../lib/system/complianceExecutiveStrategyPlanEngine.js'
+import { planComplianceStrategicMilestones } from '../lib/system/complianceStrategicMilestonePlannerEngine.js'
+import { evaluateComplianceStrategicKpis } from '../lib/system/complianceStrategicKpiTrackerEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2191,6 +2193,8 @@ function App() {
       'compliance-optimization-roadmaps',
       'compliance-strategic-initiative-portfolios',
       'compliance-executive-strategy-plans',
+      'compliance-strategic-milestone-plans',
+      'compliance-strategic-kpi-evaluations',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3616,6 +3620,28 @@ function App() {
     complianceStrategicInitiativePortfolio,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceStrategicMilestones = useMemo(() => planComplianceStrategicMilestones({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceExecutiveStrategyPlan,
+    complianceImplementationPlanning,
+    complianceGovernanceActionItems,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:34:00.000Z' }), [
+    complianceExecutiveStrategyPlan,
+    complianceGovernanceActionItems,
+    complianceImplementationPlanning,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceStrategicKpis = useMemo(() => evaluateComplianceStrategicKpis({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicMilestones,
+    complianceExecutiveStrategyPlan,
+    complianceStrategicInitiativePortfolio,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:35:00.000Z' }), [
+    complianceExecutiveStrategyPlan,
+    complianceStrategicInitiativePortfolio,
+    complianceStrategicMilestones,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3684,6 +3710,7 @@ function App() {
     { id: 'compliance-outcome-benefits', label: 'Outcome Benefits', status: complianceBenefitRealization.benefitRealizationStatus },
     { id: 'compliance-continuous-optimization', label: 'Continuous Optimize', status: complianceOptimizationRoadmap.optimizationRoadmapStatus },
     { id: 'compliance-strategic-planning', label: 'Strategic Plan', status: complianceExecutiveStrategyPlan.executiveStrategyStatus },
+    { id: 'compliance-strategic-execution', label: 'Strategic Execute', status: complianceStrategicKpis.strategicKpiStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9886,6 +9913,43 @@ function App() {
           </div>
           <span className="event-line">{complianceStrategicInitiativePortfolio.eventType}</span>
           <span className="event-line">{complianceExecutiveStrategyPlan.eventType}</span>
+        </article>
+
+        <article id="compliance-strategic-execution" className={`panel compliance-strategic-execution-panel ${complianceStrategicKpis.strategicKpiStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Strategic Execution</h2>
+            <span>Strategic milestone planning and KPI tracking for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Strategic KPI Status</span>
+              <strong>{complianceStrategicKpis.strategicKpiStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceStrategicKpis.strategicKpiStatus === 'blocked' ? 'danger' : complianceStrategicKpis.strategicKpiStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceStrategicKpis.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Milestone Score" value={formatNumber(complianceStrategicMilestones.strategicMilestoneSummary.averageMilestoneScore)} />
+            <MetricCard label="Milestones Needing Review" value={formatNumber(complianceStrategicMilestones.strategicMilestoneSummary.needsReview)} />
+            <MetricCard label="KPI Score" value={formatNumber(complianceStrategicKpis.strategicKpiSummary.averageKpiScore)} />
+            <MetricCard label="KPI Watch Items" value={formatNumber(complianceStrategicKpis.strategicKpiSummary.watch)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Strategic Milestone Planning Design</h3>
+              <p className="empty-state">Strategic milestones translate executive strategy, implementation planning, and governance action context into human-reviewed execution checkpoints.</p>
+            </section>
+            <section>
+              <h3>Strategic KPI Tracking Design</h3>
+              <p className="empty-state">Strategic KPI tracking evaluates milestone, strategy, and initiative scores without automated KPI approval or executive distribution.</p>
+            </section>
+            <section>
+              <h3>Strategic Execution Boundary</h3>
+              <p className="empty-state">No automatic milestone approval, KPI approval, assignments, funding action, remediation, executive distribution, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceStrategicMilestones.eventType}</span>
+          <span className="event-line">{complianceStrategicKpis.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
