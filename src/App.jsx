@@ -40,6 +40,8 @@ import {
 import { classifyMarketRegime } from '../lib/market/marketRegimeClassificationEngine.js'
 import { prepareHistoricalReplayStep } from '../lib/market/historicalMarketReplayEngine.js'
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
+import { normalizeMarketDataContracts } from '../lib/market/marketDataContractEngine.js'
+import { prepareMarketDataCache } from '../lib/market/marketDataCacheEngine.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2243,6 +2245,8 @@ function App() {
       'institutional-chart-indicator-templates',
       'institutional-chart-advanced-drawing-sync',
       'institutional-chart-indicator-watchlists',
+      'market-data-contracts',
+      'market-data-cache',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3924,6 +3928,32 @@ function App() {
     operatorActionCenter,
     workspaceCommandPalette,
   ])
+  const marketDataContracts = useMemo(() => normalizeMarketDataContracts({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataAdapterHealth,
+    scannerSignal,
+    historicalReplay,
+    symbol: scannerSignal.quote.symbol,
+    assetType: scannerSignal.quote.assetType,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:00:00.000Z' }), [
+    historicalReplay,
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataAdapterHealth,
+    scannerSignal,
+  ])
+  const marketDataCache = useMemo(() => prepareMarketDataCache({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataContracts,
+    cachePolicy: {
+      quoteTtlMs: 90000,
+      candleTtlMs: 300000,
+      localFallbackReady: true,
+      postgresPersistenceReady: true,
+    },
+  }, { emitEvent: false, timestamp: '2026-07-13T10:01:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataContracts,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4103,7 +4133,7 @@ function App() {
         <article id="market-data-health" className={`panel market-data-health-panel ${marketDataAdapterHealth.health.status}`}>
           <div className="panel-heading">
             <h2>Market Data Health</h2>
-            <span>Mock adapter default. Paper trading only.</span>
+            <span>Mock adapter default, normalized market-data contracts, and quote/candle cache readiness. Paper trading only.</span>
           </div>
           <div className="guardrail-card-header">
             <div>
@@ -4120,10 +4150,29 @@ function App() {
             <MetricCard label="Stale Data" value={marketDataAdapterHealth.health.stale ? 'yes' : 'no'} />
             <MetricCard label="Capabilities" value={formatNumber(marketDataAdapterHealth.metadata.capabilities.length)} />
             <MetricCard label="Asset Types" value={formatNumber(marketDataAdapterHealth.metadata.assetTypes.length)} />
+            <MetricCard label="Contracts" value={formatNumber(marketDataContracts.marketDataContractSummary.totalRequests)} />
+            <MetricCard label="Cached Entries" value={formatNumber(marketDataCache.marketDataCacheSummary.totalCacheEntries)} />
+            <MetricCard label="Fresh Entries" value={formatNumber(marketDataCache.marketDataCacheSummary.freshEntries)} />
             <MetricCard label="Paper Mode" value={marketDataAdapterHealth.health.paperTrading ? 'enabled' : 'disabled'} />
           </div>
-          <p className="empty-state">No paid data API is required for this adapter foundation.</p>
+          <div className="analytics-columns">
+            <section>
+              <h3>Normalized Market-Data Contracts</h3>
+              <p className="empty-state">{marketDataContracts.marketDataContracts[0]?.schemaSummary.version} / quotes, candles, and symbol metadata share an asset-agnostic contract.</p>
+            </section>
+            <section>
+              <h3>Quote and Candle Cache</h3>
+              <p className="empty-state">{marketDataCache.marketDataCaches[0]?.cachePolicy.localFallbackReady ? 'local fallback ready' : 'local fallback review'} / {marketDataCache.marketDataCaches[0]?.cachePolicy.postgresPersistenceReady ? 'PostgreSQL persistence ready' : 'PostgreSQL persistence review'}.</p>
+            </section>
+            <section>
+              <h3>Stale Data Handling</h3>
+              <p className="empty-state">{formatNumber(marketDataCache.marketDataCacheSummary.staleEntries)} stale entries / cache policy serves stale data with caution and refresh planning.</p>
+            </section>
+          </div>
+          <p className="empty-state">No paid data API is required for this market-data platform foundation.</p>
           <span className="event-line">{marketDataAdapterHealth.eventType}</span>
+          <span className="event-line">{marketDataContracts.eventType}</span>
+          <span className="event-line">{marketDataCache.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
