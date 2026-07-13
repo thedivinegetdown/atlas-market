@@ -187,6 +187,8 @@ import { updateComplianceStrategicKnowledgeBase } from '../lib/system/compliance
 import { archiveComplianceStrategicDecisions } from '../lib/system/complianceStrategicDecisionArchiveEngine.js'
 import { evaluateAiDecisionGovernanceReadiness } from '../lib/system/aiDecisionGovernanceReadinessEngine.js'
 import { prepareAiDecisionExplainability } from '../lib/system/aiDecisionExplainabilityEngine.js'
+import { prepareAiTradingCopilotContext } from '../lib/system/aiTradingCopilotContextEngine.js'
+import { prepareAiTradingCopilotResponse } from '../lib/system/aiTradingCopilotResponseEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2219,6 +2221,8 @@ function App() {
       'compliance-strategic-decision-archives',
       'ai-decision-governance-readiness',
       'ai-decision-explainability-records',
+      'ai-trading-copilot-contexts',
+      'ai-trading-copilot-responses',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3802,6 +3806,35 @@ function App() {
     inAppNotificationCenter.tenantAndUserScope,
     researchEnhancedDecision,
   ])
+  const aiTradingCopilotContext = useMemo(() => prepareAiTradingCopilotContext({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    operatorPrompt: 'What should I review before taking the next paper-trading action?',
+    aiDecision,
+    researchEnhancedDecision,
+    marketIntelligence,
+    risk,
+    portfolioAnalytics,
+    aiDecisionExplainability,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:48:00.000Z' }), [
+    aiDecision,
+    aiDecisionExplainability,
+    inAppNotificationCenter.tenantAndUserScope,
+    marketIntelligence,
+    portfolioAnalytics,
+    researchEnhancedDecision,
+    risk,
+  ])
+  const aiTradingCopilotResponse = useMemo(() => prepareAiTradingCopilotResponse({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    aiTradingCopilotContext,
+    aiDecisionGovernanceReadiness,
+    operatorActionCenter,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:49:00.000Z' }), [
+    aiDecisionGovernanceReadiness,
+    aiTradingCopilotContext,
+    inAppNotificationCenter.tenantAndUserScope,
+    operatorActionCenter,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3877,6 +3910,7 @@ function App() {
     { id: 'compliance-strategic-learning', label: 'Strategic Learn', status: complianceStrategicLearningSummary.strategicLearningStatus },
     { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
     { id: 'ai-decision-governance', label: 'AI Governance', status: aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus },
+    { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotResponse.aiTradingCopilotResponseStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4285,6 +4319,48 @@ function App() {
           </div>
           <span className="event-line">{aiDecisionGovernanceReadiness.eventType}</span>
           <span className="event-line">{aiDecisionExplainability.eventType}</span>
+        </article>
+
+        <article id="ai-trading-copilot" className={`panel ai-trading-copilot-panel ${aiTradingCopilotResponse.aiTradingCopilotResponseStatus}`}>
+          <div className="panel-heading">
+            <h2>AI Trading Copilot</h2>
+            <span>Paper-only copilot context and safe operator guidance for trading desk review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Copilot Status</span>
+              <strong>{aiTradingCopilotResponse.aiTradingCopilotResponseStatus}</strong>
+            </div>
+            <span className={`decision-pill ${aiTradingCopilotResponse.aiTradingCopilotResponseStatus === 'blocked' ? 'danger' : aiTradingCopilotResponse.aiTradingCopilotResponseStatus === 'caution' ? 'warning' : 'positive'}`}>paper only</span>
+          </div>
+          <p className="empty-state">{aiTradingCopilotResponse.aiTradingCopilotResponses[0]?.responseSummaryText}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Context Score" value={formatNumber(aiTradingCopilotContext.aiTradingCopilotContextSummary.averageContextScore)} />
+            <MetricCard label="Context Cautions" value={formatNumber(aiTradingCopilotContext.aiTradingCopilotContextSummary.caution)} />
+            <MetricCard label="Response Score" value={formatNumber(aiTradingCopilotResponse.aiTradingCopilotResponseSummary.averageResponseScore)} />
+            <MetricCard label="Response Reviews" value={formatNumber(aiTradingCopilotResponse.aiTradingCopilotResponseSummary.needsReview)} />
+            <MetricCard label="External AI" value={aiTradingCopilotResponse.externalAiProvider ? 'enabled' : 'disabled'} />
+            <MetricCard label="Order Automation" value={aiTradingCopilotResponse.automaticOrderPlacement ? 'enabled' : 'disabled'} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Copilot Context Design</h3>
+              <p className="empty-state">Copilot context packages AI decision, research, market, risk, analytics, and explainability outputs without external AI provider dependency.</p>
+            </section>
+            <section>
+              <h3>Copilot Response Design</h3>
+              <p className="empty-state">Copilot responses prepare safe review prompts and operator action references without placing orders or overriding decisions.</p>
+            </section>
+            <section>
+              <h3>Copilot Safety Boundary</h3>
+              <p className="empty-state">No external AI provider, automatic order placement, broker execution, decision override, destructive automation, live orders, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <ul className="warning-list">
+            {(aiTradingCopilotResponse.aiTradingCopilotResponses[0]?.suggestedQuestions ?? []).map((question) => <li key={question}>{question}</li>)}
+          </ul>
+          <span className="event-line">{aiTradingCopilotContext.eventType}</span>
+          <span className="event-line">{aiTradingCopilotResponse.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>
