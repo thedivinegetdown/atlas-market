@@ -23,7 +23,7 @@ export default defineConfig({
             },
             {
               name: 'risk-execution-engines',
-              test: /src[\\/]core[\\/](risk|execution|accounting|journal|ai)[\\/]/,
+              test: /(src[\\/]core[\\/](risk|execution|accounting|journal|ai)|lib[\\/]trading)[\\/]/,
             },
             {
               name: 'charting-system',

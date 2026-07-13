@@ -53,6 +53,9 @@ import { routeMarketDataStreamingEvents } from '../lib/market/marketDataStreamin
 import { evaluateRealtimeScanner } from '../lib/scanners/realTimeScannerOrchestrator.js'
 import { evaluateRealtimeSignals } from '../lib/signals/realTimeSignalEvaluationEngine.js'
 import { createRealtimeAlerts } from '../lib/alerts/realTimeAlertPipeline.js'
+import { evaluateRealtimePaperDecisions } from '../lib/trading/realTimePaperDecisionCoordinator.js'
+import { prepareRealtimePaperTrades } from '../lib/trading/realTimePaperTradePreparationCoordinator.js'
+import { simulateRealtimePaperExecution } from '../lib/trading/realTimeSimulatedExecutionCoordinator.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2271,6 +2274,10 @@ function App() {
       'realtime-alerts',
       'realtime-alert-status-update',
       'realtime-scanner-alert-operations-health',
+      'realtime-paper-decisions',
+      'realtime-prepared-trades',
+      'realtime-simulated-executions',
+      'realtime-paper-execution-operations-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4118,6 +4125,59 @@ function App() {
     notificationPreferences,
     realtimeSignals,
   ])
+  const realtimePaperDecisions = useMemo(() => evaluateRealtimePaperDecisions({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    realtimeSignals,
+    realtimeAlerts,
+    researchEnhancedDecision,
+    marketRegimeClassification,
+    portfolioRisk: risk,
+    drawdownProtection,
+    capitalAllocation,
+    strategyLifecycle,
+    strategyRegistry,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:26:00.000Z' }), [
+    capitalAllocation,
+    drawdownProtection,
+    inAppNotificationCenter.tenantAndUserScope,
+    marketRegimeClassification,
+    realtimeAlerts,
+    realtimeSignals,
+    researchEnhancedDecision,
+    risk,
+    strategyLifecycle,
+    strategyRegistry,
+  ])
+  const realtimePreparedTrades = useMemo(() => prepareRealtimePaperTrades({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    realtimePaperDecisions,
+    portfolio: guardrailDemoPortfolio,
+    portfolioRisk: evaluatePortfolioRisk(guardrailDemoPortfolio, { emitEvent: false }),
+    positionSizing,
+    capitalAllocation,
+    drawdownProtection,
+    tradeGuardrail: guardrails[0]?.result,
+    quote: demoExecutionQuotes[demoProposedTrades[0].id],
+    tradeTemplate: demoProposedTrades[0],
+  }, { emitEvent: false, timestamp: '2026-07-13T10:27:00.000Z' }), [
+    capitalAllocation,
+    drawdownProtection,
+    guardrails,
+    inAppNotificationCenter.tenantAndUserScope,
+    positionSizing,
+    realtimePaperDecisions,
+  ])
+  const realtimeSimulatedExecutions = useMemo(() => simulateRealtimePaperExecution({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    realtimePreparedTrades,
+    portfolio: accountingDemoPortfolio,
+    quote: demoExecutionQuotes[demoProposedTrades[0].id],
+    realtimeAlerts,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:28:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    realtimeAlerts,
+    realtimePreparedTrades,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4474,6 +4534,51 @@ function App() {
           <span className="event-line">{realtimeScanner.eventType}</span>
           <span className="event-line">{realtimeSignals.eventType}</span>
           <span className="event-line">{realtimeAlerts.eventType}</span>
+        </article>
+
+        <article id="realtime-paper-execution" className={`panel realtime-paper-execution-panel ${realtimeSimulatedExecutions.executionOperationsStatus}`}>
+          <div className="panel-heading">
+            <h2>Real-Time Paper Execution</h2>
+            <span>Qualified real-time signals are coordinated through paper decisions, sizing, guardrails, simulated execution, accounting, and journal linkage.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Paper Execution Status</span>
+              <strong>{realtimeSimulatedExecutions.executionOperationsStatus}</strong>
+            </div>
+            <span className={`decision-pill ${realtimePreparedTrades.preparationStatus === 'ready' ? 'positive' : realtimePreparedTrades.preparationStatus === 'blocked' ? 'danger' : 'warning'}`}>{realtimePreparedTrades.preparationStatus}</span>
+          </div>
+          <p className="empty-state">{realtimeSimulatedExecutions.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Approved Decisions" value={formatNumber(realtimePaperDecisions.realtimePaperDecisionSummary.approved)} />
+            <MetricCard label="Caution Decisions" value={formatNumber(realtimePaperDecisions.realtimePaperDecisionSummary.caution)} />
+            <MetricCard label="Prepared Trades" value={formatNumber(realtimePreparedTrades.realtimePreparedTradeSummary.total)} />
+            <MetricCard label="Ready Trades" value={formatNumber(realtimePreparedTrades.realtimePreparedTradeSummary.ready)} />
+            <MetricCard label="Simulated Fills" value={formatNumber(realtimeSimulatedExecutions.realtimeSimulatedExecutionSummary.simulated)} />
+            <MetricCard label="Accounting Updates" value={formatNumber(realtimeSimulatedExecutions.realtimeSimulatedExecutionSummary.accountingUpdates)} />
+            <MetricCard label="Journal Records" value={formatNumber(realtimeSimulatedExecutions.realtimeSimulatedExecutionSummary.journalRecords)} />
+            <MetricCard label="Duplicates Suppressed" value={formatNumber(realtimeSimulatedExecutions.realtimeSimulatedExecutionSummary.duplicateSuppressed)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Real-Time Paper Decision Coordinator</h3>
+              <p className="empty-state">{realtimePaperDecisions.summary}</p>
+            </section>
+            <section>
+              <h3>Position Sizing &amp; Guardrail Coordinator</h3>
+              <p className="empty-state">{realtimePreparedTrades.summary}</p>
+            </section>
+            <section>
+              <h3>Simulated Execution Lifecycle</h3>
+              <p className="empty-state">Accounting and journal events are recorded only after successful simulated fills; live orders and broker execution remain disabled.</p>
+            </section>
+          </div>
+          <span className="event-line">{realtimePaperDecisions.eventType}</span>
+          <span className="event-line">{realtimePreparedTrades.eventType}</span>
+          <span className="event-line">{realtimePreparedTrades.realtimeGuardrailEvaluations[0]?.eventType}</span>
+          <span className="event-line">{realtimeSimulatedExecutions.eventType}</span>
+          <span className="event-line">paperAccounting.realtime.updated</span>
+          <span className="event-line">paperJournal.realtime.recorded</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
