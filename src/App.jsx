@@ -175,6 +175,8 @@ import { evaluateComplianceStrategicInitiativePortfolio } from '../lib/system/co
 import { prepareComplianceExecutiveStrategyPlan } from '../lib/system/complianceExecutiveStrategyPlanEngine.js'
 import { planComplianceStrategicMilestones } from '../lib/system/complianceStrategicMilestonePlannerEngine.js'
 import { evaluateComplianceStrategicKpis } from '../lib/system/complianceStrategicKpiTrackerEngine.js'
+import { evaluateComplianceStrategicStakeholderAlignment } from '../lib/system/complianceStrategicStakeholderAlignmentEngine.js'
+import { prepareComplianceStrategicCommunicationPlan } from '../lib/system/complianceStrategicCommunicationPlanEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2195,6 +2197,8 @@ function App() {
       'compliance-executive-strategy-plans',
       'compliance-strategic-milestone-plans',
       'compliance-strategic-kpi-evaluations',
+      'compliance-strategic-stakeholder-alignments',
+      'compliance-strategic-communication-plans',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3642,6 +3646,28 @@ function App() {
     complianceStrategicMilestones,
     inAppNotificationCenter.tenantAndUserScope,
   ])
+  const complianceStrategicStakeholderAlignment = useMemo(() => evaluateComplianceStrategicStakeholderAlignment({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicKpis,
+    complianceStrategicMilestones,
+    complianceGovernanceReadout,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:36:00.000Z' }), [
+    complianceGovernanceReadout,
+    complianceStrategicKpis,
+    complianceStrategicMilestones,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
+  const complianceStrategicCommunicationPlan = useMemo(() => prepareComplianceStrategicCommunicationPlan({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    complianceStrategicStakeholderAlignment,
+    complianceExecutiveStrategyPlan,
+    complianceGovernanceReadout,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:37:00.000Z' }), [
+    complianceExecutiveStrategyPlan,
+    complianceGovernanceReadout,
+    complianceStrategicStakeholderAlignment,
+    inAppNotificationCenter.tenantAndUserScope,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -3711,6 +3737,7 @@ function App() {
     { id: 'compliance-continuous-optimization', label: 'Continuous Optimize', status: complianceOptimizationRoadmap.optimizationRoadmapStatus },
     { id: 'compliance-strategic-planning', label: 'Strategic Plan', status: complianceExecutiveStrategyPlan.executiveStrategyStatus },
     { id: 'compliance-strategic-execution', label: 'Strategic Execute', status: complianceStrategicKpis.strategicKpiStatus },
+    { id: 'compliance-strategic-alignment', label: 'Strategic Align', status: complianceStrategicCommunicationPlan.strategicCommunicationStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -9950,6 +9977,43 @@ function App() {
           </div>
           <span className="event-line">{complianceStrategicMilestones.eventType}</span>
           <span className="event-line">{complianceStrategicKpis.eventType}</span>
+        </article>
+
+        <article id="compliance-strategic-alignment" className={`panel compliance-strategic-alignment-panel ${complianceStrategicCommunicationPlan.strategicCommunicationStatus}`}>
+          <div className="panel-heading">
+            <h2>Compliance Strategic Alignment</h2>
+            <span>Stakeholder alignment and strategic communication planning for owner/admin review.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Communication Plan Status</span>
+              <strong>{complianceStrategicCommunicationPlan.strategicCommunicationStatus}</strong>
+            </div>
+            <span className={`decision-pill ${complianceStrategicCommunicationPlan.strategicCommunicationStatus === 'blocked' ? 'danger' : complianceStrategicCommunicationPlan.strategicCommunicationStatus === 'caution' ? 'warning' : 'positive'}`}>advisory only</span>
+          </div>
+          <p className="empty-state">{complianceStrategicCommunicationPlan.summary}</p>
+          <div className="analytics-grid">
+            <MetricCard label="Alignment Score" value={formatNumber(complianceStrategicStakeholderAlignment.stakeholderAlignmentSummary.averageAlignmentScore)} />
+            <MetricCard label="Alignment Reviews" value={formatNumber(complianceStrategicStakeholderAlignment.stakeholderAlignmentSummary.needsReview)} />
+            <MetricCard label="Communication Score" value={formatNumber(complianceStrategicCommunicationPlan.strategicCommunicationSummary.averageCommunicationScore)} />
+            <MetricCard label="Communication Cautions" value={formatNumber(complianceStrategicCommunicationPlan.strategicCommunicationSummary.caution)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Stakeholder Alignment Design</h3>
+              <p className="empty-state">Stakeholder alignment combines strategic KPI, milestone, and governance readout context without stakeholder approval automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Communication Design</h3>
+              <p className="empty-state">Strategic communication plans summarize alignment, executive strategy, and readout context without message approval or distribution automation.</p>
+            </section>
+            <section>
+              <h3>Strategic Alignment Boundary</h3>
+              <p className="empty-state">No automatic stakeholder approval, message approval, distribution, assignments, compliance claims, destructive automation, live orders, broker execution, secrets, tokens, or sensitive session payloads are introduced.</p>
+            </section>
+          </div>
+          <span className="event-line">{complianceStrategicStakeholderAlignment.eventType}</span>
+          <span className="event-line">{complianceStrategicCommunicationPlan.eventType}</span>
         </article>
 
         <article id="event-timeline" className="panel event-timeline-panel">
