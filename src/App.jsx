@@ -44,6 +44,9 @@ import { normalizeMarketDataContracts } from '../lib/market/marketDataContractEn
 import { prepareMarketDataCache } from '../lib/market/marketDataCacheEngine.js'
 import { prepareMarketDataStreaming } from '../lib/market/marketDataStreamingEngine.js'
 import { evaluateMarketDataProviderFailover } from '../lib/market/marketDataProviderFailoverEngine.js'
+import { evaluateMarketDataProviderResilience } from '../lib/market/marketDataProviderResilienceEngine.js'
+import { evaluateScannerThroughputBackpressure } from '../lib/scanners/scannerThroughputBackpressureEngine.js'
+import { evaluateMarketDataScannerHealth } from '../lib/market/marketDataScannerHealthEngine.js'
 import { evaluateMarketDataStreamingSession } from '../lib/market/marketDataStreamingSessionEngine.js'
 import { evaluateMarketDataFreshnessGapRecovery } from '../lib/market/marketDataFreshnessGapRecoveryEngine.js'
 import { evaluateMarketDataStreamingOperations } from '../lib/market/marketDataStreamingOperationsEngine.js'
@@ -2298,6 +2301,9 @@ function App() {
       'paper-operations-incidents',
       'paper-operations-incident-action',
       'paper-operations-observability',
+      'market-data-resilience',
+      'scanner-production-health',
+      'market-data-scanner-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4025,6 +4031,19 @@ function App() {
     marketDataCache,
     marketDataStreaming,
   ])
+  const marketDataProviderResilience = useMemo(() => evaluateMarketDataProviderResilience({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    marketDataProviderFailover,
+    marketDataAdapterHealth,
+    marketDataCache,
+    policy: { failureThreshold: 3, recoveryWindowMs: 60000, staleAfterMs: 120000 },
+  }, { emitEvent: false, timestamp: '2026-07-13T10:03:30.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataAdapterHealth,
+    marketDataCache,
+    marketDataProviderFailover,
+  ])
   const marketDataStreamingSession = useMemo(() => evaluateMarketDataStreamingSession({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     marketDataStreaming,
@@ -4116,6 +4135,18 @@ function App() {
   }, { emitEvent: false, timestamp: '2026-07-13T10:23:00.000Z' }), [
     inAppNotificationCenter.tenantAndUserScope,
     marketDataStreamingRouting,
+  ])
+  const scannerThroughputBackpressure = useMemo(() => evaluateScannerThroughputBackpressure({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    realtimeScanner,
+    marketDataProviderResilience,
+    scannerSubscriptions: realtimeScanner.scannerSubscriptionRegistry,
+    policy: { maxQueueSize: 128, concurrency: 8, maxPerCycle: 100, cycleDeadlineMs: 2500 },
+  }, { emitEvent: false, timestamp: '2026-07-13T10:23:30.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataProviderResilience,
+    realtimeScanner,
   ])
   const realtimeSignals = useMemo(() => evaluateRealtimeSignals({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
@@ -4328,6 +4359,18 @@ function App() {
     realtimeScanner,
     realtimeSignals,
     realtimeSimulatedExecutions,
+  ])
+  const marketDataScannerHealth = useMemo(() => evaluateMarketDataScannerHealth({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    marketDataProviderResilience,
+    scannerThroughput: scannerThroughputBackpressure,
+    marketDataStreamingRouting,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:37:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataProviderResilience,
+    marketDataStreamingRouting,
+    scannerThroughputBackpressure,
   ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
@@ -4853,6 +4896,50 @@ function App() {
           <span className="event-line">{paperOperationsAlerts.eventType}</span>
           <span className="event-line">{paperOperationsIncidents.eventType}</span>
           <span className="event-line">{paperOperationsObservability.eventType}</span>
+        </article>
+
+        <article id="market-data-scanner-health" className={`panel market-data-streaming-operations-panel ${marketDataScannerHealth.healthStatus}`}>
+          <div className="panel-heading">
+            <h2>Market Data &amp; Scanner Production Health</h2>
+            <span>Provider resilience, circuit-breaker state, stream freshness, and bounded scanner throughput for paper-only operations.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Market Data and Scanner Health</span>
+              <strong>{marketDataScannerHealth.healthStatus}</strong>
+            </div>
+            <span className={`decision-pill ${marketDataScannerHealth.healthStatus === 'healthy' ? 'positive' : marketDataScannerHealth.healthStatus === 'critical' ? 'danger' : 'warning'}`}>
+              {marketDataProviderResilience.marketDataProviderResilienceSummary.activeProviderId}
+            </span>
+          </div>
+          <p className="empty-state">{marketDataScannerHealth.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Active Provider" value={marketDataScannerHealth.marketDataScannerHealthSummary.activeProviderId} />
+            <MetricCard label="Provider Health" value={marketDataScannerHealth.marketDataScannerHealthSnapshot.providerHealthSummary.providerHealth} />
+            <MetricCard label="Circuit State" value={marketDataProviderResilience.marketDataProviderResilienceSnapshot.providerStates[0]?.circuitState} />
+            <MetricCard label="Failover Count" value={formatNumber(marketDataScannerHealth.marketDataScannerHealthSnapshot.providerHealthSummary.failoverCount)} />
+            <MetricCard label="Scanner Queue Depth" value={formatNumber(marketDataScannerHealth.marketDataScannerHealthSummary.queueDepth)} />
+            <MetricCard label="Scanner Cycle" value={marketDataScannerHealth.marketDataScannerHealthSummary.scannerCycleStatus} />
+            <MetricCard label="Scanner Throughput" value={formatNumber(marketDataScannerHealth.marketDataScannerHealthSnapshot.scannerHealthSummary.throughputPerSecond)} />
+            <MetricCard label="Stale Symbols" value={formatNumber(marketDataScannerHealth.marketDataScannerHealthSummary.staleSymbols)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Provider Resilience</h3>
+              <p className="empty-state">Primary {marketDataProviderResilience.marketDataProviderResilienceSummary.primaryProviderId} / active {marketDataProviderResilience.marketDataProviderResilienceSummary.activeProviderId}; fallback mode is controlled and credential-free.</p>
+            </section>
+            <section>
+              <h3>Scanner Backpressure</h3>
+              <p className="empty-state">{scannerThroughputBackpressure.scannerThroughputSummary.processed} processed / {scannerThroughputBackpressure.scannerThroughputSummary.deferred} deferred / {scannerThroughputBackpressure.scannerThroughputSummary.stale} stale.</p>
+            </section>
+            <section>
+              <h3>Freshness Protection</h3>
+              <p className="empty-state">Stale market data is rejected before new scanner candidates, signals, alerts, paper decisions, or simulated executions are created.</p>
+            </section>
+          </div>
+          <span className="event-line">{marketDataProviderResilience.eventType}</span>
+          <span className="event-line">{scannerThroughputBackpressure.eventType}</span>
+          <span className="event-line">{marketDataScannerHealth.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>

@@ -35,7 +35,7 @@ export default defineConfig({
             },
             {
               name: 'market-data-system',
-              test: /lib[\\/]market[\\/]/,
+              test: /lib[\\/](market|scanners)[\\/]/,
             },
             {
               name: 'system-operations',
