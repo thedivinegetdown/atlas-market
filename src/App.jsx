@@ -56,6 +56,8 @@ import { createRealtimeAlerts } from '../lib/alerts/realTimeAlertPipeline.js'
 import { evaluateRealtimePaperDecisions } from '../lib/trading/realTimePaperDecisionCoordinator.js'
 import { prepareRealtimePaperTrades } from '../lib/trading/realTimePaperTradePreparationCoordinator.js'
 import { simulateRealtimePaperExecution } from '../lib/trading/realTimeSimulatedExecutionCoordinator.js'
+import { reconcileRealtimePortfolio } from '../lib/trading/realTimePortfolioReconciliationEngine.js'
+import { streamRealtimePaperPortfolio } from '../lib/trading/realTimePortfolioStreamingEngine.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2278,6 +2280,10 @@ function App() {
       'realtime-prepared-trades',
       'realtime-simulated-executions',
       'realtime-paper-execution-operations-health',
+      'realtime-portfolio-reconciliation',
+      'realtime-paper-portfolio',
+      'realtime-pnl',
+      'portfolio-reconciliation-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4178,6 +4184,26 @@ function App() {
     realtimeAlerts,
     realtimePreparedTrades,
   ])
+  const realtimePortfolioReconciliation = useMemo(() => reconcileRealtimePortfolio({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    realtimeSimulatedExecutions,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:29:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    realtimeSimulatedExecutions,
+  ])
+  const realtimePaperPortfolio = useMemo(() => streamRealtimePaperPortfolio({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    realtimePortfolioReconciliation,
+    portfolioAnalytics,
+    portfolioRisk: risk,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:30:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    portfolioAnalytics,
+    realtimePortfolioReconciliation,
+    risk,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4579,6 +4605,47 @@ function App() {
           <span className="event-line">{realtimeSimulatedExecutions.eventType}</span>
           <span className="event-line">paperAccounting.realtime.updated</span>
           <span className="event-line">paperJournal.realtime.recorded</span>
+        </article>
+
+        <article id="realtime-portfolio-pnl" className={`panel realtime-portfolio-pnl-panel ${realtimePaperPortfolio.streamingPortfolioStatus}`}>
+          <div className="panel-heading">
+            <h2>Real-Time Portfolio &amp; P&amp;L</h2>
+            <span>Successful simulated fills reconcile into paper account, position, and P&amp;L streaming snapshots without broker or live-account access.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Portfolio Streaming Status</span>
+              <strong>{realtimePaperPortfolio.streamingPortfolioStatus}</strong>
+            </div>
+            <span className={`decision-pill ${realtimePortfolioReconciliation.reconciliationStatus === 'reconciled' ? 'positive' : realtimePortfolioReconciliation.reconciliationStatus === 'blocked' ? 'danger' : 'warning'}`}>{realtimePortfolioReconciliation.reconciliationStatus}</span>
+          </div>
+          <p className="empty-state">{realtimePaperPortfolio.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Cash" value={formatCurrency(realtimePaperPortfolio.currentCashSummary.cash)} />
+            <MetricCard label="Equity" value={formatCurrency(realtimePaperPortfolio.currentEquitySummary.equity)} />
+            <MetricCard label="Open Positions" value={formatNumber(realtimePaperPortfolio.openPositionsSummary.totalOpenPositions)} />
+            <MetricCard label="Realized P&amp;L" value={formatCurrency(realtimePaperPortfolio.realizedPnlSummary.realizedPnl)} />
+            <MetricCard label="Unrealized P&amp;L" value={formatCurrency(realtimePaperPortfolio.unrealizedPnlSummary.unrealizedPnl)} />
+            <MetricCard label="Gross Exposure" value={formatCurrency(realtimePaperPortfolio.exposureSummaryReferences.grossExposure)} />
+            <MetricCard label="Net Exposure" value={formatCurrency(realtimePaperPortfolio.exposureSummaryReferences.netExposure)} />
+            <MetricCard label="Duplicate Fills" value={formatNumber(realtimePortfolioReconciliation.realtimePortfolioReconciliationSummary.duplicateFillsSuppressed)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Portfolio Reconciliation</h3>
+              <p className="empty-state">{realtimePortfolioReconciliation.summary}</p>
+            </section>
+            <section>
+              <h3>Paper Account Snapshot</h3>
+              <p className="empty-state">Cash, equity, average price, quantity, realized P&amp;L, and journal/accounting consistency are derived from paper accounting snapshots.</p>
+            </section>
+            <section>
+              <h3>P&amp;L Streaming</h3>
+              <p className="empty-state">Unrealized P&amp;L and exposure summaries are bounded to the latest reconciled position snapshot; history stays paginated through APIs.</p>
+            </section>
+          </div>
+          <span className="event-line">{realtimePortfolioReconciliation.eventType}</span>
+          <span className="event-line">{realtimePaperPortfolio.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
