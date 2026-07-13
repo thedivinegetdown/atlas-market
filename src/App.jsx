@@ -58,6 +58,9 @@ import { prepareRealtimePaperTrades } from '../lib/trading/realTimePaperTradePre
 import { simulateRealtimePaperExecution } from '../lib/trading/realTimeSimulatedExecutionCoordinator.js'
 import { reconcileRealtimePortfolio } from '../lib/trading/realTimePortfolioReconciliationEngine.js'
 import { streamRealtimePaperPortfolio } from '../lib/trading/realTimePortfolioStreamingEngine.js'
+import { monitorRealtimePaperRisk } from '../lib/trading/realTimePaperRiskMonitorEngine.js'
+import { streamRealtimePaperPerformance } from '../lib/trading/realTimePaperPerformanceStreamEngine.js'
+import { evaluateRealtimePaperOperations } from '../lib/trading/realTimePaperOperationsCommandCenterEngine.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2284,6 +2287,9 @@ function App() {
       'realtime-paper-portfolio',
       'realtime-pnl',
       'portfolio-reconciliation-health',
+      'realtime-paper-risk',
+      'realtime-paper-performance',
+      'realtime-paper-operations',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4204,6 +4210,59 @@ function App() {
     realtimePortfolioReconciliation,
     risk,
   ])
+  const realtimePaperRisk = useMemo(() => monitorRealtimePaperRisk({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    realtimePaperPortfolio,
+    realtimePortfolioReconciliation,
+    portfolioRisk: risk,
+    drawdownProtection,
+    latestGuardrailEvaluation: realtimePreparedTrades.realtimeGuardrailEvaluations[0],
+  }, { emitEvent: false, timestamp: '2026-07-13T10:31:00.000Z' }), [
+    drawdownProtection,
+    inAppNotificationCenter.tenantAndUserScope,
+    realtimePaperPortfolio,
+    realtimePortfolioReconciliation,
+    realtimePreparedTrades,
+    risk,
+  ])
+  const realtimePaperPerformance = useMemo(() => streamRealtimePaperPerformance({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    realtimePaperPortfolio,
+    realtimePortfolioReconciliation,
+    realtimeSimulatedExecutions,
+    riskAdjustedPerformance,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:32:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    realtimePaperPortfolio,
+    realtimePortfolioReconciliation,
+    realtimeSimulatedExecutions,
+    riskAdjustedPerformance,
+  ])
+  const realtimePaperOperations = useMemo(() => evaluateRealtimePaperOperations({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    realtimeSignals,
+    realtimeAlerts,
+    realtimePaperDecisions,
+    realtimePreparedTrades,
+    realtimeSimulatedExecutions,
+    realtimePortfolioReconciliation,
+    realtimePaperPortfolio,
+    realtimePaperRisk,
+    realtimePaperPerformance,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:33:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    realtimeAlerts,
+    realtimePaperDecisions,
+    realtimePaperPerformance,
+    realtimePaperPortfolio,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+    realtimePreparedTrades,
+    realtimeSignals,
+    realtimeSimulatedExecutions,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4646,6 +4705,44 @@ function App() {
           </div>
           <span className="event-line">{realtimePortfolioReconciliation.eventType}</span>
           <span className="event-line">{realtimePaperPortfolio.eventType}</span>
+        </article>
+
+        <article id="realtime-paper-operations" className={`panel realtime-portfolio-pnl-panel ${realtimePaperOperations.operationsStatus}`}>
+          <div className="panel-heading">
+            <h2>Real-Time Paper Operations</h2>
+            <span>Paper risk, performance, and operations health summarize the scanner-to-portfolio lifecycle without live orders or broker execution.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Paper Operations Status</span>
+              <strong>{realtimePaperOperations.operationsStatus}</strong>
+            </div>
+            <span className={`decision-pill ${realtimePaperRisk.riskStatus === 'healthy' ? 'positive' : realtimePaperRisk.riskStatus === 'blocked' || realtimePaperRisk.riskStatus === 'elevated' ? 'danger' : 'warning'}`}>
+              {realtimePaperRisk.riskStatus}
+            </span>
+          </div>
+          <p className="empty-state">{realtimePaperOperations.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Paper Risk Monitor" value={realtimePaperRisk.riskStatus} />
+            <MetricCard label="Paper Performance Stream" value={realtimePaperPerformance.performanceStatus} />
+            <MetricCard label="Operations Healthy" value={formatNumber(realtimePaperOperations.realtimePaperOperationsSummary.healthy)} />
+            <MetricCard label="Operations Caution" value={formatNumber(realtimePaperOperations.realtimePaperOperationsSummary.caution)} />
+            <MetricCard label="Risk Issues" value={formatNumber(realtimePaperRisk.realtimePaperRiskSummary.issueCount)} />
+            <MetricCard label="Total Trades" value={formatNumber(realtimePaperPerformance.realtimePaperPerformanceSummary.totalTrades)} />
+            <MetricCard label="Realized P&amp;L" value={formatCurrency(realtimePaperPerformance.realtimePaperPerformanceSummary.realizedPnl)} />
+            <MetricCard label="Unrealized P&amp;L" value={formatCurrency(realtimePaperPerformance.realtimePaperPerformanceSummary.unrealizedPnl)} />
+          </div>
+          <div className="analytics-columns">
+            {realtimePaperOperations.realtimePaperOperationsSections.slice(0, 6).map((section) => (
+              <section key={section.id}>
+                <h3>{section.label}</h3>
+                <p className="empty-state">{section.status}</p>
+              </section>
+            ))}
+          </div>
+          <span className="event-line">{realtimePaperRisk.eventType}</span>
+          <span className="event-line">{realtimePaperPerformance.eventType}</span>
+          <span className="event-line">{realtimePaperOperations.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
