@@ -61,6 +61,9 @@ import { streamRealtimePaperPortfolio } from '../lib/trading/realTimePortfolioSt
 import { monitorRealtimePaperRisk } from '../lib/trading/realTimePaperRiskMonitorEngine.js'
 import { streamRealtimePaperPerformance } from '../lib/trading/realTimePaperPerformanceStreamEngine.js'
 import { evaluateRealtimePaperOperations } from '../lib/trading/realTimePaperOperationsCommandCenterEngine.js'
+import { evaluatePaperOperationsAlerts } from '../lib/trading/paperOperationsAlertingEngine.js'
+import { openPaperOperationsIncidents } from '../lib/trading/paperOperationsIncidentManagementEngine.js'
+import { evaluatePaperOperationsObservability } from '../lib/trading/paperOperationsObservabilityEngine.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2290,6 +2293,11 @@ function App() {
       'realtime-paper-risk',
       'realtime-paper-performance',
       'realtime-paper-operations',
+      'paper-operations-alerts',
+      'paper-operations-alert-action',
+      'paper-operations-incidents',
+      'paper-operations-incident-action',
+      'paper-operations-observability',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4263,6 +4271,64 @@ function App() {
     realtimeSignals,
     realtimeSimulatedExecutions,
   ])
+  const paperOperationsAlerts = useMemo(() => evaluatePaperOperationsAlerts({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    realtimePaperOperations,
+    realtimePaperRisk,
+    realtimePaperPerformance,
+    realtimePortfolioReconciliation,
+    realtimeSimulatedExecutions,
+    marketDataStreamingRouting,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:34:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataStreamingRouting,
+    realtimePaperOperations,
+    realtimePaperPerformance,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+    realtimeSimulatedExecutions,
+  ])
+  const paperOperationsIncidents = useMemo(() => openPaperOperationsIncidents({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    paperOperationsAlerts: paperOperationsAlerts.paperOperationsAlerts,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:35:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    paperOperationsAlerts,
+  ])
+  const paperOperationsObservability = useMemo(() => evaluatePaperOperationsObservability({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    apiReliability,
+    realtimeScanner,
+    realtimeSignals,
+    realtimeAlerts,
+    realtimePaperDecisions,
+    realtimePreparedTrades,
+    realtimeSimulatedExecutions,
+    realtimePortfolioReconciliation,
+    realtimePaperRisk,
+    realtimePaperPerformance,
+    paperOperationsAlerts: paperOperationsAlerts.paperOperationsAlerts,
+    paperOperationsIncidents: paperOperationsIncidents.paperOperationsIncidents,
+    marketDataStreamingRouting,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:36:00.000Z' }), [
+    apiReliability,
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataStreamingRouting,
+    paperOperationsAlerts,
+    paperOperationsIncidents,
+    realtimeAlerts,
+    realtimePaperDecisions,
+    realtimePaperPerformance,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+    realtimePreparedTrades,
+    realtimeScanner,
+    realtimeSignals,
+    realtimeSimulatedExecutions,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4743,6 +4809,50 @@ function App() {
           <span className="event-line">{realtimePaperRisk.eventType}</span>
           <span className="event-line">{realtimePaperPerformance.eventType}</span>
           <span className="event-line">{realtimePaperOperations.eventType}</span>
+        </article>
+
+        <article id="realtime-operations-health" className={`panel realtime-portfolio-pnl-panel ${paperOperationsObservability.healthStatus}`}>
+          <div className="panel-heading">
+            <h2>Real-Time Operations Health</h2>
+            <span>Operational alerting, incidents, and compact observability metrics for paper-only real-time trading workflows.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Operational Health Status</span>
+              <strong>{paperOperationsObservability.healthStatus}</strong>
+            </div>
+            <span className={`decision-pill ${paperOperationsObservability.healthStatus === 'healthy' ? 'positive' : paperOperationsObservability.healthStatus === 'critical' ? 'danger' : 'warning'}`}>
+              {paperOperationsAlerts.alertingStatus}
+            </span>
+          </div>
+          <p className="empty-state">{paperOperationsObservability.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Open Alerts" value={formatNumber(paperOperationsObservability.paperOperationsObservabilitySummary.openAlerts)} />
+            <MetricCard label="Critical Alerts" value={formatNumber(paperOperationsObservability.paperOperationsObservabilitySnapshot.alertMetrics.critical)} />
+            <MetricCard label="Open Incidents" value={formatNumber(paperOperationsObservability.paperOperationsObservabilitySummary.openIncidents)} />
+            <MetricCard label="API Failure Rate" value={`${formatNumber(paperOperationsObservability.paperOperationsObservabilitySummary.apiFailureRate * 100)}%`} />
+            <MetricCard label="Execution Failure Rate" value={`${formatNumber(paperOperationsObservability.paperOperationsObservabilitySummary.executionFailureRate * 100)}%`} />
+            <MetricCard label="Reconciliation Mismatch Rate" value={`${formatNumber(paperOperationsObservability.paperOperationsObservabilitySummary.reconciliationMismatchRate * 100)}%`} />
+            <MetricCard label="Risk Freshness" value={`${formatNumber(paperOperationsObservability.paperOperationsObservabilitySnapshot.riskMetrics.snapshotAgeMs)} ms`} />
+            <MetricCard label="Performance Freshness" value={`${formatNumber(paperOperationsObservability.paperOperationsObservabilitySnapshot.performanceMetrics.snapshotAgeMs)} ms`} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Open Alerts Grouped by Severity</h3>
+              <p className="empty-state">Critical {paperOperationsAlerts.paperOperationsAlertSummary.critical} / warning {paperOperationsAlerts.paperOperationsAlertSummary.warning} / info {paperOperationsAlerts.paperOperationsAlertSummary.info}. Viewer access is read-only.</p>
+            </section>
+            <section>
+              <h3>Active Incidents</h3>
+              <p className="empty-state">Open {paperOperationsIncidents.paperOperationsIncidentSummary.open} / investigating {paperOperationsIncidents.paperOperationsIncidentSummary.investigating} / mitigated {paperOperationsIncidents.paperOperationsIncidentSummary.mitigated} / resolved {paperOperationsIncidents.paperOperationsIncidentSummary.resolved}.</p>
+            </section>
+            <section>
+              <h3>Acknowledge and Lifecycle Controls</h3>
+              <p className="empty-state">Analyst, owner, and admin workflows are API-gated; dashboard state stays summary-only and paper-mode locked.</p>
+            </section>
+          </div>
+          <span className="event-line">{paperOperationsAlerts.eventType}</span>
+          <span className="event-line">{paperOperationsIncidents.eventType}</span>
+          <span className="event-line">{paperOperationsObservability.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
