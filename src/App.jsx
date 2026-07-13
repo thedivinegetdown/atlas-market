@@ -42,6 +42,8 @@ import { prepareHistoricalReplayStep } from '../lib/market/historicalMarketRepla
 import { createMarketDataAdapter, MARKET_DATA_ADAPTER_CHECKED_EVENT } from '../lib/market/marketDataAdapter.js'
 import { normalizeMarketDataContracts } from '../lib/market/marketDataContractEngine.js'
 import { prepareMarketDataCache } from '../lib/market/marketDataCacheEngine.js'
+import { prepareMarketDataStreaming } from '../lib/market/marketDataStreamingEngine.js'
+import { evaluateMarketDataProviderFailover } from '../lib/market/marketDataProviderFailoverEngine.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2247,6 +2249,8 @@ function App() {
       'institutional-chart-indicator-watchlists',
       'market-data-contracts',
       'market-data-cache',
+      'market-data-streaming',
+      'market-data-provider-failover',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3954,6 +3958,26 @@ function App() {
     inAppNotificationCenter.tenantAndUserScope,
     marketDataContracts,
   ])
+  const marketDataStreaming = useMemo(() => prepareMarketDataStreaming({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataContracts,
+    marketDataAdapterHealth,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:02:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataAdapterHealth,
+    marketDataContracts,
+  ])
+  const marketDataProviderFailover = useMemo(() => evaluateMarketDataProviderFailover({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    marketDataAdapterHealth,
+    marketDataCache,
+    marketDataStreaming,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:03:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataAdapterHealth,
+    marketDataCache,
+    marketDataStreaming,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4153,6 +4177,8 @@ function App() {
             <MetricCard label="Contracts" value={formatNumber(marketDataContracts.marketDataContractSummary.totalRequests)} />
             <MetricCard label="Cached Entries" value={formatNumber(marketDataCache.marketDataCacheSummary.totalCacheEntries)} />
             <MetricCard label="Fresh Entries" value={formatNumber(marketDataCache.marketDataCacheSummary.freshEntries)} />
+            <MetricCard label="Stream Channels" value={formatNumber(marketDataStreaming.marketDataStreamingSummary.totalChannels)} />
+            <MetricCard label="Providers" value={formatNumber(marketDataProviderFailover.marketDataProviderFailoverSummary.totalProviders)} />
             <MetricCard label="Paper Mode" value={marketDataAdapterHealth.health.paperTrading ? 'enabled' : 'disabled'} />
           </div>
           <div className="analytics-columns">
@@ -4168,11 +4194,21 @@ function App() {
               <h3>Stale Data Handling</h3>
               <p className="empty-state">{formatNumber(marketDataCache.marketDataCacheSummary.staleEntries)} stale entries / cache policy serves stale data with caution and refresh planning.</p>
             </section>
+            <section>
+              <h3>Streaming Market-Data Architecture</h3>
+              <p className="empty-state">{marketDataStreaming.marketDataStreamingConfigs[0]?.connectionPolicy.connectionMode} / {formatNumber(marketDataStreaming.marketDataStreamingSummary.totalSubscriptions)} subscriptions prepared.</p>
+            </section>
+            <section>
+              <h3>Provider Failover Monitoring</h3>
+              <p className="empty-state">{marketDataProviderFailover.marketDataProviderFailovers[0]?.activeProviderId} active / {marketDataProviderFailover.marketDataProviderFailovers[0]?.fallbackProviderId} fallback.</p>
+            </section>
           </div>
           <p className="empty-state">No paid data API is required for this market-data platform foundation.</p>
           <span className="event-line">{marketDataAdapterHealth.eventType}</span>
           <span className="event-line">{marketDataContracts.eventType}</span>
           <span className="event-line">{marketDataCache.eventType}</span>
+          <span className="event-line">{marketDataStreaming.eventType}</span>
+          <span className="event-line">{marketDataProviderFailover.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
