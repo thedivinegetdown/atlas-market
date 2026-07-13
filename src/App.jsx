@@ -197,6 +197,8 @@ import { prepareInstitutionalChartWorkspace } from '../lib/system/institutionalC
 import { synchronizeInstitutionalChartLayout } from '../lib/system/institutionalChartLayoutEngine.js'
 import { prepareInstitutionalChartDrawingInteraction } from '../lib/system/institutionalChartDrawingInteractionEngine.js'
 import { prepareInstitutionalChartIndicatorTemplate } from '../lib/system/institutionalChartIndicatorTemplateEngine.js'
+import { prepareInstitutionalChartAdvancedDrawingSync } from '../lib/system/institutionalChartAdvancedDrawingSyncEngine.js'
+import { prepareInstitutionalChartIndicatorWatchlist } from '../lib/system/institutionalChartIndicatorWatchlistEngine.js'
 import {
   accountingDemoPortfolio,
   demoExecutionQuotes,
@@ -2239,6 +2241,8 @@ function App() {
       'institutional-chart-layouts',
       'institutional-chart-drawing-interactions',
       'institutional-chart-indicator-templates',
+      'institutional-chart-advanced-drawing-sync',
+      'institutional-chart-indicator-watchlists',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -3958,6 +3962,26 @@ function App() {
     institutionalChartDrawingInteraction,
     institutionalChartWorkspace,
   ])
+  const institutionalChartAdvancedDrawingSync = useMemo(() => prepareInstitutionalChartAdvancedDrawingSync({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartDrawingInteraction,
+    institutionalChartLayout,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:58:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartDrawingInteraction,
+    institutionalChartLayout,
+  ])
+  const institutionalChartIndicatorWatchlist = useMemo(() => prepareInstitutionalChartIndicatorWatchlist({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartWorkspace,
+    institutionalChartIndicatorTemplate,
+    institutionalChartAdvancedDrawingSync,
+  }, { emitEvent: false, timestamp: '2026-07-13T09:59:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    institutionalChartAdvancedDrawingSync,
+    institutionalChartIndicatorTemplate,
+    institutionalChartWorkspace,
+  ])
   const workspaceNavigation = [
     ...workspaceNavigationBase,
     { id: 'workspace-persistence', label: 'Persistence', status: workspacePersistence.persistenceStatus },
@@ -4034,7 +4058,7 @@ function App() {
     { id: 'compliance-strategic-archive', label: 'Strategic Archive', status: complianceStrategicDecisionArchive.strategicDecisionArchiveStatus },
     { id: 'ai-decision-governance', label: 'AI Governance', status: aiDecisionGovernanceReadiness.aiDecisionGovernanceStatus },
     { id: 'ai-trading-copilot', label: 'Trading Copilot', status: aiTradingCopilotWorkflowAssistance.aiTradingCopilotWorkflowAssistanceStatus },
-    { id: 'institutional-charting', label: 'Charting', status: institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplateStatus },
+    { id: 'institutional-charting', label: 'Charting', status: institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlistStatus },
   ].map((item) => ({
     ...item,
     family: getWorkspaceFamily(item.id),
@@ -4513,19 +4537,19 @@ function App() {
           <span className="event-line">{aiTradingCopilotWorkflowAssistance.eventType}</span>
         </article>
 
-        <article id="institutional-charting" className={`panel institutional-charting-panel ${institutionalChartLayout.institutionalChartLayoutStatus}`}>
+        <article id="institutional-charting" className={`panel institutional-charting-panel ${institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlistStatus}`}>
           <div className="panel-heading">
             <h2>Institutional Charting</h2>
-            <span>Chart workspace foundation, multi-chart layouts, timeframe synchronization, drawings, indicators, and state persistence.</span>
+            <span>Chart workspace foundation, multi-chart layouts, timeframe synchronization, drawings, indicators, watchlists, and state persistence.</span>
           </div>
           <div className="guardrail-card-header">
             <div>
-              <span>Chart Layout Status</span>
-              <strong>{institutionalChartLayout.institutionalChartLayoutStatus}</strong>
+              <span>Chart Management Status</span>
+              <strong>{institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlistStatus}</strong>
             </div>
-            <span className={`decision-pill ${institutionalChartLayout.institutionalChartLayoutStatus === 'ready' ? 'positive' : institutionalChartLayout.institutionalChartLayoutStatus === 'blocked' ? 'danger' : 'warning'}`}>charting only</span>
+            <span className={`decision-pill ${institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlistStatus === 'ready' ? 'positive' : institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlistStatus === 'blocked' ? 'danger' : 'warning'}`}>charting only</span>
           </div>
-          <p className="empty-state">{institutionalChartLayout.summary}</p>
+          <p className="empty-state">{institutionalChartIndicatorWatchlist.summary}</p>
           <div className="research-intelligence-grid">
             <MetricCard label="Workspace Score" value={formatNumber(institutionalChartWorkspace.institutionalChartWorkspaceSummary.averageWorkspaceScore)} />
             <MetricCard label="Chart Panes" value={formatNumber(institutionalChartWorkspace.institutionalChartWorkspaceSummary.totalChartPanes)} />
@@ -4533,9 +4557,12 @@ function App() {
             <MetricCard label="Layout Cells" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.totalLayoutCells)} />
             <MetricCard label="Sync Groups" value={formatNumber(institutionalChartLayout.institutionalChartLayoutSummary.synchronizedGroups)} />
             <MetricCard label="Drawing Tools" value={formatNumber(institutionalChartDrawingInteraction.institutionalChartDrawingInteractionSummary.totalDrawingTools)} />
+            <MetricCard label="Advanced Tools" value={formatNumber(institutionalChartAdvancedDrawingSync.institutionalChartAdvancedDrawingSyncSummary.totalAdvancedDrawingTools)} />
+            <MetricCard label="Sync Enhancements" value={formatNumber(institutionalChartAdvancedDrawingSync.institutionalChartAdvancedDrawingSyncSummary.totalSynchronizationEnhancements)} />
             <MetricCard label="Interaction Modes" value={formatNumber(institutionalChartDrawingInteraction.institutionalChartDrawingInteractionSummary.totalInteractionModes)} />
             <MetricCard label="Indicators" value={formatNumber(institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplateSummary.totalIndicators)} />
             <MetricCard label="Templates" value={formatNumber(institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplateSummary.totalTemplates)} />
+            <MetricCard label="Linked Symbols" value={formatNumber(institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlistSummary.totalLinkedSymbols)} />
             <MetricCard label="Live Orders" value={institutionalChartLayout.liveOrders ? 'enabled' : 'disabled'} />
           </div>
           <div className="analytics-columns">
@@ -4560,8 +4587,24 @@ function App() {
               <p className="empty-state">{institutionalChartDrawingInteraction.institutionalChartDrawingInteractions[0]?.interactionModes.map((mode) => mode.type).join(' / ')} with synchronized crosshair, zoom, and pan state.</p>
             </section>
             <section>
+              <h3>Advanced Drawing Tools</h3>
+              <p className="empty-state">{institutionalChartAdvancedDrawingSync.institutionalChartAdvancedDrawingSyncRecords[0]?.advancedDrawingTools.map((tool) => tool.label).join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Chart Synchronization Enhancements</h3>
+              <p className="empty-state">{institutionalChartAdvancedDrawingSync.institutionalChartAdvancedDrawingSyncRecords[0]?.synchronizationEnhancements.map((item) => item.type).join(' / ')}</p>
+            </section>
+            <section>
               <h3>Indicator Framework</h3>
               <p className="empty-state">{institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplates[0]?.indicatorDefinitions.map((indicator) => indicator.label).join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Indicator Management</h3>
+              <p className="empty-state">{institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlists[0]?.indicatorConfigurations.map((indicator) => indicator.indicatorId).join(' / ')}</p>
+            </section>
+            <section>
+              <h3>Chart-Linked Watchlists</h3>
+              <p className="empty-state">{institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlists[0]?.chartWatchlists.map((watchlist) => watchlist.name).join(' / ')} / {institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlists[0]?.chartLinkedSymbolSummary.activeSymbol}</p>
             </section>
             <section>
               <h3>Chart Templates</h3>
@@ -4569,13 +4612,15 @@ function App() {
             </section>
             <section>
               <h3>Chart State Persistence</h3>
-              <p className="empty-state">{institutionalChartIndicatorTemplate.institutionalChartIndicatorTemplates[0]?.templatePersistenceSummary.templateStateVersion} / drawing, interaction, template, and layout state remain tenant scoped.</p>
+              <p className="empty-state">{institutionalChartIndicatorWatchlist.institutionalChartIndicatorWatchlists[0]?.persistenceSummary.stateVersion} / drawing, interaction, template, watchlist, and layout state remain tenant scoped.</p>
             </section>
           </div>
           <span className="event-line">{institutionalChartWorkspace.eventType}</span>
           <span className="event-line">{institutionalChartLayout.eventType}</span>
           <span className="event-line">{institutionalChartDrawingInteraction.eventType}</span>
           <span className="event-line">{institutionalChartIndicatorTemplate.eventType}</span>
+          <span className="event-line">{institutionalChartAdvancedDrawingSync.eventType}</span>
+          <span className="event-line">{institutionalChartIndicatorWatchlist.eventType}</span>
         </article>
 
         <article id="release-readiness" className={`panel release-readiness-panel ${releaseReadiness.releaseReadinessStatus}`}>

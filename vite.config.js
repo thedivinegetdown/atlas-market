@@ -26,6 +26,10 @@ export default defineConfig({
               test: /src[\\/]core[\\/](risk|execution|accounting|journal|ai)[\\/]/,
             },
             {
+              name: 'charting-system',
+              test: /lib[\\/]system[\\/]institutionalChart/,
+            },
+            {
               name: 'compliance-system',
               test: /lib[\\/]system[\\/]compliance/,
             },
