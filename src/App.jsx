@@ -47,6 +47,9 @@ import { evaluateMarketDataProviderFailover } from '../lib/market/marketDataProv
 import { evaluateMarketDataStreamingSession } from '../lib/market/marketDataStreamingSessionEngine.js'
 import { evaluateMarketDataFreshnessGapRecovery } from '../lib/market/marketDataFreshnessGapRecoveryEngine.js'
 import { evaluateMarketDataStreamingOperations } from '../lib/market/marketDataStreamingOperationsEngine.js'
+import { evaluateMarketDataWebSocketAdapter } from '../lib/market/marketDataWebSocketAdapterEngine.js'
+import { createMockWebSocketProviderAdapter, createReferenceWebSocketProviderAdapter } from '../lib/market/marketDataStreamingProviderAdapters.js'
+import { routeMarketDataStreamingEvents } from '../lib/market/marketDataStreamingEventRouter.js'
 import { evaluateMultiTimeframeResearchContext } from '../lib/research/multiTimeframeResearchContextEngine.js'
 import { prepareResearchDecisionContext } from '../lib/research/researchDecisionContextEngine.js'
 import { evaluateMarketIntelligence } from '../lib/research/marketIntelligenceEngine.js'
@@ -2257,6 +2260,9 @@ function App() {
       'market-data-streaming-sessions',
       'market-data-freshness',
       'market-data-streaming-operations',
+      'market-data-provider-capabilities',
+      'market-data-provider-adapter-health',
+      'market-data-streaming-routing-health',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4020,6 +4026,47 @@ function App() {
     marketDataStreaming,
     marketDataStreamingSession,
   ])
+  const mockWebSocketProviderAdapter = useMemo(() => createMockWebSocketProviderAdapter({ timestamp: '2026-07-13T10:20:00.000Z' }), [])
+  const referenceWebSocketProviderAdapter = useMemo(() => createReferenceWebSocketProviderAdapter({ providerId: 'reference-websocket-market-data', enabled: false }), [])
+  const marketDataWebSocketAdapter = useMemo(() => {
+    mockWebSocketProviderAdapter.initialize()
+    mockWebSocketProviderAdapter.connect()
+    const subscriptionResult = mockWebSocketProviderAdapter.subscribe({ channel: 'quote', symbols: ['SPY'] })
+    return evaluateMarketDataWebSocketAdapter({
+      tenantContext: inAppNotificationCenter.tenantAndUserScope,
+      marketDataWebSocketAdapters: [
+        {
+          capabilityMetadata: mockWebSocketProviderAdapter.metadata,
+          adapterStatus: 'ready',
+          adapterScore: 94,
+          lifecycleState: { initialized: true, connected: true, heartbeatHealthy: true },
+          reconnectPolicy: { reconnectAttempts: 0, maxReconnectAttempts: 5 },
+          subscriptionAcknowledgements: subscriptionResult.acknowledgements,
+          providerEvents: subscriptionResult.providerEvents,
+        },
+        {
+          capabilityMetadata: referenceWebSocketProviderAdapter.metadata,
+          adapterStatus: 'caution',
+          adapterScore: 70,
+          lifecycleState: { initialized: true, connected: false, heartbeatHealthy: true },
+          providerErrors: [referenceWebSocketProviderAdapter.connect().error],
+        },
+      ],
+    }, { emitEvent: false, timestamp: '2026-07-13T10:21:00.000Z' })
+  }, [
+    inAppNotificationCenter.tenantAndUserScope,
+    mockWebSocketProviderAdapter,
+    referenceWebSocketProviderAdapter,
+  ])
+  const marketDataStreamingRouting = useMemo(() => routeMarketDataStreamingEvents({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    providerEvents: mockWebSocketProviderAdapter.simulateEvents({ channel: 'quote', symbols: ['SPY'] }),
+    marketDataWebSocketAdapter,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:22:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    marketDataWebSocketAdapter,
+    mockWebSocketProviderAdapter,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4293,6 +4340,47 @@ function App() {
           <span className="event-line">{marketDataStreamingSession.eventType}</span>
           <span className="event-line">{marketDataGapRecovery.eventType}</span>
           <span className="event-line">{marketDataStreamingOperations.eventType}</span>
+        </article>
+
+        <article id="market-data-streaming-provider-adapters" className={`panel market-data-streaming-provider-adapters-panel ${marketDataWebSocketAdapter.marketDataWebSocketAdapterStatus}`}>
+          <div className="panel-heading">
+            <h2>Streaming Provider Adapters</h2>
+            <span>Provider-agnostic WebSocket adapter contracts, mock/reference adapters, and normalized streaming-event routing.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Adapter Contract Status</span>
+              <strong>{marketDataWebSocketAdapter.marketDataWebSocketAdapterStatus}</strong>
+            </div>
+            <span className={`decision-pill ${marketDataWebSocketAdapter.marketDataWebSocketAdapterStatus === 'ready' ? 'positive' : marketDataWebSocketAdapter.marketDataWebSocketAdapterStatus === 'blocked' ? 'danger' : 'warning'}`}>mock default</span>
+          </div>
+          <p className="empty-state">{marketDataWebSocketAdapter.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Adapters" value={formatNumber(marketDataWebSocketAdapter.marketDataWebSocketAdapterSummary.total)} />
+            <MetricCard label="Mock Adapters" value={formatNumber(marketDataWebSocketAdapter.marketDataWebSocketAdapterSummary.mockAdapters)} />
+            <MetricCard label="Reference Configured" value={formatNumber(marketDataWebSocketAdapter.marketDataWebSocketAdapterSummary.configuredReferenceAdapters)} />
+            <MetricCard label="Acknowledgements" value={formatNumber(marketDataWebSocketAdapter.marketDataWebSocketAdapterSummary.totalAcknowledgements)} />
+            <MetricCard label="Accepted Routes" value={formatNumber(marketDataStreamingRouting.marketDataStreamingRoutingSummary.accepted)} />
+            <MetricCard label="Duplicate Routes" value={formatNumber(marketDataStreamingRouting.marketDataStreamingRoutingSummary.duplicate)} />
+            <MetricCard label="Stale Routes" value={formatNumber(marketDataStreamingRouting.marketDataStreamingRoutingSummary.stale)} />
+            <MetricCard label="Scanner Ready" value={formatNumber(marketDataStreamingRouting.marketDataStreamingRoutingSummary.scannerReady)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Provider WebSocket Adapter Contract</h3>
+              <p className="empty-state">{marketDataWebSocketAdapter.marketDataWebSocketAdapters[0]?.capabilityMetadata.lifecycle.join(', ')} / bounded reconnect and safe error normalization.</p>
+            </section>
+            <section>
+              <h3>Mock &amp; Reference Providers</h3>
+              <p className="empty-state">{marketDataWebSocketAdapter.marketDataWebSocketAdapters[0]?.capabilityMetadata.providerId} default / {marketDataWebSocketAdapter.marketDataWebSocketAdapters[1]?.capabilityMetadata.providerId} disabled until explicit configuration.</p>
+            </section>
+            <section>
+              <h3>Streaming Event Normalization</h3>
+              <p className="empty-state">{marketDataStreamingRouting.summary}</p>
+            </section>
+          </div>
+          <span className="event-line">{marketDataWebSocketAdapter.eventType}</span>
+          <span className="event-line">{marketDataStreamingRouting.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
