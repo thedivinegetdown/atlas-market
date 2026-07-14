@@ -38,6 +38,10 @@ export default defineConfig({
               test: /lib[\\/](market|scanners)[\\/]/,
             },
             {
+              name: 'reporting-system',
+              test: /lib[\\/]reports[\\/]/,
+            },
+            {
               name: 'system-operations',
               test: /lib[\\/]system[\\/](?!compliance|institutionalChart)/,
             },

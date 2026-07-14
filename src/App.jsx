@@ -47,6 +47,9 @@ import { evaluateMarketDataProviderFailover } from '../lib/market/marketDataProv
 import { evaluateMarketDataProviderResilience } from '../lib/market/marketDataProviderResilienceEngine.js'
 import { evaluateScannerThroughputBackpressure } from '../lib/scanners/scannerThroughputBackpressureEngine.js'
 import { evaluateMarketDataScannerHealth } from '../lib/market/marketDataScannerHealthEngine.js'
+import { generatePaperTradingReport } from '../lib/reports/paperTradingReportingEngine.js'
+import { exportPaperReport } from '../lib/reports/paperReportExportEngine.js'
+import { generatePaperAuditReport } from '../lib/reports/paperAuditReportingEngine.js'
 import { evaluateMarketDataStreamingSession } from '../lib/market/marketDataStreamingSessionEngine.js'
 import { evaluateMarketDataFreshnessGapRecovery } from '../lib/market/marketDataFreshnessGapRecoveryEngine.js'
 import { evaluateMarketDataStreamingOperations } from '../lib/market/marketDataStreamingOperationsEngine.js'
@@ -2304,6 +2307,9 @@ function App() {
       'market-data-resilience',
       'scanner-production-health',
       'market-data-scanner-health',
+      'paper-reports',
+      'paper-report-export',
+      'paper-audit',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4372,6 +4378,57 @@ function App() {
     marketDataStreamingRouting,
     scannerThroughputBackpressure,
   ])
+  const paperTradingReport = useMemo(() => generatePaperTradingReport({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    reportType: 'operations-summary',
+    dateRange: { from: '2026-07-13T00:00:00.000Z', to: '2026-07-13T23:59:59.000Z' },
+    realtimePaperPortfolio,
+    realtimePaperPerformance,
+    realtimePortfolioReconciliation,
+    realtimePaperRisk,
+    realtimePaperOperations,
+    paperOperationsAlerts,
+    paperOperationsIncidents,
+    pagination: { limit: 25, offset: 0 },
+  }, { emitEvent: false, timestamp: '2026-07-13T10:38:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    paperOperationsAlerts,
+    paperOperationsIncidents,
+    realtimePaperOperations,
+    realtimePaperPerformance,
+    realtimePaperPortfolio,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+  ])
+  const paperReportExport = useMemo(() => exportPaperReport({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    paperReport: paperTradingReport.paperReport,
+    format: 'csv',
+  }, { emitEvent: false, timestamp: '2026-07-13T10:39:00.000Z' }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    paperTradingReport,
+  ])
+  const paperAuditReport = useMemo(() => generatePaperAuditReport({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    realtimeSimulatedExecutions,
+    realtimePortfolioReconciliation,
+    realtimePaperOperations,
+    paperOperationsAlerts,
+    paperOperationsIncidents,
+    paperOperationsObservability,
+    apiReliability,
+  }, { emitEvent: false, timestamp: '2026-07-13T10:40:00.000Z' }), [
+    apiReliability,
+    inAppNotificationCenter.tenantAndUserScope,
+    paperOperationsAlerts,
+    paperOperationsIncidents,
+    paperOperationsObservability,
+    realtimePaperOperations,
+    realtimePortfolioReconciliation,
+    realtimeSimulatedExecutions,
+  ])
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -4940,6 +4997,48 @@ function App() {
           <span className="event-line">{marketDataProviderResilience.eventType}</span>
           <span className="event-line">{scannerThroughputBackpressure.eventType}</span>
           <span className="event-line">{marketDataScannerHealth.eventType}</span>
+        </article>
+
+        <article id="paper-reports-audit" className={`panel realtime-portfolio-pnl-panel ${paperTradingReport.reportStatus}`}>
+          <div className="panel-heading">
+            <h2>Paper Reports &amp; Audit</h2>
+            <span>Snapshot reports, CSV/JSON export readiness, and read-only audit summaries for paper trading operations.</span>
+          </div>
+          <div className="guardrail-card-header">
+            <div>
+              <span>Report Type</span>
+              <strong>{paperTradingReport.paperReport.reportType}</strong>
+            </div>
+            <span className="decision-pill positive">{paperReportExport.paperReportExport.format}</span>
+          </div>
+          <p className="empty-state">{paperTradingReport.summary}</p>
+          <div className="research-intelligence-grid">
+            <MetricCard label="Report Rows" value={formatNumber(paperTradingReport.paperReport.rows.length)} />
+            <MetricCard label="Report Total" value={formatNumber(paperTradingReport.paperReport.pagination.total)} />
+            <MetricCard label="Export Format" value={paperReportExport.paperReportExport.format} />
+            <MetricCard label="Export Bytes" value={formatNumber(paperReportExport.paperReportExport.byteLength)} />
+            <MetricCard label="Execution Audit" value={formatNumber(paperAuditReport.paperAuditReport.executionAudit.total)} />
+            <MetricCard label="Reconciliation Audit" value={formatNumber(paperAuditReport.paperAuditReport.reconciliationAudit.total)} />
+            <MetricCard label="Alert History" value={formatNumber(paperAuditReport.paperAuditReport.alertHistory.total)} />
+            <MetricCard label="Incident History" value={formatNumber(paperAuditReport.paperAuditReport.incidentHistory.total)} />
+          </div>
+          <div className="analytics-columns">
+            <section>
+              <h3>Date-Range Filtering</h3>
+              <p className="empty-state">{paperTradingReport.paperReport.dateRange.from} to {paperTradingReport.paperReport.dateRange.to}; pagination-ready result set.</p>
+            </section>
+            <section>
+              <h3>Export Actions</h3>
+              <p className="empty-state">Latest safe filename {paperReportExport.paperReportExport.filename}; CSV and JSON are supported without filesystem persistence.</p>
+            </section>
+            <section>
+              <h3>Audit Summaries</h3>
+              <p className="empty-state">Execution, reconciliation, operations, alerts, incidents, user activity, and API activity remain read-only and append-only.</p>
+            </section>
+          </div>
+          <span className="event-line">{paperTradingReport.eventType}</span>
+          <span className="event-line">{paperReportExport.eventType}</span>
+          <span className="event-line">{paperAuditReport.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
