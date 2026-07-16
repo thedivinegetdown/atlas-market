@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { validateProductionConfiguration } from '../../lib/system/productionConfigurationValidationEngine.js'
 import { evaluateReleaseReadinessDiagnostics } from '../../lib/system/releaseReadinessDiagnosticsEngine.js'
+import { createReleaseCandidateManifest, supersedeReleaseCandidate } from '../../lib/system/releaseCandidatePackagingEngine.js'
+import { transitionReleaseApproval, validateProductionRun } from '../../lib/system/releaseApprovalWorkflowEngine.js'
 
 export function ReleaseDiagnosticsPanel({
   tenantContext,
@@ -107,6 +109,72 @@ export function ReleaseDiagnosticsPanel({
   }, { emitEvent: false, timestamp: '2026-07-16T10:46:00.000Z' }), [accountId, tenantContext])
   const readiness = releaseReadinessDiagnostics ?? evaluatedReadiness
   const configuration = productionConfigurationValidation ?? evaluatedConfiguration
+  const releaseCandidate = useMemo(() => createReleaseCandidateManifest({
+    tenantContext,
+    accountId,
+    releaseCandidateId: 'rc-paper-0.0.0-ffe3837',
+    gitCommit: 'ffe3837f2f5d4dfbcfe464e389084665536a2de6',
+    branch: 'part-10-trading-workspace',
+    applicationVersion: '0.0.0',
+    databaseMigrationLevel: '202607160060_phase77_release_candidate_approval_validation',
+    enabledPaperTradingFeatureSet: ['streaming', 'scanner', 'paper-execution', 'portfolio-pnl', 'reporting', 'release-diagnostics'],
+    testSummaryReferences: ['npm test', 'phase76 diagnostics', 'phase77 release workflow'],
+    lintSummary: { command: 'npm run lint', status: 'passed' },
+    buildSummary: { command: 'npm run build', status: 'passed' },
+    releaseReadinessDiagnostics: readiness,
+    productionConfigurationValidation: configuration,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:00:00.000Z' }), [accountId, configuration, readiness, tenantContext])
+  const releaseApproval = useMemo(() => transitionReleaseApproval({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    actor: { id: tenantContext?.userId ?? 'local-operator', role: 'owner' },
+    decision: releaseCandidate.releaseCandidateManifest.manifestState === 'blocked' ? 'rejected' : 'approved',
+    note: 'Paper-only release candidate reviewed.',
+  }, { emitEvent: false, timestamp: '2026-07-16T11:01:00.000Z' }), [accountId, releaseCandidate, tenantContext])
+  const productionRunValidation = useMemo(() => validateProductionRun({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    releaseReadinessDiagnostics: readiness,
+    productionConfigurationValidation: configuration,
+    authenticationReadiness,
+    apiReliability,
+    marketDataScannerHealth,
+    realtimePortfolioReconciliation,
+    realtimePaperRisk,
+    paperOperationsObservability,
+    paperReportWorker,
+    paperReportArtifact,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:02:00.000Z' }), [
+    accountId,
+    apiReliability,
+    authenticationReadiness,
+    configuration,
+    marketDataScannerHealth,
+    paperOperationsObservability,
+    paperReportArtifact,
+    paperReportWorker,
+    readiness,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+    releaseApproval,
+    releaseCandidate,
+    tenantContext,
+  ])
+  const supersededCandidate = useMemo(() => supersedeReleaseCandidate({
+    tenantContext,
+    accountId,
+    releaseCandidateId: 'rc-paper-0.0.0-next',
+    gitCommit: 'next-paper-candidate',
+    branch: 'part-10-trading-workspace',
+    applicationVersion: '0.0.0',
+    databaseMigrationLevel: '202607160060_phase77_release_candidate_approval_validation',
+    supersedesReleaseCandidateId: releaseCandidate.releaseCandidateManifest.releaseCandidateId,
+    releaseReadinessDiagnostics: readiness,
+    productionConfigurationValidation: configuration,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:03:00.000Z' }), [accountId, configuration, readiness, releaseCandidate, tenantContext])
   return (
     <article id="release-diagnostics" className={`panel release-readiness-panel ${readiness.releaseReadinessStatus}`}>
       <div className="panel-heading">
@@ -142,9 +210,29 @@ export function ReleaseDiagnosticsPanel({
           <h3>Configuration Validation Results</h3>
           <p className="empty-state">{configuration.findings[0]?.message ?? 'Production configuration validation passed without exposing secret values.'}</p>
         </section>
+        <section>
+          <h3>Current Release Candidate</h3>
+          <p className="empty-state">{releaseCandidate.releaseCandidateManifest.releaseCandidateId} / {releaseCandidate.releaseCandidateManifest.applicationVersion} / checksum {releaseCandidate.releaseCandidateManifest.checksum}</p>
+        </section>
+        <section>
+          <h3>Approval History</h3>
+          <p className="empty-state">{releaseApproval.releaseApproval.approvalState} by {releaseApproval.releaseApproval.actor.role} / activity append-only.</p>
+        </section>
+        <section>
+          <h3>Production-Run Validation</h3>
+          <p className="empty-state">{productionRunValidation.validationState}: {productionRunValidation.productionRunValidation.checks.filter((item) => item.status === 'passed').length} passed / {productionRunValidation.productionRunValidation.warnings.length} warnings / {productionRunValidation.productionRunValidation.blockers.length} failed.</p>
+        </section>
+        <section>
+          <h3>Superseded Release Candidates</h3>
+          <p className="empty-state">{supersededCandidate.supersededReleaseCandidateId} can be superseded by {supersededCandidate.releaseCandidateManifest.releaseCandidateId} without mutating historical manifest content.</p>
+        </section>
       </div>
       <span className="event-line">{readiness.eventType}</span>
       <span className="event-line">{configuration.eventType}</span>
+      <span className="event-line">{releaseCandidate.eventType}</span>
+      <span className="event-line">{releaseApproval.eventType}</span>
+      <span className="event-line">{productionRunValidation.eventType}</span>
+      <span className="event-line">{supersededCandidate.eventType}</span>
     </article>
   )
 }
