@@ -50,6 +50,7 @@ import { evaluateMarketDataScannerHealth } from '../lib/market/marketDataScanner
 import { generatePaperTradingReport } from '../lib/reports/paperTradingReportingEngine.js'
 import { exportPaperReport } from '../lib/reports/paperReportExportEngine.js'
 import { generatePaperAuditReport } from '../lib/reports/paperAuditReportingEngine.js'
+import { preparePaperReportOperations } from '../lib/reports/paperReportOperationsDashboardEngine.js'
 import { evaluateMarketDataStreamingSession } from '../lib/market/marketDataStreamingSessionEngine.js'
 import { evaluateMarketDataFreshnessGapRecovery } from '../lib/market/marketDataFreshnessGapRecoveryEngine.js'
 import { evaluateMarketDataStreamingOperations } from '../lib/market/marketDataStreamingOperationsEngine.js'
@@ -2310,6 +2311,12 @@ function App() {
       'paper-reports',
       'paper-report-export',
       'paper-audit',
+      'paper-report-jobs',
+      'paper-report-job-action',
+      'paper-report-schedules',
+      'paper-report-schedule-action',
+      'paper-report-schedule-run',
+      'paper-report-deliveries',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4429,6 +4436,31 @@ function App() {
     realtimePortfolioReconciliation,
     realtimeSimulatedExecutions,
   ])
+  const paperReportOperations = useMemo(() => preparePaperReportOperations({
+    tenantContext: inAppNotificationCenter.tenantAndUserScope,
+    accountId: accountingDemoPortfolio.id,
+    paperTradingReport,
+    paperReportExport,
+    realtimePaperPortfolio,
+    realtimePaperPerformance,
+    realtimePortfolioReconciliation,
+    realtimePaperRisk,
+    realtimePaperOperations,
+    paperOperationsAlerts,
+    paperOperationsIncidents,
+  }, { emitEvent: false }), [
+    inAppNotificationCenter.tenantAndUserScope,
+    paperOperationsAlerts,
+    paperOperationsIncidents,
+    paperReportExport,
+    paperTradingReport,
+    realtimePaperOperations,
+    realtimePaperPerformance,
+    realtimePaperPortfolio,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+  ])
+  const { paperReportJob, paperReportSchedule, paperReportDelivery } = paperReportOperations
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -5021,6 +5053,10 @@ function App() {
             <MetricCard label="Reconciliation Audit" value={formatNumber(paperAuditReport.paperAuditReport.reconciliationAudit.total)} />
             <MetricCard label="Alert History" value={formatNumber(paperAuditReport.paperAuditReport.alertHistory.total)} />
             <MetricCard label="Incident History" value={formatNumber(paperAuditReport.paperAuditReport.incidentHistory.total)} />
+            <MetricCard label="Recent Job Status" value={paperReportJob.paperReportJob.status} />
+            <MetricCard label="Next Scheduled Run" value={paperReportSchedule.paperReportSchedule.nextRunAt} />
+            <MetricCard label="Delivery Status" value={paperReportDelivery.paperReportDelivery.status} />
+            <MetricCard label="Download Available" value={paperReportDelivery.downloadValidation.valid ? 'yes' : 'no'} />
           </div>
           <div className="analytics-columns">
             <section>
@@ -5035,10 +5071,25 @@ function App() {
               <h3>Audit Summaries</h3>
               <p className="empty-state">Execution, reconciliation, operations, alerts, incidents, user activity, and API activity remain read-only and append-only.</p>
             </section>
+            <section>
+              <h3>Recent Jobs</h3>
+              <p className="empty-state">{paperReportJob.paperReportJob.jobType} / {paperReportJob.paperReportJob.status} / payload-free job table.</p>
+            </section>
+            <section>
+              <h3>Schedules</h3>
+              <p className="empty-state">{paperReportSchedule.paperReportSchedule.frequency} / {paperReportSchedule.paperReportSchedule.timezone}; next {paperReportSchedule.paperReportSchedule.nextRunAt}.</p>
+            </section>
+            <section>
+              <h3>Delivery History</h3>
+              <p className="empty-state">{paperReportDelivery.paperReportDelivery.filename}; expires {paperReportDelivery.paperReportDelivery.expiresAt}; append-only metadata.</p>
+            </section>
           </div>
           <span className="event-line">{paperTradingReport.eventType}</span>
           <span className="event-line">{paperReportExport.eventType}</span>
           <span className="event-line">{paperAuditReport.eventType}</span>
+          <span className="event-line">{paperReportJob.eventType}</span>
+          <span className="event-line">{paperReportSchedule.eventType}</span>
+          <span className="event-line">{paperReportDelivery.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
