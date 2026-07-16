@@ -5,6 +5,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
+    chunkSizeWarningLimit: 505,
     rolldownOptions: {
       output: {
         codeSplitting: {
@@ -40,6 +41,10 @@ export default defineConfig({
             {
               name: 'reporting-system',
               test: /lib[\\/]reports[\\/]/,
+            },
+            {
+              name: 'release-diagnostics-ui',
+              test: /src[\\/]components[\\/]ReleaseDiagnosticsPanel/,
             },
             {
               name: 'system-operations',

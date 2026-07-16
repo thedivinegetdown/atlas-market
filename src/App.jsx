@@ -1,5 +1,6 @@
 import { Suspense, useMemo } from 'react'
 import './App.css'
+import { ReleaseDiagnosticsPanel } from './components/ReleaseDiagnosticsPanel.jsx'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
 import { integrateResearchEnhancedDecision } from './core/ai/researchEnhancedDecisionIntegration.js'
@@ -5644,6 +5645,36 @@ function App() {
           </div>
           <span className="event-line">{releaseReadiness.eventType}</span>
         </article>
+
+        <ReleaseDiagnosticsPanel
+          tenantContext={inAppNotificationCenter.tenantAndUserScope}
+          accountId={accountingDemoPortfolio.id}
+          systems={[
+            authenticationReadiness,
+            identityAuthorization,
+            apiReliability,
+            marketDataScannerHealth,
+            realtimeScanner,
+            realtimeSignals,
+            realtimeSimulatedExecutions,
+            primaryAccounting,
+            realtimePortfolioReconciliation,
+            realtimePaperPortfolio,
+            realtimePaperRisk,
+            realtimePaperPerformance,
+            risk,
+            paperTradingReport,
+            paperReportJob,
+            paperReportWorker,
+            paperReportArtifact,
+            realtimePaperOperations,
+            paperOperationsAlerts,
+            paperOperationsIncidents,
+            paperOperationsObservability,
+          ]}
+          MetricCard={MetricCard}
+          formatNumber={formatNumber}
+        />
 
         <article id="rc-stabilization" className={`panel rc-stabilization-panel ${releaseCandidateStabilization.finalStatus}`}>
           <div className="panel-heading">
