@@ -2317,6 +2317,10 @@ function App() {
       'paper-report-schedule-action',
       'paper-report-schedule-run',
       'paper-report-deliveries',
+      'paper-report-worker',
+      'paper-report-artifacts',
+      'paper-report-artifact-download',
+      'paper-report-artifact-expiration',
     ],
   }), [])
   const persistenceApiIntegration = useMemo(() => evaluatePersistenceApiIntegration({
@@ -4460,7 +4464,7 @@ function App() {
     realtimePaperRisk,
     realtimePortfolioReconciliation,
   ])
-  const { paperReportJob, paperReportSchedule, paperReportDelivery } = paperReportOperations
+  const { paperReportJob, paperReportSchedule, paperReportDelivery, paperReportWorker, paperReportArtifact, paperReportArtifactDownload } = paperReportOperations
   const institutionalChartWorkspace = useMemo(() => prepareInstitutionalChartWorkspace({
     tenantContext: inAppNotificationCenter.tenantAndUserScope,
     symbol: 'SPY',
@@ -5034,7 +5038,7 @@ function App() {
         <article id="paper-reports-audit" className={`panel realtime-portfolio-pnl-panel ${paperTradingReport.reportStatus}`}>
           <div className="panel-heading">
             <h2>Paper Reports &amp; Audit</h2>
-            <span>Snapshot reports, CSV/JSON export readiness, and read-only audit summaries for paper trading operations.</span>
+            <span>Snapshot reports, CSV/JSON exports, and read-only paper audit summaries.</span>
           </div>
           <div className="guardrail-card-header">
             <div>
@@ -5054,9 +5058,10 @@ function App() {
             <MetricCard label="Alert History" value={formatNumber(paperAuditReport.paperAuditReport.alertHistory.total)} />
             <MetricCard label="Incident History" value={formatNumber(paperAuditReport.paperAuditReport.incidentHistory.total)} />
             <MetricCard label="Recent Job Status" value={paperReportJob.paperReportJob.status} />
+            <MetricCard label="Worker Health" value={paperReportWorker.paperReportWorkerRun.status} />
             <MetricCard label="Next Scheduled Run" value={paperReportSchedule.paperReportSchedule.nextRunAt} />
             <MetricCard label="Delivery Status" value={paperReportDelivery.paperReportDelivery.status} />
-            <MetricCard label="Download Available" value={paperReportDelivery.downloadValidation.valid ? 'yes' : 'no'} />
+            <MetricCard label="Available Artifacts" value={paperReportArtifact ? '1' : '0'} />
           </div>
           <div className="analytics-columns">
             <section>
@@ -5065,15 +5070,15 @@ function App() {
             </section>
             <section>
               <h3>Export Actions</h3>
-              <p className="empty-state">Latest safe filename {paperReportExport.paperReportExport.filename}; CSV and JSON are supported without filesystem persistence.</p>
+              <p className="empty-state">{paperReportExport.paperReportExport.filename}; CSV/JSON without filesystem persistence.</p>
             </section>
             <section>
               <h3>Audit Summaries</h3>
-              <p className="empty-state">Execution, reconciliation, operations, alerts, incidents, user activity, and API activity remain read-only and append-only.</p>
+              <p className="empty-state">Execution, reconciliation, operations, alerts, incidents, users, and APIs remain read-only.</p>
             </section>
             <section>
               <h3>Recent Jobs</h3>
-              <p className="empty-state">{paperReportJob.paperReportJob.jobType} / {paperReportJob.paperReportJob.status} / payload-free job table.</p>
+              <p className="empty-state">{paperReportJob.paperReportJob.jobType} / {paperReportJob.paperReportJob.status}; {paperReportWorker.paperReportWorkerRun.processedCount} processed / {paperReportWorker.paperReportWorkerRun.deferredCount} deferred.</p>
             </section>
             <section>
               <h3>Schedules</h3>
@@ -5083,6 +5088,10 @@ function App() {
               <h3>Delivery History</h3>
               <p className="empty-state">{paperReportDelivery.paperReportDelivery.filename}; expires {paperReportDelivery.paperReportDelivery.expiresAt}; append-only metadata.</p>
             </section>
+            <section>
+              <h3>Download Action</h3>
+              <p className="empty-state">{paperReportArtifact?.paperReportArtifact?.filename ?? 'No artifact'} / {formatNumber(paperReportArtifact?.paperReportArtifact?.byteSize ?? 0)} bytes / downloads {formatNumber(paperReportArtifactDownload?.paperReportArtifact?.downloadCount ?? 0)} / {paperReportArtifactDownload?.downloadStatus ?? 'not downloaded'}.</p>
+            </section>
           </div>
           <span className="event-line">{paperTradingReport.eventType}</span>
           <span className="event-line">{paperReportExport.eventType}</span>
@@ -5090,6 +5099,9 @@ function App() {
           <span className="event-line">{paperReportJob.eventType}</span>
           <span className="event-line">{paperReportSchedule.eventType}</span>
           <span className="event-line">{paperReportDelivery.eventType}</span>
+          <span className="event-line">{paperReportWorker.eventType}</span>
+          <span className="event-line">{paperReportArtifact?.eventType}</span>
+          <span className="event-line">{paperReportArtifactDownload?.eventType}</span>
         </article>
 
         <article id="market-regime" className={`panel market-regime-panel ${marketRegimeClassification.riskRegime.regime}`}>
