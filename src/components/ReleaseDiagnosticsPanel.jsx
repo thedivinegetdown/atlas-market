@@ -7,6 +7,8 @@ import { certifyReleaseCandidate, supersedeReleaseCertification } from '../../li
 import { evaluateReleaseRecoveryReadiness, generateReleaseRunbook, updateReleaseRunbookItem } from '../../lib/system/releaseRunbookRecoveryEngine.js'
 import { registerReleaseEvidence, summarizeReleaseEvidence, updateReleaseEvidenceVerification } from '../../lib/system/releaseEvidenceRegistryEngine.js'
 import { evaluateReleaseGate, signReleaseAttestation, supersedeReleaseAttestation } from '../../lib/system/releaseAttestationGateEngine.js'
+import { createReleaseAcceptanceRun } from '../../lib/system/releaseAcceptanceEngine.js'
+import { evaluateReleaseHandoff, generateReleaseDocumentation, transitionReleaseDocumentation } from '../../lib/system/releaseDocumentationEngine.js'
 
 export function ReleaseDiagnosticsPanel({
   tenantContext,
@@ -309,6 +311,101 @@ export function ReleaseDiagnosticsPanel({
     acceptedWarnings: true,
     expectedMigrationLevel: releaseCandidate.releaseCandidateManifest.databaseMigrationLevel,
   }, { emitEvent: false, timestamp: '2026-07-16T11:14:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, signedAttestation, tenantContext])
+  const releaseAcceptance = useMemo(() => createReleaseAcceptanceRun({
+    tenantContext,
+    accountId,
+    suiteType: 'pre_release',
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseCertification: releaseCertification.releaseCertification,
+    releaseRunbook: releaseRunbook.releaseRunbook,
+    releaseRecoveryReadiness: releaseRecoveryReadiness.releaseRecoveryReadiness,
+    releaseAttestation: signedAttestation.releaseAttestation,
+    releaseGateEvaluation: releaseGate.releaseGateEvaluation,
+    productionRunValidation: productionRunValidation.productionRunValidation,
+    evidenceSummary: releaseEvidenceSummary,
+    releaseReadinessDiagnostics: readiness,
+    productionConfigurationValidation: configuration,
+    authenticationReadiness,
+    identityAuthorization,
+    apiReliability,
+    marketDataScannerHealth,
+    realtimeScanner,
+    realtimeSignals,
+    realtimeSimulatedExecutions,
+    primaryAccounting,
+    realtimePortfolioReconciliation,
+    realtimePaperPortfolio,
+    realtimePaperRisk,
+    paperOperationsObservability,
+    paperTradingReport,
+    paperReportWorker,
+    paperReportArtifact,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:15:00.000Z' }), [
+    accountId,
+    apiReliability,
+    authenticationReadiness,
+    configuration,
+    identityAuthorization,
+    marketDataScannerHealth,
+    paperOperationsObservability,
+    paperReportArtifact,
+    paperReportWorker,
+    paperTradingReport,
+    primaryAccounting,
+    productionRunValidation,
+    readiness,
+    realtimePaperPortfolio,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+    realtimeScanner,
+    realtimeSignals,
+    realtimeSimulatedExecutions,
+    releaseCandidate,
+    releaseCertification,
+    releaseEvidenceSummary,
+    releaseGate,
+    releaseRecoveryReadiness,
+    releaseRunbook,
+    signedAttestation,
+    tenantContext,
+  ])
+  const releaseDocumentation = useMemo(() => ['release_notes', 'operator_guide', 'administrator_guide', 'final_handoff_checklist'].map((documentationType) => {
+    const generated = generateReleaseDocumentation({
+      tenantContext,
+      accountId,
+      documentationType,
+      releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+      releaseApproval: releaseApproval.releaseApproval,
+      productionConfigurationValidation: configuration,
+      releaseCertification: releaseCertification.releaseCertification,
+      releaseRecoveryReadiness: releaseRecoveryReadiness.releaseRecoveryReadiness,
+      releaseAttestation: signedAttestation.releaseAttestation,
+      releaseGateEvaluation: releaseGate.releaseGateEvaluation,
+      releaseAcceptanceRun: releaseAcceptance.releaseAcceptanceRun,
+      evidenceSummary: releaseEvidenceSummary,
+      validationSummary: { tests: 'passed', lint: 'passed', build: 'passed' },
+    }, { emitEvent: false, timestamp: '2026-07-16T11:16:00.000Z' }).releaseDocumentation
+    const validated = transitionReleaseDocumentation({ releaseDocumentation: generated, action: 'validate' }, { emitEvent: false, timestamp: '2026-07-16T11:17:00.000Z' }).releaseDocumentation
+    return transitionReleaseDocumentation({ releaseDocumentation: validated, action: 'publish' }, { emitEvent: false, timestamp: '2026-07-16T11:18:00.000Z' }).releaseDocumentation
+  }), [accountId, configuration, releaseAcceptance, releaseApproval, releaseCandidate, releaseCertification, releaseEvidenceSummary, releaseGate, releaseRecoveryReadiness, signedAttestation, tenantContext])
+  const supersededReleaseDocumentation = useMemo(() => transitionReleaseDocumentation({
+    releaseDocumentation: releaseDocumentation[0],
+    action: 'supersede',
+  }, { emitEvent: false, timestamp: '2026-07-16T11:19:00.000Z' }), [releaseDocumentation])
+  const releaseHandoff = useMemo(() => evaluateReleaseHandoff({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    productionConfigurationValidation: configuration,
+    releaseCertification: releaseCertification.releaseCertification,
+    releaseRecoveryReadiness: releaseRecoveryReadiness.releaseRecoveryReadiness,
+    evidenceSummary: releaseEvidenceSummary,
+    releaseAttestation: signedAttestation.releaseAttestation,
+    releaseGateEvaluation: releaseGate.releaseGateEvaluation,
+    releaseAcceptanceRun: releaseAcceptance.releaseAcceptanceRun,
+    releaseDocumentation,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:20:00.000Z' }), [accountId, configuration, releaseAcceptance, releaseApproval, releaseCandidate, releaseCertification, releaseDocumentation, releaseEvidenceSummary, releaseGate, releaseRecoveryReadiness, signedAttestation, tenantContext])
   return (
     <article id="release-diagnostics" className={`panel release-readiness-panel ${readiness.releaseReadinessStatus}`}>
       <div className="panel-heading">
@@ -408,6 +505,26 @@ export function ReleaseDiagnosticsPanel({
           <h3>Final Security &amp; UX Hardening</h3>
           <p className="empty-state">Security policy default-deny checks, bounded summaries, accessible status text, keyboard-operable release actions, and paper-only labels are enforced before v1.0 release review.</p>
         </section>
+        <section>
+          <h3>Acceptance Suite Status</h3>
+          <p className="empty-state">{releaseAcceptance.releaseAcceptanceRun.suiteType} / {releaseAcceptance.releaseAcceptanceRun.runState}: {formatNumber(releaseAcceptance.releaseAcceptanceRun.passedCount)} passed / {formatNumber(releaseAcceptance.releaseAcceptanceRun.warningCount)} warnings / {formatNumber(releaseAcceptance.releaseAcceptanceRun.failedCount)} failed / {formatNumber(releaseAcceptance.releaseAcceptanceRun.skippedCount)} skipped.</p>
+        </section>
+        <section>
+          <h3>Recent Acceptance History</h3>
+          <p className="empty-state">{releaseAcceptance.releaseAcceptanceRun.idempotencyKey} prevents duplicate active runs; read-only checks {formatNumber(releaseAcceptance.releaseAcceptanceRun.readOnlyChecks)} / paper smoke actions {formatNumber(releaseAcceptance.releaseAcceptanceRun.paperSmokeActions)}.</p>
+        </section>
+        <section>
+          <h3>Release Documentation Status</h3>
+          <p className="empty-state">Release notes {releaseDocumentation.find((item) => item.documentationType === 'release_notes')?.documentationState} / operator guide {releaseDocumentation.find((item) => item.documentationType === 'operator_guide')?.documentationState} / administrator guide {releaseDocumentation.find((item) => item.documentationType === 'administrator_guide')?.documentationState}.</p>
+        </section>
+        <section>
+          <h3>Documentation Checksum</h3>
+          <p className="empty-state">{releaseDocumentation[0]?.checksum} / {supersededReleaseDocumentation.releaseDocumentation.documentationState} historical version preserved.</p>
+        </section>
+        <section>
+          <h3>Final Handoff Checklist</h3>
+          <p className="empty-state">{releaseHandoff.handoffState}: {releaseHandoff.releaseHandoffEvaluation.checks.filter((item) => item.status === 'passed').length} passed / {releaseHandoff.releaseHandoffEvaluation.blockers.length} blocked / Atlas Market paper-trading release procedures only.</p>
+        </section>
       </div>
       <span className="event-line">{readiness.eventType}</span>
       <span className="event-line">{configuration.eventType}</span>
@@ -425,6 +542,12 @@ export function ReleaseDiagnosticsPanel({
       <span className="event-line">{supersededAttestation.eventType}</span>
       <span className="event-line">{releaseGate.evaluatedEventType}</span>
       <span className="event-line">{releaseGate.eventType}</span>
+      <span className="event-line">{releaseAcceptance.eventType}</span>
+      <span className="event-line">{releaseAcceptance.checkEventType}</span>
+      <span className="event-line">releaseDocumentation.published</span>
+      <span className="event-line">{supersededReleaseDocumentation.eventType}</span>
+      <span className="event-line">{releaseHandoff.evaluatedEventType}</span>
+      <span className="event-line">{releaseHandoff.eventType}</span>
     </article>
   )
 }
