@@ -3,6 +3,8 @@ import { validateProductionConfiguration } from '../../lib/system/productionConf
 import { evaluateReleaseReadinessDiagnostics } from '../../lib/system/releaseReadinessDiagnosticsEngine.js'
 import { createReleaseCandidateManifest, supersedeReleaseCandidate } from '../../lib/system/releaseCandidatePackagingEngine.js'
 import { transitionReleaseApproval, validateProductionRun } from '../../lib/system/releaseApprovalWorkflowEngine.js'
+import { certifyReleaseCandidate, supersedeReleaseCertification } from '../../lib/system/releaseCertificationEngine.js'
+import { evaluateReleaseRecoveryReadiness, generateReleaseRunbook, updateReleaseRunbookItem } from '../../lib/system/releaseRunbookRecoveryEngine.js'
 
 export function ReleaseDiagnosticsPanel({
   tenantContext,
@@ -175,6 +177,60 @@ export function ReleaseDiagnosticsPanel({
     releaseReadinessDiagnostics: readiness,
     productionConfigurationValidation: configuration,
   }, { emitEvent: false, timestamp: '2026-07-16T11:03:00.000Z' }), [accountId, configuration, readiness, releaseCandidate, tenantContext])
+  const releaseCertification = useMemo(() => certifyReleaseCandidate({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    productionRunValidation: productionRunValidation.productionRunValidation,
+    releaseReadinessDiagnostics: readiness,
+    productionConfigurationValidation: configuration,
+    authenticationReadiness,
+    apiReliability,
+    marketDataScannerHealth,
+    realtimePortfolioReconciliation,
+    realtimePaperRisk,
+    paperOperationsObservability,
+    paperReportWorker,
+    validationSummary: { testFileCount: 167, testCount: 930, lint: { status: 'passed' }, build: { status: 'passed' } },
+  }, { emitEvent: false, timestamp: '2026-07-16T11:04:00.000Z' }), [
+    accountId,
+    apiReliability,
+    authenticationReadiness,
+    configuration,
+    marketDataScannerHealth,
+    paperOperationsObservability,
+    paperReportWorker,
+    productionRunValidation,
+    readiness,
+    realtimePaperRisk,
+    realtimePortfolioReconciliation,
+    releaseApproval,
+    releaseCandidate,
+    tenantContext,
+  ])
+  const releaseRunbook = useMemo(() => generateReleaseRunbook({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:05:00.000Z' }), [accountId, releaseCandidate, tenantContext])
+  const completedRunbookItems = useMemo(() => releaseRunbook.releaseRunbookItems.map((item) => (
+    item.requiredRole === 'analyst'
+      ? updateReleaseRunbookItem({ runbookItem: item, actor: { id: tenantContext?.userId ?? 'local-operator', role: 'analyst' }, status: 'completed' }, { emitEvent: false, timestamp: '2026-07-16T11:06:00.000Z' }).runbookItem
+      : updateReleaseRunbookItem({ runbookItem: item, actor: { id: tenantContext?.userId ?? 'local-operator', role: 'owner' }, status: 'completed' }, { emitEvent: false, timestamp: '2026-07-16T11:06:00.000Z' }).runbookItem
+  )), [releaseRunbook, tenantContext])
+  const releaseRecoveryReadiness = useMemo(() => evaluateReleaseRecoveryReadiness({
+    releaseRunbook: releaseRunbook.releaseRunbook,
+    releaseRunbookItems: completedRunbookItems,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:07:00.000Z' }), [completedRunbookItems, releaseRunbook])
+  const supersededCertification = useMemo(() => supersedeReleaseCertification({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    productionRunValidation: productionRunValidation.productionRunValidation,
+    supersedesCertificationId: releaseCertification.releaseCertification.id,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:08:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, tenantContext])
   return (
     <article id="release-diagnostics" className={`panel release-readiness-panel ${readiness.releaseReadinessStatus}`}>
       <div className="panel-heading">
@@ -226,6 +282,26 @@ export function ReleaseDiagnosticsPanel({
           <h3>Superseded Release Candidates</h3>
           <p className="empty-state">{supersededCandidate.supersededReleaseCandidateId} can be superseded by {supersededCandidate.releaseCandidateManifest.releaseCandidateId} without mutating historical manifest content.</p>
         </section>
+        <section>
+          <h3>QA Certification Status</h3>
+          <p className="empty-state">{releaseCertification.certificationState} / score {formatNumber(releaseCertification.certificationScore)} / {releaseCertification.releaseCertification.categories.length} certification categories.</p>
+        </section>
+        <section>
+          <h3>Certification Categories</h3>
+          <p className="empty-state">{releaseCertification.releaseCertification.categories.slice(0, 3).map((item) => `${item.label}: ${item.status}`).join(' / ')}</p>
+        </section>
+        <section>
+          <h3>Runbook Version</h3>
+          <p className="empty-state">{releaseRunbook.releaseRunbook.runbookVersion} / recovery {releaseRecoveryReadiness.recoveryReadinessState} / paper-trading procedures only.</p>
+        </section>
+        <section>
+          <h3>Required Checklist Items</h3>
+          <p className="empty-state">{completedRunbookItems.length} items / {releaseRecoveryReadiness.releaseRecoveryReadiness.itemSummary.completed} completed / {releaseRecoveryReadiness.releaseRecoveryReadiness.itemSummary.pending} pending / {releaseRecoveryReadiness.releaseRecoveryReadiness.itemSummary.blocked} blocked / {releaseRecoveryReadiness.releaseRecoveryReadiness.itemSummary.skipped} skipped.</p>
+        </section>
+        <section>
+          <h3>Historical Certifications</h3>
+          <p className="empty-state">{supersededCertification.releaseCertification.supersedesCertificationId} can be superseded by {supersededCertification.releaseCertification.id} without mutating certification history.</p>
+        </section>
       </div>
       <span className="event-line">{readiness.eventType}</span>
       <span className="event-line">{configuration.eventType}</span>
@@ -233,6 +309,11 @@ export function ReleaseDiagnosticsPanel({
       <span className="event-line">{releaseApproval.eventType}</span>
       <span className="event-line">{productionRunValidation.eventType}</span>
       <span className="event-line">{supersededCandidate.eventType}</span>
+      <span className="event-line">{releaseCertification.eventType}</span>
+      <span className="event-line">{releaseRunbook.eventType}</span>
+      <span className="event-line">releaseRunbook.itemUpdated</span>
+      <span className="event-line">{releaseRecoveryReadiness.eventType}</span>
+      <span className="event-line">{supersededCertification.eventType}</span>
     </article>
   )
 }
