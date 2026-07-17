@@ -1,5 +1,6 @@
 import { AppError, ERROR_CODES } from '../../lib/errors/appError.js'
 import { createReleaseGateEvaluationRepository, evaluateReleaseGate } from '../../lib/system/releaseAttestationGateEngine.js'
+import { evaluateSensitiveAction, requireAccountContext } from '../../lib/security/securityPolicyEngine.js'
 import { apiFoundationEvent } from './_shared/persistenceApi.js'
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 
@@ -15,11 +16,13 @@ export function createReleaseGateHandler(options = {}) {
     assertAccess(membership, event.httpMethod)
     const repository = options.releaseGateEvaluationRepository ?? createReleaseGateEvaluationRepository(options)
     if (String(event.httpMethod ?? 'GET').toUpperCase() === 'POST') {
-      const result = evaluateReleaseGate({ ...options, ...body, tenantContext, accountId: body.accountId ?? query.accountId ?? options.accountId }, { emitEvent: false, signingSecret: options.releaseSigningSecret ?? body.signingSecret })
+      const accountId = requireAccountContext(body.accountId ?? query.accountId ?? options.accountId)
+      evaluateSensitiveAction({ tenantContext, membership, accountId, action: 'evaluate-release-gate', allowedRoles: ['owner', 'admin'] })
+      const result = evaluateReleaseGate({ ...options, ...body, signingSecret: undefined, tenantContext, accountId }, { emitEvent: false, signingSecret: options.releaseSigningSecret })
       const saved = await repository.create?.(result.releaseGateEvaluation)
       return { event: apiFoundationEvent({ requestId, endpoint: 'release-gate', status: result.gateState }), releaseGate: { ...result, persisted: saved?.ok }, paperTrading: true, liveOrders: false, brokerExecution: false }
     }
-    const evaluations = await repository.list?.({ tenantContext, accountId: query.accountId ?? options.accountId, releaseCandidateId: query.releaseCandidateId, gateState: query.gateState, limit: query.limit }) ?? []
+    const evaluations = await repository.list?.({ tenantContext, accountId: requireAccountContext(query.accountId ?? options.accountId), releaseCandidateId: query.releaseCandidateId, gateState: query.gateState, limit: query.limit }) ?? []
     return { event: apiFoundationEvent({ requestId, endpoint: 'release-gate', status: 'ok' }), releaseGateEvaluations: evaluations, paperTrading: true, liveOrders: false, brokerExecution: false }
   }, { allowedMethods: ['GET', 'POST'], requiredPermission: 'dashboard.read', workspaceAction: 'read', routeId: 'release-gate', ...options })
 }

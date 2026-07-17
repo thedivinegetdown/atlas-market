@@ -1,5 +1,6 @@
 import { AppError, ERROR_CODES } from '../../lib/errors/appError.js'
 import { createReleaseEvidenceRepository, registerReleaseEvidence } from '../../lib/system/releaseEvidenceRegistryEngine.js'
+import { requireAccountContext } from '../../lib/security/securityPolicyEngine.js'
 import { apiFoundationEvent } from './_shared/persistenceApi.js'
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 
@@ -14,13 +15,14 @@ export function createReleaseEvidenceHandler(options = {}) {
   return createOrganizationAuthenticatedApiHandler(async ({ requestId, body, query, membership, tenantContext, event }) => {
     assertAccess(membership, event.httpMethod)
     const repository = options.releaseEvidenceRepository ?? createReleaseEvidenceRepository(options)
+    const accountId = requireAccountContext(body.accountId ?? query.accountId ?? options.accountId)
     if (String(event.httpMethod ?? 'GET').toUpperCase() === 'POST') {
-      const result = registerReleaseEvidence({ ...options, ...body, tenantContext, accountId: body.accountId ?? query.accountId ?? options.accountId }, { emitEvent: false })
+      const result = registerReleaseEvidence({ ...options, ...body, tenantContext, accountId }, { emitEvent: false })
       const saved = await repository.create?.(result.releaseEvidence)
       await repository.appendActivity?.(result.releaseEvidenceActivity)
       return { event: apiFoundationEvent({ requestId, endpoint: 'release-evidence', status: result.releaseEvidence.verificationState }), releaseEvidence: { ...result, persisted: saved?.ok }, paperTrading: true, liveOrders: false, brokerExecution: false }
     }
-    const evidence = await repository.list?.({ tenantContext, accountId: query.accountId ?? options.accountId, releaseCandidateId: query.releaseCandidateId, verificationState: query.verificationState, limit: query.limit }) ?? []
+    const evidence = await repository.list?.({ tenantContext, accountId, releaseCandidateId: query.releaseCandidateId, verificationState: query.verificationState, limit: query.limit }) ?? []
     return { event: apiFoundationEvent({ requestId, endpoint: 'release-evidence', status: 'ok' }), releaseEvidence: evidence, paperTrading: true, liveOrders: false, brokerExecution: false }
   }, { allowedMethods: ['GET', 'POST'], requiredPermission: 'dashboard.read', workspaceAction: 'read', routeId: 'release-evidence', ...options })
 }

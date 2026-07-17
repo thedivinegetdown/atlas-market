@@ -282,7 +282,7 @@ export function ReleaseDiagnosticsPanel({
     actor: { id: tenantContext?.userId ?? 'local-operator', role: 'owner' },
     acceptedWarnings: true,
     acceptedRisks: [{ message: 'Paper release remains gated by advisory readiness checks.' }],
-  }, { emitEvent: false, signingSecret: 'configured-paper-release-signing-material', timestamp: '2026-07-16T11:12:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, releaseRunbook, tenantContext])
+  }, { emitEvent: false, timestamp: '2026-07-16T11:12:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, releaseRunbook, tenantContext])
   const supersededAttestation = useMemo(() => supersedeReleaseAttestation({
     tenantContext,
     accountId,
@@ -308,7 +308,7 @@ export function ReleaseDiagnosticsPanel({
     releaseAttestation: signedAttestation.releaseAttestation,
     acceptedWarnings: true,
     expectedMigrationLevel: releaseCandidate.releaseCandidateManifest.databaseMigrationLevel,
-  }, { emitEvent: false, signingSecret: 'configured-paper-release-signing-material', timestamp: '2026-07-16T11:14:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, signedAttestation, tenantContext])
+  }, { emitEvent: false, timestamp: '2026-07-16T11:14:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, signedAttestation, tenantContext])
   return (
     <article id="release-diagnostics" className={`panel release-readiness-panel ${readiness.releaseReadinessStatus}`}>
       <div className="panel-heading">
@@ -403,6 +403,10 @@ export function ReleaseDiagnosticsPanel({
         <section>
           <h3>Historical Attestations and Gate Evaluations</h3>
           <p className="empty-state">{supersededAttestation.supersededAttestationId ?? signedAttestation.releaseAttestation.id} can be superseded without mutating signed attestation content / latest gate {releaseGate.releaseGateEvaluation.id}.</p>
+        </section>
+        <section aria-label="Final Security and UX Hardening">
+          <h3>Final Security &amp; UX Hardening</h3>
+          <p className="empty-state">Security policy default-deny checks, bounded summaries, accessible status text, keyboard-operable release actions, and paper-only labels are enforced before v1.0 release review.</p>
         </section>
       </div>
       <span className="event-line">{readiness.eventType}</span>
