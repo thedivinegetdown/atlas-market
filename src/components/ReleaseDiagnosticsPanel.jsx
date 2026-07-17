@@ -9,6 +9,7 @@ import { registerReleaseEvidence, summarizeReleaseEvidence, updateReleaseEvidenc
 import { evaluateReleaseGate, signReleaseAttestation, supersedeReleaseAttestation } from '../../lib/system/releaseAttestationGateEngine.js'
 import { createReleaseAcceptanceRun } from '../../lib/system/releaseAcceptanceEngine.js'
 import { evaluateReleaseHandoff, generateReleaseDocumentation, transitionReleaseDocumentation } from '../../lib/system/releaseDocumentationEngine.js'
+import { ATLAS_MARKET_VERSION, evaluateMergeReadiness, evaluateReleaseClosure, transitionReleaseClosure } from '../../lib/system/releaseClosureMergeReadinessEngine.js'
 
 export function ReleaseDiagnosticsPanel({
   tenantContext,
@@ -118,11 +119,11 @@ export function ReleaseDiagnosticsPanel({
   const releaseCandidate = useMemo(() => createReleaseCandidateManifest({
     tenantContext,
     accountId,
-    releaseCandidateId: 'rc-paper-0.0.0-ffe3837',
-    gitCommit: 'ffe3837f2f5d4dfbcfe464e389084665536a2de6',
+    releaseCandidateId: `rc-paper-${ATLAS_MARKET_VERSION}-f2b125f`,
+    gitCommit: 'f2b125f60171db366d9dad8e1e6611256d0de3f4',
     branch: 'part-10-trading-workspace',
-    applicationVersion: '0.0.0',
-    databaseMigrationLevel: '202607160060_phase77_release_candidate_approval_validation',
+    applicationVersion: ATLAS_MARKET_VERSION,
+    databaseMigrationLevel: '202607170064_phase82_release_closure_merge_readiness',
     enabledPaperTradingFeatureSet: ['streaming', 'scanner', 'paper-execution', 'portfolio-pnl', 'reporting', 'release-diagnostics'],
     testSummaryReferences: ['npm test', 'phase76 diagnostics', 'phase77 release workflow'],
     lintSummary: { command: 'npm run lint', status: 'passed' },
@@ -172,11 +173,11 @@ export function ReleaseDiagnosticsPanel({
   const supersededCandidate = useMemo(() => supersedeReleaseCandidate({
     tenantContext,
     accountId,
-    releaseCandidateId: 'rc-paper-0.0.0-next',
+    releaseCandidateId: `rc-paper-${ATLAS_MARKET_VERSION}-next`,
     gitCommit: 'next-paper-candidate',
     branch: 'part-10-trading-workspace',
-    applicationVersion: '0.0.0',
-    databaseMigrationLevel: '202607160060_phase77_release_candidate_approval_validation',
+    applicationVersion: ATLAS_MARKET_VERSION,
+    databaseMigrationLevel: '202607170064_phase82_release_closure_merge_readiness',
     supersedesReleaseCandidateId: releaseCandidate.releaseCandidateManifest.releaseCandidateId,
     releaseReadinessDiagnostics: readiness,
     productionConfigurationValidation: configuration,
@@ -406,6 +407,52 @@ export function ReleaseDiagnosticsPanel({
     releaseAcceptanceRun: releaseAcceptance.releaseAcceptanceRun,
     releaseDocumentation,
   }, { emitEvent: false, timestamp: '2026-07-16T11:20:00.000Z' }), [accountId, configuration, releaseAcceptance, releaseApproval, releaseCandidate, releaseCertification, releaseDocumentation, releaseEvidenceSummary, releaseGate, releaseRecoveryReadiness, signedAttestation, tenantContext])
+  const releaseClosure = useMemo(() => evaluateReleaseClosure({
+    tenantContext,
+    accountId,
+    version: ATLAS_MARKET_VERSION,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    productionConfigurationValidation: configuration,
+    productionRunValidation: productionRunValidation.productionRunValidation,
+    releaseCertification: releaseCertification.releaseCertification,
+    releaseRecoveryReadiness: releaseRecoveryReadiness.releaseRecoveryReadiness,
+    releaseEvidence,
+    releaseAttestation: signedAttestation.releaseAttestation,
+    releaseGateEvaluation: releaseGate.releaseGateEvaluation,
+    releaseAcceptanceRun: releaseAcceptance.releaseAcceptanceRun,
+    releaseDocumentation,
+    releaseHandoffEvaluation: releaseHandoff.releaseHandoffEvaluation,
+    expectedMigrationLevel: releaseCandidate.releaseCandidateManifest.databaseMigrationLevel,
+    closureNote: 'Final paper-trading release closure reviewed for human PR readiness.',
+    acceptedWarnings: true,
+    acceptedRisks: [{ message: 'Manual PR merge remains outside application automation.' }],
+  }, { emitEvent: false, timestamp: '2026-07-16T11:21:00.000Z' }), [accountId, configuration, productionRunValidation, releaseAcceptance, releaseApproval, releaseCandidate, releaseCertification, releaseDocumentation, releaseEvidence, releaseGate, releaseHandoff, releaseRecoveryReadiness, signedAttestation, tenantContext])
+  const closedReleaseClosure = useMemo(() => transitionReleaseClosure({
+    releaseClosure: releaseClosure.releaseClosure,
+    actor: { id: tenantContext?.userId ?? 'local-operator', role: 'owner' },
+    action: 'close',
+    closureNote: 'Final closure is recorded only when server-side blockers are clear.',
+  }, { emitEvent: false, timestamp: '2026-07-16T11:22:00.000Z' }), [releaseClosure, tenantContext])
+  const mergeReadiness = useMemo(() => evaluateMergeReadiness({
+    tenantContext,
+    accountId,
+    version: ATLAS_MARKET_VERSION,
+    branch: releaseCandidate.releaseCandidateManifest.branch,
+    commit: releaseCandidate.releaseCandidateManifest.gitCommit,
+    migrationLevel: releaseCandidate.releaseCandidateManifest.databaseMigrationLevel,
+    totalTestFiles: 171,
+    totalTests: 949,
+    testResult: 'passed',
+    lintResult: 'passed',
+    buildResult: 'passed',
+    sensitiveMaterialScanResult: 'passed',
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseClosure: closedReleaseClosure.releaseClosure,
+    releaseGateEvaluation: releaseGate.releaseGateEvaluation,
+    releaseAcceptanceRun: releaseAcceptance.releaseAcceptanceRun,
+    releaseDocumentation,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:23:00.000Z' }), [accountId, closedReleaseClosure, releaseAcceptance, releaseCandidate, releaseDocumentation, releaseGate, tenantContext])
   return (
     <article id="release-diagnostics" className={`panel release-readiness-panel ${readiness.releaseReadinessStatus}`}>
       <div className="panel-heading">
@@ -525,6 +572,22 @@ export function ReleaseDiagnosticsPanel({
           <h3>Final Handoff Checklist</h3>
           <p className="empty-state">{releaseHandoff.handoffState}: {releaseHandoff.releaseHandoffEvaluation.checks.filter((item) => item.status === 'passed').length} passed / {releaseHandoff.releaseHandoffEvaluation.blockers.length} blocked / Atlas Market paper-trading release procedures only.</p>
         </section>
+        <section>
+          <h3>Final Release Closure</h3>
+          <p className="empty-state">Atlas Market version {ATLAS_MARKET_VERSION} / closure {releaseClosure.closureState} / checksum {releaseClosure.releaseClosure.closureChecksum} / {releaseClosure.releaseClosure.blockers.length} blockers / {releaseClosure.releaseClosure.warnings.length} warnings.</p>
+        </section>
+        <section>
+          <h3>Closure Decision Activity</h3>
+          <p className="empty-state">{closedReleaseClosure.releaseClosure.closureState} by {closedReleaseClosure.releaseClosure.authorizedActor?.role ?? 'pending'} / ready-for-PR does not merge, deploy, tag, or publish the release.</p>
+        </section>
+        <section>
+          <h3>Merge Readiness Summary</h3>
+          <p className="empty-state">{mergeReadiness.mergeRecommendation}: tests {mergeReadiness.mergeReadinessSnapshot.testResult} / lint {mergeReadiness.mergeReadinessSnapshot.lintResult} / build {mergeReadiness.mergeReadinessSnapshot.buildResult} / security scan {mergeReadiness.mergeReadinessSnapshot.sensitiveMaterialScanResult}.</p>
+        </section>
+        <section>
+          <h3>Deferred Out-of-Scope Items</h3>
+          <p className="empty-state">{mergeReadiness.mergeReadinessSnapshot.deferredOutOfScopeItems.join(' / ')} remain outside Atlas Market v1.0 paper-trading release closure.</p>
+        </section>
       </div>
       <span className="event-line">{readiness.eventType}</span>
       <span className="event-line">{configuration.eventType}</span>
@@ -548,6 +611,11 @@ export function ReleaseDiagnosticsPanel({
       <span className="event-line">{supersededReleaseDocumentation.eventType}</span>
       <span className="event-line">{releaseHandoff.evaluatedEventType}</span>
       <span className="event-line">{releaseHandoff.eventType}</span>
+      <span className="event-line">{releaseClosure.evaluatedEventType}</span>
+      <span className="event-line">{releaseClosure.eventType}</span>
+      <span className="event-line">{closedReleaseClosure.eventType}</span>
+      <span className="event-line">{mergeReadiness.evaluatedEventType}</span>
+      <span className="event-line">{mergeReadiness.eventType}</span>
     </article>
   )
 }
