@@ -47,6 +47,10 @@ export default defineConfig({
               test: /src[\\/]components[\\/]ReleaseDiagnosticsPanel/,
             },
             {
+              name: 'atlas-ai-copilot',
+              test: /(lib[\\/]ai[\\/]|src[\\/]components[\\/]AtlasCopilotPanel)/,
+            },
+            {
               name: 'system-operations',
               test: /lib[\\/]system[\\/](?!compliance|institutionalChart)/,
             },

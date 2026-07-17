@@ -1,5 +1,6 @@
 import { Suspense, useMemo } from 'react'
 import './App.css'
+import { AtlasCopilotPanel } from './components/AtlasCopilotPanel.jsx'
 import { ReleaseDiagnosticsPanel } from './components/ReleaseDiagnosticsPanel.jsx'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
@@ -4554,6 +4555,7 @@ function App() {
     { id: 'customer-onboarding', label: 'Onboarding', status: customerOnboardingReadiness.onboardingReadinessStatus },
     { id: 'support-operations', label: 'Support', status: supportOperationsReadiness.supportReadinessStatus },
     { id: 'launch-readiness', label: 'Launch', status: launchReadinessReview.launchReadinessStatus },
+    { id: 'atlas-copilot', label: 'Atlas Copilot', status: 'advisory' },
     { id: 'commercial-release-summary', label: 'Commercial Release', status: commercialReleaseSummary.finalCommercialReleaseStatus },
     { id: 'persistence-api-foundation', label: 'Persistence API', status: persistenceApiIntegration.persistenceReadinessStatus },
     { id: 'database-operations', label: 'DB Ops', status: databaseOperations.databaseOperationsStatus },
@@ -5674,6 +5676,23 @@ function App() {
           ]}
           MetricCard={MetricCard}
           formatNumber={formatNumber}
+        />
+
+        <AtlasCopilotPanel
+          tenantContext={inAppNotificationCenter.tenantAndUserScope}
+          accountId={accountingDemoPortfolio.id}
+          portfolioSummary={portfolioAnalytics}
+          pnlSummary={realtimePaperPortfolio}
+          riskMetrics={risk}
+          strategyMetrics={strategyAttribution}
+          scannerSummaries={realtimeScanner}
+          signalSummaries={realtimeSignals}
+          journalEntries={journalRecords.map((record) => record.result)}
+          alerts={paperOperationsAlerts}
+          incidents={paperOperationsIncidents}
+          marketDataHealth={marketDataScannerHealth}
+          operationsHealth={paperOperationsObservability}
+          MetricCard={MetricCard}
         />
 
         <article id="rc-stabilization" className={`panel rc-stabilization-panel ${releaseCandidateStabilization.finalStatus}`}>
