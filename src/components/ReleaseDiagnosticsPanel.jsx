@@ -5,6 +5,8 @@ import { createReleaseCandidateManifest, supersedeReleaseCandidate } from '../..
 import { transitionReleaseApproval, validateProductionRun } from '../../lib/system/releaseApprovalWorkflowEngine.js'
 import { certifyReleaseCandidate, supersedeReleaseCertification } from '../../lib/system/releaseCertificationEngine.js'
 import { evaluateReleaseRecoveryReadiness, generateReleaseRunbook, updateReleaseRunbookItem } from '../../lib/system/releaseRunbookRecoveryEngine.js'
+import { registerReleaseEvidence, summarizeReleaseEvidence, updateReleaseEvidenceVerification } from '../../lib/system/releaseEvidenceRegistryEngine.js'
+import { evaluateReleaseGate, signReleaseAttestation, supersedeReleaseAttestation } from '../../lib/system/releaseAttestationGateEngine.js'
 
 export function ReleaseDiagnosticsPanel({
   tenantContext,
@@ -231,6 +233,82 @@ export function ReleaseDiagnosticsPanel({
     productionRunValidation: productionRunValidation.productionRunValidation,
     supersedesCertificationId: releaseCertification.releaseCertification.id,
   }, { emitEvent: false, timestamp: '2026-07-16T11:08:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, tenantContext])
+  const releaseEvidence = useMemo(() => ([
+    ['functional-test-results', 'npm test', 'Full test suite passed for paper release.'],
+    ['regression-test-results', 'phase76-78 regressions', 'Release diagnostics and release workflow regressions passed.'],
+    ['lint-results', 'npm run lint', 'Lint completed without errors.'],
+    ['build-results', 'npm run build', 'Production build completed without new chunk warnings.'],
+    ['migration-verification', releaseCandidate.releaseCandidateManifest.databaseMigrationLevel, 'Idempotent migration level verified.'],
+    ['tenant-isolation-verification', readiness.eventType, 'Tenant isolation diagnostics remain enabled.'],
+    ['paper-only-boundary-verification', releaseCandidate.releaseCandidateManifest.releaseCandidateId, 'Paper-only boundary verified.'],
+    ['production-configuration-validation', configuration.eventType, 'Production configuration validation reviewed.'],
+    ['production-run-validation', productionRunValidation.productionRunValidation.id, 'Production-run validation snapshot reviewed.'],
+    ['recovery-readiness-validation', releaseRecoveryReadiness.releaseRecoveryReadiness.id, 'Release recovery readiness reviewed.'],
+  ]).map(([category, sourceReference, description], index) => {
+    const registered = registerReleaseEvidence({
+      tenantContext,
+      accountId,
+      releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+      certificationId: releaseCertification.releaseCertification.id,
+      runbookId: releaseRunbook.releaseRunbook.id,
+      approvalId: releaseApproval.releaseApproval.id,
+      productionRunValidationId: productionRunValidation.productionRunValidation.id,
+      category,
+      sourceType: 'atlas-snapshot-reference',
+      sourceReference,
+      title: category.replaceAll('-', ' '),
+      description,
+      checksum: `ui-evidence-${index}`,
+    }, { emitEvent: false, timestamp: '2026-07-16T11:09:00.000Z' })
+    return updateReleaseEvidenceVerification({
+      releaseEvidence: registered.releaseEvidence,
+      actor: { id: tenantContext?.userId ?? 'local-operator', role: 'owner' },
+      action: 'verified',
+      note: 'Verified for paper v1.0 release gate.',
+    }, { emitEvent: false, timestamp: '2026-07-16T11:10:00.000Z' }).releaseEvidence
+  }), [accountId, configuration, productionRunValidation, readiness, releaseApproval, releaseCandidate, releaseCertification, releaseRecoveryReadiness, releaseRunbook, tenantContext])
+  const releaseEvidenceSummary = useMemo(() => summarizeReleaseEvidence(releaseEvidence, undefined, { timestamp: '2026-07-16T11:11:00.000Z' }), [releaseEvidence])
+  const signedAttestation = useMemo(() => signReleaseAttestation({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    productionRunValidation: productionRunValidation.productionRunValidation,
+    releaseCertification: releaseCertification.releaseCertification,
+    releaseRunbook: releaseRunbook.releaseRunbook,
+    releaseRecoveryReadiness: releaseRecoveryReadiness.releaseRecoveryReadiness,
+    releaseEvidence,
+    evidenceSummary: releaseEvidenceSummary,
+    actor: { id: tenantContext?.userId ?? 'local-operator', role: 'owner' },
+    acceptedWarnings: true,
+    acceptedRisks: [{ message: 'Paper release remains gated by advisory readiness checks.' }],
+  }, { emitEvent: false, signingSecret: 'configured-paper-release-signing-material', timestamp: '2026-07-16T11:12:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, releaseRunbook, tenantContext])
+  const supersededAttestation = useMemo(() => supersedeReleaseAttestation({
+    tenantContext,
+    accountId,
+    releaseAttestation: signedAttestation.releaseAttestation,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    productionRunValidation: productionRunValidation.productionRunValidation,
+    releaseCertification: releaseCertification.releaseCertification,
+    releaseRecoveryReadiness: releaseRecoveryReadiness.releaseRecoveryReadiness,
+    releaseEvidence,
+    evidenceSummary: releaseEvidenceSummary,
+  }, { emitEvent: false, timestamp: '2026-07-16T11:13:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, signedAttestation, tenantContext])
+  const releaseGate = useMemo(() => evaluateReleaseGate({
+    tenantContext,
+    accountId,
+    releaseCandidateManifest: releaseCandidate.releaseCandidateManifest,
+    releaseApproval: releaseApproval.releaseApproval,
+    productionRunValidation: productionRunValidation.productionRunValidation,
+    releaseCertification: releaseCertification.releaseCertification,
+    releaseRecoveryReadiness: releaseRecoveryReadiness.releaseRecoveryReadiness,
+    releaseEvidence,
+    evidenceSummary: releaseEvidenceSummary,
+    releaseAttestation: signedAttestation.releaseAttestation,
+    acceptedWarnings: true,
+    expectedMigrationLevel: releaseCandidate.releaseCandidateManifest.databaseMigrationLevel,
+  }, { emitEvent: false, signingSecret: 'configured-paper-release-signing-material', timestamp: '2026-07-16T11:14:00.000Z' }), [accountId, productionRunValidation, releaseApproval, releaseCandidate, releaseCertification, releaseEvidence, releaseEvidenceSummary, releaseRecoveryReadiness, signedAttestation, tenantContext])
   return (
     <article id="release-diagnostics" className={`panel release-readiness-panel ${readiness.releaseReadinessStatus}`}>
       <div className="panel-heading">
@@ -302,6 +380,30 @@ export function ReleaseDiagnosticsPanel({
           <h3>Historical Certifications</h3>
           <p className="empty-state">{supersededCertification.releaseCertification.supersedesCertificationId} can be superseded by {supersededCertification.releaseCertification.id} without mutating certification history.</p>
         </section>
+        <section>
+          <h3>Required Evidence Status</h3>
+          <p className="empty-state">{releaseEvidenceSummary.verifiedCount} verified / {releaseEvidenceSummary.pendingCount} pending / {releaseEvidenceSummary.rejectedCount} rejected / {releaseEvidenceSummary.expiredCount} expired / missing {releaseEvidenceSummary.missingCategories.length} categories.</p>
+        </section>
+        <section>
+          <h3>Current Attestation Status</h3>
+          <p className="empty-state">{signedAttestation.releaseAttestation.attestationState} / checksum {signedAttestation.releaseAttestation.attestationChecksum} / signature integrity {signedAttestation.releaseAttestation.signatureIntegrity} / signer {signedAttestation.releaseAttestation.signer?.role ?? 'pending'}.</p>
+        </section>
+        <section>
+          <h3>Final v1.0 Release Gate</h3>
+          <p className="empty-state">{releaseGate.gateState}: {releaseGate.releaseGateEvaluation.checks.filter((item) => item.status === 'passed').length} passed checks / {releaseGate.releaseGateEvaluation.blockers.length} blockers / paper-trading platform readiness only.</p>
+        </section>
+        <section>
+          <h3>Gate Blockers and Warnings</h3>
+          <p className="empty-state">{releaseGate.releaseGateEvaluation.blockers[0]?.message ?? 'No v1.0 release-gate blockers detected.'}</p>
+        </section>
+        <section>
+          <h3>Paper-only Release Declaration</h3>
+          <p className="empty-state">{signedAttestation.releaseAttestation.attestationContent.paperOnlyDeclaration}</p>
+        </section>
+        <section>
+          <h3>Historical Attestations and Gate Evaluations</h3>
+          <p className="empty-state">{supersededAttestation.supersededAttestationId ?? signedAttestation.releaseAttestation.id} can be superseded without mutating signed attestation content / latest gate {releaseGate.releaseGateEvaluation.id}.</p>
+        </section>
       </div>
       <span className="event-line">{readiness.eventType}</span>
       <span className="event-line">{configuration.eventType}</span>
@@ -314,6 +416,11 @@ export function ReleaseDiagnosticsPanel({
       <span className="event-line">releaseRunbook.itemUpdated</span>
       <span className="event-line">{releaseRecoveryReadiness.eventType}</span>
       <span className="event-line">{supersededCertification.eventType}</span>
+      <span className="event-line">releaseEvidence.verified</span>
+      <span className="event-line">{signedAttestation.eventType}</span>
+      <span className="event-line">{supersededAttestation.eventType}</span>
+      <span className="event-line">{releaseGate.evaluatedEventType}</span>
+      <span className="event-line">{releaseGate.eventType}</span>
     </article>
   )
 }
