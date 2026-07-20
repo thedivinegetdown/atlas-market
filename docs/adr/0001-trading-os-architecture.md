@@ -31,6 +31,10 @@ Core decisions:
 - Atlas opportunity analysis is an advisory workflow over existing Atlas market and paper-trading context. Deterministic preprocessing validates symbols, timeframes, limits, stale data, baseline ranks, hard rejections, and no-trade conditions before AI-assisted interpretation is allowed.
 - Atlas opportunity APIs preserve authentication, authorization, tenant isolation, account scoping, correlation identifiers, safe errors, and paper-trading boundaries. Client input cannot provide arbitrary providers, models, tenant authority, account authority, or mutation instructions.
 - Atlas opportunity persistence stores compact sanitized summaries, fingerprints, ranks, exclusions, no-trade decisions, usage estimates, context fingerprints, and retention metadata; raw provider payloads, prompts, credentials, authorization headers, chain-of-thought, executable instructions, and live-trading state are excluded.
+- Atlas opportunity ranking is deterministic and reproducible from validated inputs. Component contributions cover scanner quality, freshness, supporting evidence, risk severity, invalidation clarity, liquidity, strategy compatibility, data completeness, provider fallback/degradation, and evaluator warnings. Scores and confidence values are bounded, and unsafe or rejected opportunities remain non-actionable.
+- Atlas opportunity explainability separates observed Atlas data from AI interpretation. Explanations include positive contributors, negative contributors, stale or missing data, source timestamps, fallback/evaluation warnings, limitations, and version metadata without exposing prompts, raw provider payloads, private reasoning, secrets, or chain-of-thought.
+- Atlas opportunity review workflow stores only human review metadata: `new`, `reviewing`, `saved`, `dismissed`, and `expired` states plus bounded sanitized notes and optional feedback. Review state changes require server-side tenant/account/user authorization and cannot prepare, place, modify, cancel, or route trades.
+- Atlas opportunity history supports bounded tenant-safe filtering by symbol, category, timeframe, review state, ranking tier, and date range. Expired and dismissed records stay distinct, and dismissal preserves audit history.
 
 ## Consequences
 
@@ -43,6 +47,7 @@ Positive outcomes:
 - AI provider credentials, raw provider requests, raw provider responses, authorization headers, private provider URLs, stack traces, and hidden prompts stay out of browser responses and persisted audit records.
 - Streaming, memory, and usage metadata remain audit-safe and do not create autonomous actions or mutation paths.
 - Opportunity analysis can improve review quality without adding a hidden trading, broker, worker, deployment, SQL, or shell execution path.
+- Opportunity ranking and review improve comparison and auditability without creating execution recommendations or autonomous actions.
 
 Tradeoffs:
 
@@ -58,3 +63,5 @@ Phase 84 release safety additionally requires provider adapter tests, routing an
 Phase 85 release safety additionally requires streaming cancellation/timeout checks, incomplete-stream persistence protection, bounded memory isolation, budget exhaustion behavior, and usage retention metadata validation.
 
 Phase 86 release safety additionally requires opportunity input validation, stale-data warning checks, unsafe-output rejection, tenant/account/user isolation, idempotent non-destructive migration review, safe persistence verification, and regression coverage for Phases 83 through 85.
+
+Phase 87 release safety additionally requires deterministic ranking reproducibility, component scoring bounds, explainability separation, review-state authorization, tenant-safe history filtering, UI accessibility checks, migration safety scans, sensitive-material scans, and regression coverage proving no trade, order, broker, position, risk-limit, worker, deployment, shell, SQL, or autonomous-agent path was added.

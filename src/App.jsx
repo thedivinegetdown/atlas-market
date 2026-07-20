@@ -1,6 +1,7 @@
 import { Suspense, useMemo } from 'react'
 import './App.css'
 import { AtlasCopilotPanel } from './components/AtlasCopilotPanel.jsx'
+import { AtlasOpportunityReviewPanel } from './components/AtlasOpportunityReviewPanel.jsx'
 import { ReleaseDiagnosticsPanel } from './components/ReleaseDiagnosticsPanel.jsx'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
@@ -5693,6 +5694,13 @@ function App() {
           marketDataHealth={marketDataScannerHealth}
           operationsHealth={paperOperationsObservability}
           MetricCard={MetricCard}
+        />
+
+        <AtlasOpportunityReviewPanel
+          scannerSummaries={realtimeScanner}
+          marketDataHealth={marketDataScannerHealth}
+          MetricCard={MetricCard}
+          formatNumber={formatNumber}
         />
 
         <article id="rc-stabilization" className={`panel rc-stabilization-panel ${releaseCandidateStabilization.finalStatus}`}>

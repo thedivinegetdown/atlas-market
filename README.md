@@ -40,6 +40,14 @@ The deterministic layer owns symbols, timeframes, limits, stale-data warnings, s
 
 Opportunity history stores only sanitized summaries, candidate fingerprints, baseline/advisory ranks, exclusions, no-trade flags, usage estimates, context fingerprints, and retention metadata. It does not store raw provider prompts, raw provider responses, authorization headers, credentials, chain-of-thought, executable instructions, or live-trading state.
 
+## Phase 87 Opportunity Ranking and Review
+
+Atlas opportunity review now adds deterministic ranking, compact explainability, recent-history filters, and human review metadata on top of the Phase 86 opportunity-analysis workflow. Ranking is reproducible from validated stored inputs such as scanner score, source-data freshness, liquidity, data quality, strategy compatibility, risk severity, missing data, stale-data flags, provider degradation, and evaluator warnings. Scores are bounded, confidence is clamped, unsafe or rejected opportunities are not marked actionable, and every ranked item keeps advisory-only and paper-trading-only notices.
+
+Explainability separates observed Atlas evidence from model interpretation. Each ranked opportunity includes positive contributors, negative contributors, stale or missing data, evaluator warnings, fallback/degraded status, limitations, and version metadata without exposing prompts, raw provider payloads, hidden reasoning, private URLs, credentials, or chain-of-thought.
+
+The review workflow supports `new`, `reviewing`, `saved`, `dismissed`, and `expired` states plus bounded optional feedback. Review updates require authenticated tenant/account/user authority, store only compact sanitized notes, preserve audit history, and never create orders, prepare trades, call brokers, start workers, or trigger autonomous execution. The UI shows ranked advisory opportunities, confidence/freshness/degraded indicators, expandable explanations, and save/dismiss controls for human review only.
+
 ## Safety Boundaries
 
 Atlas AI remains read-only and advisory-only. It must not place or modify trades, create live orders, change risk limits, approve releases, publish documents, trigger workers, deploy, call brokers, execute shell commands, or issue executable SQL. User text, Atlas records, prior AI output, and provider output are treated as untrusted.
@@ -52,6 +60,8 @@ Phase 85 validation adds ordered streaming chunks, cancellation, timeout, fallba
 
 Phase 86 validation adds opportunity request validation, symbol/timeframe/limit rejection, stale-data warnings, confidence clamping, unsafe provider-output rejection, tenant/account/user authorization, API error safety, opportunity-history migration safety, reliability route registration, and regression coverage for Phases 83, 84, and 85.
 
+Phase 87 validation adds deterministic ranking reproducibility, tier boundaries, component scoring, explainability separation, review-state authorization, tenant-safe history filtering, migration safety, UI rendering, and regression checks proving no order, broker, live-execution, autonomous-agent, SQL, shell, or deployment path was added.
+
 ## Development History
 
 Phase 83 established Atlas Copilot as a bounded, persisted, mock-first advisory layer. Phase 84 adds real-provider adapter seams, server-controlled routing/fallback, and deterministic response evaluation without changing the paper-trading-only architecture. Implementation assistance from Codex was used to draft and validate this phase; product direction, safety requirements, and acceptance criteria remain the project owner’s contribution.
@@ -61,6 +71,8 @@ Interview-ready summary: Atlas Copilot is designed as a safe AI adapter layer, n
 Phase 85 development note: streaming UX, compact conversation memory, and usage/cost controls were added without changing the advisory-only paper-trading boundary. Interview-ready addition: streaming is finalized only after validation, memory is compact and tenant-scoped, usage is budget-aware, and every budget failure degrades AI assistance without affecting deterministic Atlas workflows.
 
 Phase 86 development note: opportunity analysis was completed as an advisory workflow over existing Atlas market and paper-trading context. Interview-ready addition: deterministic preprocessing decides what data is eligible, AI only explains bounded candidates, stale data is surfaced explicitly, and no output creates a trade, order, broker call, automation, shell command, SQL execution, or live-system mutation. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
+
+Phase 87 development note: opportunity ranking and review make the analysis workflow easier to compare and audit. Interview-ready addition: Atlas ranks opportunities with deterministic component math, explains observed evidence separately from interpretation, and lets humans save or dismiss records as review metadata only. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 ## Tooling
 
