@@ -32,6 +32,14 @@ Conversation memory is compact and bounded. Recent turns are retained by tenant,
 
 Usage controls estimate tokens and cost, track authorized daily and monthly summaries, attach retention metadata, and return graceful degraded advisory responses when configured budgets are exhausted. Budget exhaustion affects only AI assistance; deterministic Atlas workflows remain available.
 
+## Phase 86 Opportunity Analysis
+
+Atlas opportunity analysis completes the Copilot market-opportunity workflow. Requests pass through authenticated Netlify APIs, server-side tenant/account/user scoping, deterministic input validation, candidate normalization, eligibility rules, AI-assisted interpretation through the existing Atlas AI gateway, final structured validation, and compact audit-safe persistence.
+
+The deterministic layer owns symbols, timeframes, limits, stale-data warnings, source timestamps, baseline ranks, hard rejections, no-trade reasons, and paper-trading boundaries. AI assistance may summarize and compare eligible candidates, but it cannot fabricate market data, provide guaranteed outcomes, create unsupported price targets, or override deterministic guardrails.
+
+Opportunity history stores only sanitized summaries, candidate fingerprints, baseline/advisory ranks, exclusions, no-trade flags, usage estimates, context fingerprints, and retention metadata. It does not store raw provider prompts, raw provider responses, authorization headers, credentials, chain-of-thought, executable instructions, or live-trading state.
+
 ## Safety Boundaries
 
 Atlas AI remains read-only and advisory-only. It must not place or modify trades, create live orders, change risk limits, approve releases, publish documents, trigger workers, deploy, call brokers, execute shell commands, or issue executable SQL. User text, Atlas records, prior AI output, and provider output are treated as untrusted.
@@ -42,6 +50,8 @@ Phase 84 validation is focused on adapter contract behavior, missing credential 
 
 Phase 85 validation adds ordered streaming chunks, cancellation, timeout, fallback, final validation, incomplete stream persistence protection, memory summarization, retention, reset, tenant/user isolation, cost estimation, budgets, and authorized usage summaries.
 
+Phase 86 validation adds opportunity request validation, symbol/timeframe/limit rejection, stale-data warnings, confidence clamping, unsafe provider-output rejection, tenant/account/user authorization, API error safety, opportunity-history migration safety, reliability route registration, and regression coverage for Phases 83, 84, and 85.
+
 ## Development History
 
 Phase 83 established Atlas Copilot as a bounded, persisted, mock-first advisory layer. Phase 84 adds real-provider adapter seams, server-controlled routing/fallback, and deterministic response evaluation without changing the paper-trading-only architecture. Implementation assistance from Codex was used to draft and validate this phase; product direction, safety requirements, and acceptance criteria remain the project owner’s contribution.
@@ -49,6 +59,8 @@ Phase 83 established Atlas Copilot as a bounded, persisted, mock-first advisory 
 Interview-ready summary: Atlas Copilot is designed as a safe AI adapter layer, not an autonomous trading agent. Real providers sit behind server-only descriptors and secret handling, routing is deterministic and auditable, and every model response is treated as untrusted until it passes schema and safety evaluation.
 
 Phase 85 development note: streaming UX, compact conversation memory, and usage/cost controls were added without changing the advisory-only paper-trading boundary. Interview-ready addition: streaming is finalized only after validation, memory is compact and tenant-scoped, usage is budget-aware, and every budget failure degrades AI assistance without affecting deterministic Atlas workflows.
+
+Phase 86 development note: opportunity analysis was completed as an advisory workflow over existing Atlas market and paper-trading context. Interview-ready addition: deterministic preprocessing decides what data is eligible, AI only explains bounded candidates, stale data is surfaced explicitly, and no output creates a trade, order, broker call, automation, shell command, SQL execution, or live-system mutation. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 ## Tooling
 
