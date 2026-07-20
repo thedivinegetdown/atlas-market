@@ -35,6 +35,9 @@ Core decisions:
 - Atlas opportunity explainability separates observed Atlas data from AI interpretation. Explanations include positive contributors, negative contributors, stale or missing data, source timestamps, fallback/evaluation warnings, limitations, and version metadata without exposing prompts, raw provider payloads, private reasoning, secrets, or chain-of-thought.
 - Atlas opportunity review workflow stores only human review metadata: `new`, `reviewing`, `saved`, `dismissed`, and `expired` states plus bounded sanitized notes and optional feedback. Review state changes require server-side tenant/account/user authorization and cannot prepare, place, modify, cancel, or route trades.
 - Atlas opportunity history supports bounded tenant-safe filtering by symbol, category, timeframe, review state, ranking tier, and date range. Expired and dismissed records stay distinct, and dismissal preserves audit history.
+- Atlas portfolio intelligence aggregates paper positions, risk analytics, watchlists, signals, and opportunity summaries into deterministic portfolio health snapshots. Diversification, concentration, allocations, P&L summaries, volatility estimates, exposure, stale data, missing data, confidence, and risk tiers are computed by Atlas math, not model output.
+- Atlas portfolio AI insights reuse the existing gateway and `portfolio_summary` contract. Observed portfolio data remains separate from interpretation, and model output cannot produce price predictions, guaranteed outcomes, trade recommendations, broker actions, orders, or autonomous workflows.
+- Atlas portfolio intelligence history stores compact tenant/account/user-scoped snapshots with score, risk tier, category, symbols, limitations, and AI status. Raw prompts, raw provider payloads, credentials, authorization headers, private URLs, stack traces, and chain-of-thought are excluded.
 
 ## Consequences
 
@@ -48,6 +51,7 @@ Positive outcomes:
 - Streaming, memory, and usage metadata remain audit-safe and do not create autonomous actions or mutation paths.
 - Opportunity analysis can improve review quality without adding a hidden trading, broker, worker, deployment, SQL, or shell execution path.
 - Opportunity ranking and review improve comparison and auditability without creating execution recommendations or autonomous actions.
+- Portfolio intelligence gives users a higher-level advisory dashboard while preserving deterministic calculations and paper-trading-only boundaries.
 
 Tradeoffs:
 
@@ -65,3 +69,5 @@ Phase 85 release safety additionally requires streaming cancellation/timeout che
 Phase 86 release safety additionally requires opportunity input validation, stale-data warning checks, unsafe-output rejection, tenant/account/user isolation, idempotent non-destructive migration review, safe persistence verification, and regression coverage for Phases 83 through 85.
 
 Phase 87 release safety additionally requires deterministic ranking reproducibility, component scoring bounds, explainability separation, review-state authorization, tenant-safe history filtering, UI accessibility checks, migration safety scans, sensitive-material scans, and regression coverage proving no trade, order, broker, position, risk-limit, worker, deployment, shell, SQL, or autonomous-agent path was added.
+
+Phase 88 release safety additionally requires deterministic portfolio-health validation, malformed input rejection, concentration/diversification scoring checks, stale/missing data checks, AI insight degradation behavior, tenant-safe snapshot history, UI no-execution checks, migration safety scans, and regression coverage for Phases 84 through 87.

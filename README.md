@@ -48,6 +48,14 @@ Explainability separates observed Atlas evidence from model interpretation. Each
 
 The review workflow supports `new`, `reviewing`, `saved`, `dismissed`, and `expired` states plus bounded optional feedback. Review updates require authenticated tenant/account/user authority, store only compact sanitized notes, preserve audit history, and never create orders, prepare trades, call brokers, start workers, or trigger autonomous execution. The UI shows ranked advisory opportunities, confidence/freshness/degraded indicators, expandable explanations, and save/dismiss controls for human review only.
 
+## Phase 88 Portfolio Intelligence
+
+Atlas Portfolio Intelligence aggregates existing paper positions, risk analytics, watchlist context, signals, and opportunity summaries into a unified advisory dashboard. The deterministic health engine computes diversification, concentration, sector and symbol allocation, realized and unrealized P&L summaries, volatility estimates, exposure, stale positions, missing data, confidence metadata, and risk-tier limitations without AI-generated math.
+
+AI portfolio insights reuse the existing Atlas AI Gateway through the `portfolio_summary` category. Provider output is treated as interpretation only and is separated from observed portfolio data. Insights may describe diversification, concentration, stale holdings, watchlist overlap, repeated opportunity patterns, missing information, and possible research areas, but they do not produce price predictions, guaranteed outcomes, trade recommendations, autonomous actions, broker calls, or order instructions.
+
+Portfolio intelligence history stores compact tenant/account/user-scoped snapshots with score, risk tier, category, symbols, limitations, and AI insight status. It excludes raw prompts, raw provider payloads, credentials, authorization headers, private URLs, stack traces, and chain-of-thought. The dashboard panel displays health, diversification, concentration, AI insight state, opportunity/watchlist summaries, risk summaries, stale-data warnings, and loading/error/degraded states without trade buttons.
+
 ## Safety Boundaries
 
 Atlas AI remains read-only and advisory-only. It must not place or modify trades, create live orders, change risk limits, approve releases, publish documents, trigger workers, deploy, call brokers, execute shell commands, or issue executable SQL. User text, Atlas records, prior AI output, and provider output are treated as untrusted.
@@ -62,6 +70,8 @@ Phase 86 validation adds opportunity request validation, symbol/timeframe/limit 
 
 Phase 87 validation adds deterministic ranking reproducibility, tier boundaries, component scoring, explainability separation, review-state authorization, tenant-safe history filtering, migration safety, UI rendering, and regression checks proving no order, broker, live-execution, autonomous-agent, SQL, shell, or deployment path was added.
 
+Phase 88 validation adds deterministic portfolio-health math, malformed input rejection, concentration/diversification scoring, stale and missing data detection, AI insight degradation, tenant-safe portfolio-history filters, UI accessibility/rendering, migration safety, and regression coverage for the AI/opportunity foundation.
+
 ## Development History
 
 Phase 83 established Atlas Copilot as a bounded, persisted, mock-first advisory layer. Phase 84 adds real-provider adapter seams, server-controlled routing/fallback, and deterministic response evaluation without changing the paper-trading-only architecture. Implementation assistance from Codex was used to draft and validate this phase; product direction, safety requirements, and acceptance criteria remain the project owner’s contribution.
@@ -73,6 +83,8 @@ Phase 85 development note: streaming UX, compact conversation memory, and usage/
 Phase 86 development note: opportunity analysis was completed as an advisory workflow over existing Atlas market and paper-trading context. Interview-ready addition: deterministic preprocessing decides what data is eligible, AI only explains bounded candidates, stale data is surfaced explicitly, and no output creates a trade, order, broker call, automation, shell command, SQL execution, or live-system mutation. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 Phase 87 development note: opportunity ranking and review make the analysis workflow easier to compare and audit. Interview-ready addition: Atlas ranks opportunities with deterministic component math, explains observed evidence separately from interpretation, and lets humans save or dismiss records as review metadata only. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
+
+Phase 88 development note: portfolio intelligence elevates the Copilot from single-opportunity review to portfolio-wide health review. Interview-ready addition: Atlas computes portfolio scores deterministically, uses AI only for bounded interpretation, stores compact tenant-scoped snapshots, and keeps every output advisory-only and paper-trading-only. This phase completes the roadmap step from opportunity review into portfolio-level intelligence; autonomous trading, broker connectivity, vector search, embeddings, and live execution remain deferred. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 ## Tooling
 

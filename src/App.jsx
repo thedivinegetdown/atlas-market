@@ -2,6 +2,7 @@ import { Suspense, useMemo } from 'react'
 import './App.css'
 import { AtlasCopilotPanel } from './components/AtlasCopilotPanel.jsx'
 import { AtlasOpportunityReviewPanel } from './components/AtlasOpportunityReviewPanel.jsx'
+import { AtlasPortfolioIntelligencePanel } from './components/AtlasPortfolioIntelligencePanel.jsx'
 import { ReleaseDiagnosticsPanel } from './components/ReleaseDiagnosticsPanel.jsx'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
@@ -5699,6 +5700,15 @@ function App() {
         <AtlasOpportunityReviewPanel
           scannerSummaries={realtimeScanner}
           marketDataHealth={marketDataScannerHealth}
+          MetricCard={MetricCard}
+          formatNumber={formatNumber}
+        />
+
+        <AtlasPortfolioIntelligencePanel
+          portfolioSummary={portfolioAnalytics}
+          riskMetrics={risk}
+          signals={realtimeSignals}
+          opportunities={[]}
           MetricCard={MetricCard}
           formatNumber={formatNumber}
         />

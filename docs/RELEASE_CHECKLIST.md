@@ -14,6 +14,7 @@ Use this checklist before merging or deploying Atlas Market changes.
 - [ ] Atlas AI streaming, cancellation, bounded memory, usage budgets, and incomplete-stream persistence protection verified.
 - [ ] Atlas opportunity analysis input validation, stale-data warnings, safe persistence, tenant/account/user isolation, and no-trade safety verified.
 - [ ] Atlas opportunity ranking, explainability, review-state authorization, tenant-safe history filters, stale/expired indicators, and no-execution UI boundaries verified.
+- [ ] Atlas portfolio intelligence deterministic health scoring, AI insight degradation, snapshot history, stale/missing data warnings, and no-execution UI boundaries verified.
 - [ ] API health endpoint verified.
 - [ ] No secrets, tokens, database URLs, or private credentials committed.
 - [ ] Changelog or release notes updated.
