@@ -1,9 +1,6 @@
-import { Suspense, useMemo } from 'react'
+import { lazy, Suspense, useMemo } from 'react'
 import './App.css'
-import { AtlasCopilotPanel } from './components/AtlasCopilotPanel.jsx'
-import { AtlasOpportunityReviewPanel } from './components/AtlasOpportunityReviewPanel.jsx'
-import { AtlasPortfolioIntelligencePanel } from './components/AtlasPortfolioIntelligencePanel.jsx'
-import { ReleaseDiagnosticsPanel } from './components/ReleaseDiagnosticsPanel.jsx'
+import { LazyFeature } from './components/LazyFeatureBoundary.jsx'
 import { applyPaperPortfolioAccounting } from './core/accounting/paperPortfolioAccountingEngine.js'
 import { orchestrateAIDecision } from './core/ai/aiDecisionOrchestrator.js'
 import { integrateResearchEnhancedDecision } from './core/ai/researchEnhancedDecisionIntegration.js'
@@ -241,6 +238,19 @@ import {
   demoProposedTrades,
   guardrailDemoPortfolio,
 } from './data/demoPortfolio.js'
+
+const ReleaseDiagnosticsPanel = lazy(() => import('./components/ReleaseDiagnosticsPanel.jsx').then((module) => ({
+  default: module.ReleaseDiagnosticsPanel,
+})))
+const AtlasCopilotPanel = lazy(() => import('./components/AtlasCopilotPanel.jsx').then((module) => ({
+  default: module.AtlasCopilotPanel,
+})))
+const AtlasOpportunityReviewPanel = lazy(() => import('./components/AtlasOpportunityReviewPanel.jsx').then((module) => ({
+  default: module.AtlasOpportunityReviewPanel,
+})))
+const AtlasPortfolioIntelligencePanel = lazy(() => import('./components/AtlasPortfolioIntelligencePanel.jsx').then((module) => ({
+  default: module.AtlasPortfolioIntelligencePanel,
+})))
 
 function formatCurrency(value) {
   return new Intl.NumberFormat('en-US', {
@@ -5650,68 +5660,76 @@ function App() {
           <span className="event-line">{releaseReadiness.eventType}</span>
         </article>
 
-        <ReleaseDiagnosticsPanel
-          tenantContext={inAppNotificationCenter.tenantAndUserScope}
-          accountId={accountingDemoPortfolio.id}
-          systems={[
-            authenticationReadiness,
-            identityAuthorization,
-            apiReliability,
-            marketDataScannerHealth,
-            realtimeScanner,
-            realtimeSignals,
-            realtimeSimulatedExecutions,
-            primaryAccounting,
-            realtimePortfolioReconciliation,
-            realtimePaperPortfolio,
-            realtimePaperRisk,
-            realtimePaperPerformance,
-            risk,
-            paperTradingReport,
-            paperReportJob,
-            paperReportWorker,
-            paperReportArtifact,
-            realtimePaperOperations,
-            paperOperationsAlerts,
-            paperOperationsIncidents,
-            paperOperationsObservability,
-          ]}
-          MetricCard={MetricCard}
-          formatNumber={formatNumber}
-        />
+        <LazyFeature label="Release Diagnostics">
+          <ReleaseDiagnosticsPanel
+            tenantContext={inAppNotificationCenter.tenantAndUserScope}
+            accountId={accountingDemoPortfolio.id}
+            systems={[
+              authenticationReadiness,
+              identityAuthorization,
+              apiReliability,
+              marketDataScannerHealth,
+              realtimeScanner,
+              realtimeSignals,
+              realtimeSimulatedExecutions,
+              primaryAccounting,
+              realtimePortfolioReconciliation,
+              realtimePaperPortfolio,
+              realtimePaperRisk,
+              realtimePaperPerformance,
+              risk,
+              paperTradingReport,
+              paperReportJob,
+              paperReportWorker,
+              paperReportArtifact,
+              realtimePaperOperations,
+              paperOperationsAlerts,
+              paperOperationsIncidents,
+              paperOperationsObservability,
+            ]}
+            MetricCard={MetricCard}
+            formatNumber={formatNumber}
+          />
+        </LazyFeature>
 
-        <AtlasCopilotPanel
-          tenantContext={inAppNotificationCenter.tenantAndUserScope}
-          accountId={accountingDemoPortfolio.id}
-          portfolioSummary={portfolioAnalytics}
-          pnlSummary={realtimePaperPortfolio}
-          riskMetrics={risk}
-          strategyMetrics={strategyAttribution}
-          scannerSummaries={realtimeScanner}
-          signalSummaries={realtimeSignals}
-          journalEntries={journalRecords.map((record) => record.result)}
-          alerts={paperOperationsAlerts}
-          incidents={paperOperationsIncidents}
-          marketDataHealth={marketDataScannerHealth}
-          operationsHealth={paperOperationsObservability}
-          MetricCard={MetricCard}
-        />
+        <LazyFeature label="Atlas Copilot">
+          <AtlasCopilotPanel
+            tenantContext={inAppNotificationCenter.tenantAndUserScope}
+            accountId={accountingDemoPortfolio.id}
+            portfolioSummary={portfolioAnalytics}
+            pnlSummary={realtimePaperPortfolio}
+            riskMetrics={risk}
+            strategyMetrics={strategyAttribution}
+            scannerSummaries={realtimeScanner}
+            signalSummaries={realtimeSignals}
+            journalEntries={journalRecords.map((record) => record.result)}
+            alerts={paperOperationsAlerts}
+            incidents={paperOperationsIncidents}
+            marketDataHealth={marketDataScannerHealth}
+            operationsHealth={paperOperationsObservability}
+            MetricCard={MetricCard}
+          />
+        </LazyFeature>
 
-        <AtlasOpportunityReviewPanel
-          scannerSummaries={realtimeScanner}
-          marketDataHealth={marketDataScannerHealth}
-          MetricCard={MetricCard}
-          formatNumber={formatNumber}
-        />
+        <LazyFeature label="Opportunity Review">
+          <AtlasOpportunityReviewPanel
+            scannerSummaries={realtimeScanner}
+            marketDataHealth={marketDataScannerHealth}
+            MetricCard={MetricCard}
+            formatNumber={formatNumber}
+          />
+        </LazyFeature>
 
-        <AtlasPortfolioIntelligencePanel
-          portfolioSummary={portfolioAnalytics}
-          riskMetrics={risk}
-          signals={realtimeSignals}
-          opportunities={[]}
-          MetricCard={MetricCard}
-          formatNumber={formatNumber}
-        />
+        <LazyFeature label="Portfolio Intelligence">
+          <AtlasPortfolioIntelligencePanel
+            portfolioSummary={portfolioAnalytics}
+            riskMetrics={risk}
+            signals={realtimeSignals}
+            opportunities={[]}
+            MetricCard={MetricCard}
+            formatNumber={formatNumber}
+          />
+        </LazyFeature>
 
         <article id="rc-stabilization" className={`panel rc-stabilization-panel ${releaseCandidateStabilization.finalStatus}`}>
           <div className="panel-heading">

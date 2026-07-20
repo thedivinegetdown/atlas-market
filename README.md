@@ -56,6 +56,16 @@ AI portfolio insights reuse the existing Atlas AI Gateway through the `portfolio
 
 Portfolio intelligence history stores compact tenant/account/user-scoped snapshots with score, risk tier, category, symbols, limitations, and AI insight status. It excludes raw prompts, raw provider payloads, credentials, authorization headers, private URLs, stack traces, and chain-of-thought. The dashboard panel displays health, diversification, concentration, AI insight state, opportunity/watchlist summaries, risk summaries, stale-data warnings, and loading/error/degraded states without trade buttons.
 
+## Phase 89 Performance Delivery
+
+Atlas now defers heavyweight dashboard panels with feature-level `React.lazy` boundaries for Atlas Copilot, Opportunity Review, Portfolio Intelligence, and Release Diagnostics. The initial shell, navigation, paper-trading summaries, permissions, and deterministic dashboards stay immediately available while those feature panels load only when requested by the client runtime.
+
+Production bundle baseline before Phase 89 was 2,000.41 kB of JavaScript across 13 chunks, with a 518.17 kB initial entry chunk and a recurring Vite chunk-size warning. After Phase 89, production output is 2,004,644 bytes of JavaScript across 14 chunks; eager JavaScript is 1,798,441 bytes, the initial entry/largest eager chunk is 504,418 bytes, and the largest deferred feature chunk is 107,134 bytes. Vite no longer reports the chunk-size warning.
+
+The Vite/Rolldown strategy keeps stable vendor and subsystem chunks for React, analytics, strategy, risk/execution, market data, reporting, compliance, system operations, charting, and research. Phase 89 adds separate `atlas-ai-panels` and `release-diagnostics-ui` deferred feature chunks and filters modulepreload hints for those lazy panels so they are not pulled into the initial network path. Shared AI core code remains available to existing App decision workflows; the deferred panel chunks contain the expensive UI surfaces.
+
+The `npm run performance:check` script validates build metrics after `npm run build`, including entry size, largest eager chunk, total eager JavaScript, absence of static imports for designated heavy features, and expected deferred feature chunks. The check is local, deterministic, network-free, and does not commit `dist`.
+
 ## Safety Boundaries
 
 Atlas AI remains read-only and advisory-only. It must not place or modify trades, create live orders, change risk limits, approve releases, publish documents, trigger workers, deploy, call brokers, execute shell commands, or issue executable SQL. User text, Atlas records, prior AI output, and provider output are treated as untrusted.
@@ -72,6 +82,8 @@ Phase 87 validation adds deterministic ranking reproducibility, tier boundaries,
 
 Phase 88 validation adds deterministic portfolio-health math, malformed input rejection, concentration/diversification scoring, stale and missing data detection, AI insight degradation, tenant-safe portfolio-history filters, UI accessibility/rendering, migration safety, and regression coverage for the AI/opportunity foundation.
 
+Phase 89 validation adds lazy feature import checks, accessible loading/failure fallback coverage, direct lazy module resolution, performance-budget parser and failure tests, App shell regression coverage, and production-build budget validation with `npm run performance:check`.
+
 ## Development History
 
 Phase 83 established Atlas Copilot as a bounded, persisted, mock-first advisory layer. Phase 84 adds real-provider adapter seams, server-controlled routing/fallback, and deterministic response evaluation without changing the paper-trading-only architecture. Implementation assistance from Codex was used to draft and validate this phase; product direction, safety requirements, and acceptance criteria remain the project owner’s contribution.
@@ -85,6 +97,8 @@ Phase 86 development note: opportunity analysis was completed as an advisory wor
 Phase 87 development note: opportunity ranking and review make the analysis workflow easier to compare and audit. Interview-ready addition: Atlas ranks opportunities with deterministic component math, explains observed evidence separately from interpretation, and lets humans save or dismiss records as review metadata only. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 Phase 88 development note: portfolio intelligence elevates the Copilot from single-opportunity review to portfolio-wide health review. Interview-ready addition: Atlas computes portfolio scores deterministically, uses AI only for bounded interpretation, stores compact tenant-scoped snapshots, and keeps every output advisory-only and paper-trading-only. This phase completes the roadmap step from opportunity review into portfolio-level intelligence; autonomous trading, broker connectivity, vector search, embeddings, and live execution remain deferred. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
+
+Phase 89 development note: frontend delivery was hardened without changing trading, AI, opportunity, or portfolio behavior. Interview-ready addition: Atlas measures production bundles, defers heavyweight advisory panels behind safe boundaries, keeps shared vendor chunks cacheable, and enforces an eager-load performance budget in CI-friendly tooling. Deferred optimizations include deeper route-level extraction of the remaining monolithic App shell and finer subsystem ownership for legacy operational panels. Codex assisted with implementation and validation; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 ## Tooling
 

@@ -11,7 +11,8 @@
     "test:ci": "vitest run",
     "test:watch": "vitest",
     "netlify:dev": "netlify dev",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "performance:check": "node scripts/check-build-performance.mjs"
   },
   "dependencies": {
     "pg": "^8.22.0",

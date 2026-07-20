@@ -6,6 +6,11 @@ export default defineConfig({
   plugins: [react()],
   build: {
     chunkSizeWarningLimit: 505,
+    modulePreload: {
+      resolveDependencies(_filename, dependencies) {
+        return dependencies.filter((dependency) => !/(atlas-ai-panels|release-diagnostics-ui)-/.test(dependency))
+      },
+    },
     rolldownOptions: {
       output: {
         codeSplitting: {
@@ -47,8 +52,12 @@ export default defineConfig({
               test: /src[\\/]components[\\/]ReleaseDiagnosticsPanel/,
             },
             {
-              name: 'atlas-ai-copilot',
-              test: /(lib[\\/]ai[\\/]|src[\\/]components[\\/]AtlasCopilotPanel)/,
+              name: 'atlas-ai-panels',
+              test: /src[\\/]components[\\/](AtlasCopilotPanel|AtlasOpportunityReviewPanel|AtlasPortfolioIntelligencePanel)/,
+            },
+            {
+              name: 'atlas-ai-core',
+              test: /(lib[\\/]ai[\\/]|lib[\\/]portfolio[\\/]portfolioIntelligenceEngine)/,
             },
             {
               name: 'system-operations',

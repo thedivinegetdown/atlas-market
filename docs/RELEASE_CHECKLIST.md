@@ -15,6 +15,8 @@ Use this checklist before merging or deploying Atlas Market changes.
 - [ ] Atlas opportunity analysis input validation, stale-data warnings, safe persistence, tenant/account/user isolation, and no-trade safety verified.
 - [ ] Atlas opportunity ranking, explainability, review-state authorization, tenant-safe history filters, stale/expired indicators, and no-execution UI boundaries verified.
 - [ ] Atlas portfolio intelligence deterministic health scoring, AI insight degradation, snapshot history, stale/missing data warnings, and no-execution UI boundaries verified.
+- [ ] Atlas performance budget verified with `npm run build` and `npm run performance:check`; heavy AI, opportunity, portfolio, and release panels remain dynamically imported with safe loading/error states.
+- [ ] `dist` output remains uncommitted and Vite chunk-size warning status is reviewed against current bundle metrics.
 - [ ] API health endpoint verified.
 - [ ] No secrets, tokens, database URLs, or private credentials committed.
 - [ ] Changelog or release notes updated.

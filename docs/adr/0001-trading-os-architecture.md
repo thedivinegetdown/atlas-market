@@ -38,6 +38,8 @@ Core decisions:
 - Atlas portfolio intelligence aggregates paper positions, risk analytics, watchlists, signals, and opportunity summaries into deterministic portfolio health snapshots. Diversification, concentration, allocations, P&L summaries, volatility estimates, exposure, stale data, missing data, confidence, and risk tiers are computed by Atlas math, not model output.
 - Atlas portfolio AI insights reuse the existing gateway and `portfolio_summary` contract. Observed portfolio data remains separate from interpretation, and model output cannot produce price predictions, guaranteed outcomes, trade recommendations, broker actions, orders, or autonomous workflows.
 - Atlas portfolio intelligence history stores compact tenant/account/user-scoped snapshots with score, risk tier, category, symbols, limitations, and AI status. Raw prompts, raw provider payloads, credentials, authorization headers, private URLs, stack traces, and chain-of-thought are excluded.
+- Atlas frontend delivery defers heavyweight advisory and release panels behind feature-level lazy boundaries. Atlas Copilot, Opportunity Review, Portfolio Intelligence, and Release Diagnostics load through dynamic imports with accessible loading/failure states, while the paper-trading shell and deterministic dashboard remain immediately available.
+- Atlas bundle strategy uses conservative Vite/Rolldown chunks for React, major engine families, AI panels, release diagnostics, and system groups. Deferred feature chunks are excluded from initial modulepreload hints, and `npm run performance:check` enforces eager-load budgets after production builds.
 
 ## Consequences
 
@@ -52,11 +54,13 @@ Positive outcomes:
 - Opportunity analysis can improve review quality without adding a hidden trading, broker, worker, deployment, SQL, or shell execution path.
 - Opportunity ranking and review improve comparison and auditability without creating execution recommendations or autonomous actions.
 - Portfolio intelligence gives users a higher-level advisory dashboard while preserving deterministic calculations and paper-trading-only boundaries.
+- Frontend bundle splitting reduces initial delivery cost without changing business calculations, authentication, authorization, AI routing, opportunity ranking, or portfolio intelligence behavior.
 
 Tradeoffs:
 
 - Some infrastructure is intentionally abstract before every future asset or broker is fully implemented.
 - API boundaries require more tests than direct in-process UI calls.
+- Shared AI core and legacy operational modules still remain in the eager graph where existing App workflows use them; deeper route extraction is deferred.
 
 ## Release Safety
 
@@ -71,3 +75,5 @@ Phase 86 release safety additionally requires opportunity input validation, stal
 Phase 87 release safety additionally requires deterministic ranking reproducibility, component scoring bounds, explainability separation, review-state authorization, tenant-safe history filtering, UI accessibility checks, migration safety scans, sensitive-material scans, and regression coverage proving no trade, order, broker, position, risk-limit, worker, deployment, shell, SQL, or autonomous-agent path was added.
 
 Phase 88 release safety additionally requires deterministic portfolio-health validation, malformed input rejection, concentration/diversification scoring checks, stale/missing data checks, AI insight degradation behavior, tenant-safe snapshot history, UI no-execution checks, migration safety scans, and regression coverage for Phases 84 through 87.
+
+Phase 89 release safety additionally requires production bundle metrics, lazy-loading regression tests, accessible feature fallback/error-boundary checks, performance-budget validation, sensitive-material scans, no committed `dist`, and confirmation that no trading, broker, order, shell, SQL, deployment, autonomous-agent, embedding, or vector-search path was added.
