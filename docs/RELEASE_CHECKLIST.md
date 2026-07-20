@@ -10,6 +10,7 @@ Use this checklist before merging or deploying Atlas Market changes.
 - [ ] Paper trading mode verified as the default and active trading mode.
 - [ ] Broker adapter verified as paper-only with `liveOrders: false`.
 - [ ] Market data and broker adapters verified in mock mode for the release candidate.
+- [ ] Atlas AI provider descriptors, server-side credentials, routing/fallback bounds, and deterministic response evaluation verified without exposing raw provider traffic or secrets.
 - [ ] API health endpoint verified.
 - [ ] No secrets, tokens, database URLs, or private credentials committed.
 - [ ] Changelog or release notes updated.
