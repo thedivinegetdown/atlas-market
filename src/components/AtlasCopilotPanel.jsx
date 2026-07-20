@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { ATLAS_AI_NOTICE, buildAtlasAiContext, createAtlasAiGateway } from '../../lib/ai/atlasAiGateway.js'
 
 const suggestions = [
@@ -30,6 +30,9 @@ export function AtlasCopilotPanel({
   const [requestCategory, setRequestCategory] = useState('portfolio_summary')
   const [status, setStatus] = useState('idle')
   const [history, setHistory] = useState([])
+  const [streamingText, setStreamingText] = useState('')
+  const [streamError, setStreamError] = useState('')
+  const abortRef = useRef(null)
   const contextSources = useMemo(() => ({
     portfolioSummary,
     pnlSummary,
@@ -47,15 +50,41 @@ export function AtlasCopilotPanel({
   async function submit(event) {
     event.preventDefault()
     setStatus('loading')
+    setStreamingText('')
+    setStreamError('')
+    abortRef.current = new AbortController()
     try {
-      const result = await createAtlasAiGateway().run({
+      let completed
+      for await (const streamEvent of createAtlasAiGateway().stream({
         tenantContext: { ...tenantContext, role: tenantContext?.role ?? 'viewer' },
         accountId,
         requestCategory,
         question,
         contextSources,
         conversation: history,
-      })
+      }, { signal: abortRef.current.signal })) {
+        if (streamEvent.streamEventType === 'chunk') {
+          setStreamingText((current) => `${current}${streamEvent.chunk ?? ''}`)
+          setStatus('loading')
+        }
+        if (streamEvent.streamEventType === 'completed') {
+          completed = streamEvent.metadata
+        }
+        if (streamEvent.streamEventType === 'cancelled') {
+          setStatus('cancelled')
+          return
+        }
+        if (streamEvent.streamEventType === 'error') {
+          setStreamError(streamEvent.error ?? 'Atlas Copilot stream failed.')
+          setStatus('error')
+          return
+        }
+      }
+      const result = {
+        atlasAiResponse: completed?.response,
+        atlasAiRequest: completed?.atlasAiRequest,
+        providerHealth: completed?.providerHealth,
+      }
       setHistory((current) => [{ question, summary: result.atlasAiResponse.summary, result }, ...current].slice(0, 5))
       setStatus('completed')
     } catch (error) {
@@ -64,9 +93,22 @@ export function AtlasCopilotPanel({
     }
   }
 
+  function cancelStream() {
+    abortRef.current?.abort()
+    setStatus('cancelled')
+  }
+
+  function resetSession() {
+    abortRef.current?.abort()
+    setHistory([])
+    setStreamingText('')
+    setStreamError('')
+    setStatus('idle')
+  }
+
   const latest = history[0]?.result?.atlasAiResponse
   const response = latest ?? {
-    summary: 'Atlas Copilot is ready to analyze bounded paper-trading context.',
+    summary: streamingText || 'Atlas Copilot is ready to analyze bounded paper-trading context.',
     observations: ['Choose a supported prompt and submit for advisory analysis.'],
     risks: ['AI output is not authoritative and cannot execute trades.'],
     recommendations: ['Use deterministic Atlas metrics for trading controls.'],
@@ -115,9 +157,10 @@ export function AtlasCopilotPanel({
         </section>
         <section>
           <button type="submit" aria-label="Submit Atlas Copilot question">Submit</button>
-          <button type="button" onClick={() => setStatus('cancelled')} aria-label="Cancel Atlas Copilot request">Cancel</button>
-          <button type="button" onClick={() => setHistory([])} aria-label="Start new Atlas Copilot session">New session</button>
+          <button type="button" onClick={cancelStream} aria-label="Cancel Atlas Copilot request">Cancel</button>
+          <button type="button" onClick={resetSession} aria-label="Start new Atlas Copilot session">New session</button>
           <p role="status" aria-live="polite" className="empty-state">Copilot status: {status}. Provider mode: mock/degraded-safe.</p>
+          {streamError ? <p role="alert" className="empty-state">{streamError}</p> : null}
         </section>
       </form>
       <div className="release-validation-summary">
@@ -129,7 +172,7 @@ export function AtlasCopilotPanel({
       <div className="release-readiness-list">
         <section>
           <h3>Summary</h3>
-          <p className="empty-state">{response.summary}</p>
+          <p className="empty-state">{status === 'loading' && streamingText ? streamingText : response.summary}</p>
         </section>
         <section>
           <h3>Observations</h3>

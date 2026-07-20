@@ -25,6 +25,9 @@ Core decisions:
 - Atlas AI provider adapters run only behind server-side descriptors. OpenAI, Anthropic, Google, and local/self-hosted HTTP providers share the `generateText`, `generateStructured`, `healthCheck`, and `estimateUsage` contract, alongside mock and disabled providers.
 - Atlas AI routing is deterministic and server-authoritative. Category, model allowlists, provider health, structured-output support, retry and fallback eligibility, fallback depth, timeout state, and budget estimates decide the route; browser input cannot supply arbitrary provider URLs or model identifiers.
 - Atlas AI responses are evaluated deterministically before persistence. Schema, required fields, advisory-only and paper-trading-only language, limitations, grounding risk, prohibited actions, HTML/script contamination, confidence consistency, fallback metadata, and provider validation status are reduced to compact audit-safe metadata.
+- Atlas AI streaming uses provider-neutral started, chunk, completed, error, and cancelled events with correlation and session identifiers. Final records are marked complete only after the structured response has passed the existing validation and evaluation pipeline.
+- Atlas AI conversation memory is bounded by tenant, account, user, and session. Older turns become sanitized summaries with expiration metadata; raw prompts, raw provider responses, vector databases, embeddings, and unlimited long-term memory are excluded from this architecture.
+- Atlas AI usage controls estimate tokens and cost, track authorized daily and monthly summaries, and degrade AI assistance when budgets are exhausted without interrupting deterministic Atlas workflows.
 
 ## Consequences
 
@@ -35,6 +38,7 @@ Positive outcomes:
 - API guardrails, observability, and release gates apply consistently across future endpoints.
 - Broker secrets and persistence stay server-side.
 - AI provider credentials, raw provider requests, raw provider responses, authorization headers, private provider URLs, stack traces, and hidden prompts stay out of browser responses and persisted audit records.
+- Streaming, memory, and usage metadata remain audit-safe and do not create autonomous actions or mutation paths.
 
 Tradeoffs:
 
@@ -46,3 +50,5 @@ Tradeoffs:
 Every release should pass CI, production build, health checks, environment verification, and paper-trading mode verification before deployment.
 
 Phase 84 release safety additionally requires provider adapter tests, routing and fallback policy tests, deterministic response evaluation tests, credential-handling checks, and regression coverage proving Atlas AI cannot mutate trades, broker state, risk limits, releases, workers, deployments, shell commands, or SQL execution paths.
+
+Phase 85 release safety additionally requires streaming cancellation/timeout checks, incomplete-stream persistence protection, bounded memory isolation, budget exhaustion behavior, and usage retention metadata validation.
