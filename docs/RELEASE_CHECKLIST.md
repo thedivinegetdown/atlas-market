@@ -18,6 +18,7 @@ Use this checklist before merging or deploying Atlas Market changes.
 - [ ] Atlas performance budget verified with `npm run build` and `npm run performance:check`; heavy AI, opportunity, portfolio, and release panels remain dynamically imported with safe loading/error states.
 - [ ] `dist` output remains uncommitted and Vite chunk-size warning status is reviewed against current bundle metrics.
 - [ ] Release candidate verified with `npm run release:verify`.
+- [ ] RC1 closure verified: final QA hardening reviewed, security/authorization closure reviewed, merge-readiness reviewed, and no new product features introduced.
 - [ ] Runtime liveness and readiness diagnostics reviewed with no unsafe exposure of secrets, private URLs, stack traces, raw prompts, or raw provider responses.
 - [ ] Worktree is clean, branch is pushed, and commit hash is recorded before release-candidate approval.
 - [ ] Migration scan confirms no `DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, or unrestricted `DELETE FROM` statements.

@@ -76,6 +76,12 @@ Structured observability records use bounded labels, normalized failure categori
 
 Release diagnostics remain lazily loaded and now display authorized runtime health, readiness, release metadata, performance-budget status, migration compatibility, and release-verification state. Rollback guidance is operational only: restore a prior frontend deployment, disable or forward-fix a failing function, correct configuration descriptors, hold migrations for forward-compatible remediation, degrade AI assistance during provider outages, or block release on performance regression. Atlas does not execute rollback, deploy, downgrade migrations, clear data, or call brokers.
 
+## Phase 91 RC1 Closure
+
+Atlas Market RC1 closure is a stabilization and verification milestone, not a product expansion. The final engineering pass keeps the Phase 83-90 architecture intact, confirms lazy-loaded diagnostics and AI panels remain deferred, verifies release health/readiness and redacted observability, preserves the 26-warning lint baseline, and confirms release verification can complete without deployment, provider calls, production data mutation, broker access, shell execution from the app, executable SQL, embeddings, vector search, or autonomous agents.
+
+RC1 readiness means the repository is prepared for a separate deployment batch: tests, lint, production build, performance budget, release verification, migration safety, sensitive-material scans, documentation, and git status must all be clean before rollout. Production deployment, Netlify environment verification, smoke tests, final release tagging, and post-deployment checks remain deferred to the deployment phase.
+
 ## Safety Boundaries
 
 Atlas AI remains read-only and advisory-only. It must not place or modify trades, create live orders, change risk limits, approve releases, publish documents, trigger workers, deploy, call brokers, execute shell commands, or issue executable SQL. User text, Atlas records, prior AI output, and provider output are treated as untrusted.
@@ -96,6 +102,8 @@ Phase 89 validation adds lazy feature import checks, accessible loading/failure 
 
 Phase 90 validation adds liveness/readiness status checks, AI-degraded readiness behavior, safe failure categories, observability redaction, release-verification stage ordering and fail-fast behavior, lint-warning baseline checks, metadata safety, runtime health endpoint safety, diagnostics UI authorization states, and regression coverage for Phase 89 performance splitting.
 
+Phase 91 validation is release-closure focused: full tests, lint, build, performance budget, release verification, migration-safety scan, sensitive-material scan, clean git status, and regression coverage for release diagnostics, AI safety, opportunity review, portfolio intelligence, and frontend performance splitting.
+
 ## Development History
 
 Phase 83 established Atlas Copilot as a bounded, persisted, mock-first advisory layer. Phase 84 adds real-provider adapter seams, server-controlled routing/fallback, and deterministic response evaluation without changing the paper-trading-only architecture. Implementation assistance from Codex was used to draft and validate this phase; product direction, safety requirements, and acceptance criteria remain the project owner’s contribution.
@@ -113,6 +121,8 @@ Phase 88 development note: portfolio intelligence elevates the Copilot from sing
 Phase 89 development note: frontend delivery was hardened without changing trading, AI, opportunity, or portfolio behavior. Interview-ready addition: Atlas measures production bundles, defers heavyweight advisory panels behind safe boundaries, keeps shared vendor chunks cacheable, and enforces an eager-load performance budget in CI-friendly tooling. Deferred optimizations include deeper route-level extraction of the remaining monolithic App shell and finer subsystem ownership for legacy operational panels. Codex assisted with implementation and validation; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 Phase 90 development note: release-candidate readiness now has deterministic liveness/readiness, redacted observability records, safe runtime diagnostics, and a single release verification command. Interview-ready addition: Atlas can prove release readiness without deploying, touching production data, calling providers, or expanding past advisory-only paper trading. Rollback readiness is documented as human-controlled restoration or forward-fix guidance, never as destructive automation. Codex assisted with implementation and validation; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
+
+Phase 91 development note: RC1 closure verifies the system rather than adding features. Interview-ready addition: Atlas reaches release-candidate status through deterministic QA gates, security review, documentation closure, and merge-readiness checks while keeping AI advisory-only, paper trading isolated, and deployment intentionally deferred. Codex assisted with validation and documentation closure; product direction, release criteria, and safety boundaries remain the project owner's contribution.
 
 ## Tooling
 

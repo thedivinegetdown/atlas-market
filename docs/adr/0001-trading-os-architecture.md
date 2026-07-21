@@ -44,6 +44,7 @@ Core decisions:
 - Atlas observability records are structured, redacted, and bounded-cardinality. Route, category, and status labels are normalized; raw prompts, raw provider responses, credentials, authorization headers, private URLs, stack traces, chain-of-thought, and tenant-sensitive payloads are excluded.
 - Atlas release verification is a deterministic local command, `npm run release:verify`, that validates configuration, tests, lint warning baseline, production build, performance budget, migration safety, sensitive-material scans, generated artifacts, and git state without network access, deployment, provider calls, or production data mutation.
 - Atlas rollback readiness is advisory and human-controlled. The architecture supports prior frontend deployment restoration, function forward-fix, configuration correction, migration compatibility hold, AI-provider degraded mode, and performance regression blocking without destructive downgrade migrations or automatic rollback execution.
+- Atlas RC1 closure is a verification state, not a new runtime feature. RC1 requires stable Phase 83-90 behavior, clean validation gates, no deployment side effects, no live trading or broker capability, and documentation that clearly separates release-candidate readiness from production rollout.
 
 ## Consequences
 
@@ -60,6 +61,7 @@ Positive outcomes:
 - Portfolio intelligence gives users a higher-level advisory dashboard while preserving deterministic calculations and paper-trading-only boundaries.
 - Frontend bundle splitting reduces initial delivery cost without changing business calculations, authentication, authorization, AI routing, opportunity ranking, or portfolio intelligence behavior.
 - Release-candidate readiness can be evaluated with safe metadata and diagnostics before any deployment action.
+- RC1 closure gives maintainers a merge-ready baseline for the final deployment batch without changing business behavior.
 
 Tradeoffs:
 
@@ -67,6 +69,7 @@ Tradeoffs:
 - API boundaries require more tests than direct in-process UI calls.
 - Shared AI core and legacy operational modules still remain in the eager graph where existing App workflows use them; deeper route extraction is deferred.
 - Runtime diagnostics add another release gate that must be maintained as new subsystems are introduced.
+- Actual production rollout remains a separate operational step with environment verification and smoke testing.
 
 ## Release Safety
 
@@ -85,3 +88,5 @@ Phase 88 release safety additionally requires deterministic portfolio-health val
 Phase 89 release safety additionally requires production bundle metrics, lazy-loading regression tests, accessible feature fallback/error-boundary checks, performance-budget validation, sensitive-material scans, no committed `dist`, and confirmation that no trading, broker, order, shell, SQL, deployment, autonomous-agent, embedding, or vector-search path was added.
 
 Phase 90 release safety additionally requires `npm run release:verify`, runtime liveness/readiness checks, observability redaction tests, release metadata safety checks, diagnostics authorization checks, rollback-guidance review, migration-safety scans, generated-artifact checks, clean worktree verification, pushed-branch confirmation, and explicit advisory-only paper-trading boundary verification.
+
+Phase 91 release safety additionally requires final QA closure, security and authorization review, documentation closure, merge-readiness confirmation, full validation, clean git status, pushed branch, and explicit confirmation that Atlas remains advisory-only and paper-trading-only before RC1 is declared.
