@@ -17,6 +17,12 @@ Use this checklist before merging or deploying Atlas Market changes.
 - [ ] Atlas portfolio intelligence deterministic health scoring, AI insight degradation, snapshot history, stale/missing data warnings, and no-execution UI boundaries verified.
 - [ ] Atlas performance budget verified with `npm run build` and `npm run performance:check`; heavy AI, opportunity, portfolio, and release panels remain dynamically imported with safe loading/error states.
 - [ ] `dist` output remains uncommitted and Vite chunk-size warning status is reviewed against current bundle metrics.
+- [ ] Release candidate verified with `npm run release:verify`.
+- [ ] Runtime liveness and readiness diagnostics reviewed with no unsafe exposure of secrets, private URLs, stack traces, raw prompts, or raw provider responses.
+- [ ] Worktree is clean, branch is pushed, and commit hash is recorded before release-candidate approval.
+- [ ] Migration scan confirms no `DROP TABLE`, `DROP COLUMN`, `TRUNCATE`, or unrestricted `DELETE FROM` statements.
+- [ ] Rollback readiness is documented as human-controlled prior deployment restoration or forward-fix guidance; no destructive database downgrade or automatic rollback is configured.
+- [ ] Advisory-only and paper-trading-only boundaries remain verified with no broker, live-order, order-mutation, shell, SQL, deployment, autonomous-agent, embedding, or vector-search path added.
 - [ ] API health endpoint verified.
 - [ ] No secrets, tokens, database URLs, or private credentials committed.
 - [ ] Changelog or release notes updated.

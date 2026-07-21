@@ -66,6 +66,16 @@ The Vite/Rolldown strategy keeps stable vendor and subsystem chunks for React, a
 
 The `npm run performance:check` script validates build metrics after `npm run build`, including entry size, largest eager chunk, total eager JavaScript, absence of static imports for designated heavy features, and expected deferred feature chunks. The check is local, deterministic, network-free, and does not commit `dist`.
 
+## Phase 90 Release Candidate Readiness
+
+Atlas now has production-safe runtime liveness and readiness diagnostics for release-candidate review. Liveness checks only the application runtime and paper-trading boundary, while readiness includes required configuration, API reliability, migration compatibility, optional AI provider status, paper-trading availability, performance-budget status, and safe release metadata. Optional AI degradation reports as degraded without making deterministic Atlas workflows unavailable.
+
+Structured observability records use bounded labels, normalized failure categories, sanitized correlation/request/tenant/account/user context, and redacted metadata. Credentials, authorization headers, raw prompts, raw provider responses, private URLs, stack traces, chain-of-thought, and tenant-sensitive content are excluded from logs, metrics, diagnostics payloads, and release metadata.
+
+`npm run release:verify` runs release-critical gates in order: production configuration validation, focused security/release tests, full tests, lint with the 26-warning baseline, production build, performance budget, migration-safety scan, sensitive-material scan, generated-artifact check, and git-state reporting. The command is cross-platform Node, requires no network access, does not deploy, does not call live providers, and does not mutate production data.
+
+Release diagnostics remain lazily loaded and now display authorized runtime health, readiness, release metadata, performance-budget status, migration compatibility, and release-verification state. Rollback guidance is operational only: restore a prior frontend deployment, disable or forward-fix a failing function, correct configuration descriptors, hold migrations for forward-compatible remediation, degrade AI assistance during provider outages, or block release on performance regression. Atlas does not execute rollback, deploy, downgrade migrations, clear data, or call brokers.
+
 ## Safety Boundaries
 
 Atlas AI remains read-only and advisory-only. It must not place or modify trades, create live orders, change risk limits, approve releases, publish documents, trigger workers, deploy, call brokers, execute shell commands, or issue executable SQL. User text, Atlas records, prior AI output, and provider output are treated as untrusted.
@@ -84,6 +94,8 @@ Phase 88 validation adds deterministic portfolio-health math, malformed input re
 
 Phase 89 validation adds lazy feature import checks, accessible loading/failure fallback coverage, direct lazy module resolution, performance-budget parser and failure tests, App shell regression coverage, and production-build budget validation with `npm run performance:check`.
 
+Phase 90 validation adds liveness/readiness status checks, AI-degraded readiness behavior, safe failure categories, observability redaction, release-verification stage ordering and fail-fast behavior, lint-warning baseline checks, metadata safety, runtime health endpoint safety, diagnostics UI authorization states, and regression coverage for Phase 89 performance splitting.
+
 ## Development History
 
 Phase 83 established Atlas Copilot as a bounded, persisted, mock-first advisory layer. Phase 84 adds real-provider adapter seams, server-controlled routing/fallback, and deterministic response evaluation without changing the paper-trading-only architecture. Implementation assistance from Codex was used to draft and validate this phase; product direction, safety requirements, and acceptance criteria remain the project owner’s contribution.
@@ -99,6 +111,8 @@ Phase 87 development note: opportunity ranking and review make the analysis work
 Phase 88 development note: portfolio intelligence elevates the Copilot from single-opportunity review to portfolio-wide health review. Interview-ready addition: Atlas computes portfolio scores deterministically, uses AI only for bounded interpretation, stores compact tenant-scoped snapshots, and keeps every output advisory-only and paper-trading-only. This phase completes the roadmap step from opportunity review into portfolio-level intelligence; autonomous trading, broker connectivity, vector search, embeddings, and live execution remain deferred. Codex assisted with implementation and tests; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 Phase 89 development note: frontend delivery was hardened without changing trading, AI, opportunity, or portfolio behavior. Interview-ready addition: Atlas measures production bundles, defers heavyweight advisory panels behind safe boundaries, keeps shared vendor chunks cacheable, and enforces an eager-load performance budget in CI-friendly tooling. Deferred optimizations include deeper route-level extraction of the remaining monolithic App shell and finer subsystem ownership for legacy operational panels. Codex assisted with implementation and validation; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
+
+Phase 90 development note: release-candidate readiness now has deterministic liveness/readiness, redacted observability records, safe runtime diagnostics, and a single release verification command. Interview-ready addition: Atlas can prove release readiness without deploying, touching production data, calling providers, or expanding past advisory-only paper trading. Rollback readiness is documented as human-controlled restoration or forward-fix guidance, never as destructive automation. Codex assisted with implementation and validation; product requirements, safety boundaries, and acceptance criteria remain the project owner's contribution.
 
 ## Tooling
 

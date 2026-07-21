@@ -40,6 +40,10 @@ Core decisions:
 - Atlas portfolio intelligence history stores compact tenant/account/user-scoped snapshots with score, risk tier, category, symbols, limitations, and AI status. Raw prompts, raw provider payloads, credentials, authorization headers, private URLs, stack traces, and chain-of-thought are excluded.
 - Atlas frontend delivery defers heavyweight advisory and release panels behind feature-level lazy boundaries. Atlas Copilot, Opportunity Review, Portfolio Intelligence, and Release Diagnostics load through dynamic imports with accessible loading/failure states, while the paper-trading shell and deterministic dashboard remain immediately available.
 - Atlas bundle strategy uses conservative Vite/Rolldown chunks for React, major engine families, AI panels, release diagnostics, and system groups. Deferred feature chunks are excluded from initial modulepreload hints, and `npm run performance:check` enforces eager-load budgets after production builds.
+- Atlas release-candidate readiness separates liveness from readiness. Liveness covers only runtime and paper-trading boundary health; readiness adds required configuration, API reliability, migration compatibility, optional AI availability, paper-trading service health, performance budget, and safe release metadata.
+- Atlas observability records are structured, redacted, and bounded-cardinality. Route, category, and status labels are normalized; raw prompts, raw provider responses, credentials, authorization headers, private URLs, stack traces, chain-of-thought, and tenant-sensitive payloads are excluded.
+- Atlas release verification is a deterministic local command, `npm run release:verify`, that validates configuration, tests, lint warning baseline, production build, performance budget, migration safety, sensitive-material scans, generated artifacts, and git state without network access, deployment, provider calls, or production data mutation.
+- Atlas rollback readiness is advisory and human-controlled. The architecture supports prior frontend deployment restoration, function forward-fix, configuration correction, migration compatibility hold, AI-provider degraded mode, and performance regression blocking without destructive downgrade migrations or automatic rollback execution.
 
 ## Consequences
 
@@ -55,12 +59,14 @@ Positive outcomes:
 - Opportunity ranking and review improve comparison and auditability without creating execution recommendations or autonomous actions.
 - Portfolio intelligence gives users a higher-level advisory dashboard while preserving deterministic calculations and paper-trading-only boundaries.
 - Frontend bundle splitting reduces initial delivery cost without changing business calculations, authentication, authorization, AI routing, opportunity ranking, or portfolio intelligence behavior.
+- Release-candidate readiness can be evaluated with safe metadata and diagnostics before any deployment action.
 
 Tradeoffs:
 
 - Some infrastructure is intentionally abstract before every future asset or broker is fully implemented.
 - API boundaries require more tests than direct in-process UI calls.
 - Shared AI core and legacy operational modules still remain in the eager graph where existing App workflows use them; deeper route extraction is deferred.
+- Runtime diagnostics add another release gate that must be maintained as new subsystems are introduced.
 
 ## Release Safety
 
@@ -77,3 +83,5 @@ Phase 87 release safety additionally requires deterministic ranking reproducibil
 Phase 88 release safety additionally requires deterministic portfolio-health validation, malformed input rejection, concentration/diversification scoring checks, stale/missing data checks, AI insight degradation behavior, tenant-safe snapshot history, UI no-execution checks, migration safety scans, and regression coverage for Phases 84 through 87.
 
 Phase 89 release safety additionally requires production bundle metrics, lazy-loading regression tests, accessible feature fallback/error-boundary checks, performance-budget validation, sensitive-material scans, no committed `dist`, and confirmation that no trading, broker, order, shell, SQL, deployment, autonomous-agent, embedding, or vector-search path was added.
+
+Phase 90 release safety additionally requires `npm run release:verify`, runtime liveness/readiness checks, observability redaction tests, release metadata safety checks, diagnostics authorization checks, rollback-guidance review, migration-safety scans, generated-artifact checks, clean worktree verification, pushed-branch confirmation, and explicit advisory-only paper-trading boundary verification.

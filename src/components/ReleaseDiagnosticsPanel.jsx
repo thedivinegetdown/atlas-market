@@ -1,6 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { validateProductionConfiguration } from '../../lib/system/productionConfigurationValidationEngine.js'
 import { evaluateReleaseReadinessDiagnostics } from '../../lib/system/releaseReadinessDiagnosticsEngine.js'
+import { canViewReleaseDiagnostics, createRuntimeDiagnostics } from '../../lib/system/releaseObservabilityReadinessEngine.js'
 import { createReleaseCandidateManifest, supersedeReleaseCandidate } from '../../lib/system/releaseCandidatePackagingEngine.js'
 import { transitionReleaseApproval, validateProductionRun } from '../../lib/system/releaseApprovalWorkflowEngine.js'
 import { certifyReleaseCandidate, supersedeReleaseCertification } from '../../lib/system/releaseCertificationEngine.js'
@@ -17,9 +18,13 @@ export function ReleaseDiagnosticsPanel({
   systems,
   releaseReadinessDiagnostics,
   productionConfigurationValidation,
+  runtimeDiagnostics,
+  releaseVerificationSummary,
+  authorized = true,
   MetricCard,
   formatNumber,
 }) {
+  const [refreshCount, setRefreshCount] = useState(0)
   const [
     authenticationReadiness,
     identityAuthorization,
@@ -116,6 +121,21 @@ export function ReleaseDiagnosticsPanel({
   }, { emitEvent: false, timestamp: '2026-07-16T10:46:00.000Z' }), [accountId, tenantContext])
   const readiness = releaseReadinessDiagnostics ?? evaluatedReadiness
   const configuration = productionConfigurationValidation ?? evaluatedConfiguration
+  const diagnosticsAuthorized = authorized && canViewReleaseDiagnostics(tenantContext)
+  const runtime = useMemo(() => runtimeDiagnostics ?? createRuntimeDiagnostics({
+    authorized: diagnosticsAuthorized,
+    databaseAvailable: configuration.configurationValidationStatus !== 'blocked',
+    aiProviderAvailable: false,
+    migrationCompatible: true,
+    performanceBudgetStatus: 'healthy',
+    paperTradingAvailable: true,
+    releaseVerificationStatus: releaseVerificationSummary?.ok ? 'healthy' : 'unknown',
+    releaseMetadata: {
+      commit: 'local-diagnostics',
+      releaseVerificationStatus: releaseVerificationSummary?.ok ? 'healthy' : 'unknown',
+    },
+  }, { timestamp: '2026-07-21T09:00:00.000Z' }), [configuration.configurationValidationStatus, diagnosticsAuthorized, releaseVerificationSummary, runtimeDiagnostics])
+  const refreshDisabled = refreshCount >= 2
   const releaseCandidate = useMemo(() => createReleaseCandidateManifest({
     tenantContext,
     accountId,
@@ -453,6 +473,18 @@ export function ReleaseDiagnosticsPanel({
     releaseAcceptanceRun: releaseAcceptance.releaseAcceptanceRun,
     releaseDocumentation,
   }, { emitEvent: false, timestamp: '2026-07-16T11:23:00.000Z' }), [accountId, closedReleaseClosure, releaseAcceptance, releaseCandidate, releaseDocumentation, releaseGate, tenantContext])
+  if (!diagnosticsAuthorized) {
+    return (
+      <article id="release-diagnostics" className="panel release-readiness-panel blocked" aria-label="Release diagnostics access denied">
+        <div className="panel-heading">
+          <h2>Release Diagnostics</h2>
+          <span>Diagnostics require authorized release review access.</span>
+        </div>
+        <p className="empty-state">Release diagnostics are unavailable for this user context.</p>
+      </article>
+    )
+  }
+
   return (
     <article id="release-diagnostics" className={`panel release-readiness-panel ${readiness.releaseReadinessStatus}`}>
       <div className="panel-heading">
@@ -475,6 +507,28 @@ export function ReleaseDiagnosticsPanel({
         <MetricCard label="Configuration Status" value={configuration.configurationValidationStatus} tone={configuration.configurationValidationStatus === 'healthy' ? 'positive' : configuration.configurationValidationStatus === 'warning' ? 'warning' : 'danger'} />
         <MetricCard label="Critical Config Findings" value={formatNumber(configuration.criticalSummary.length)} tone={configuration.criticalSummary.length ? 'danger' : 'positive'} />
       </div>
+      <section aria-label="Runtime health and readiness diagnostics">
+        <div className="panel-heading">
+          <h3>Runtime Health and Readiness</h3>
+          <span>Sanitized liveness, readiness, release metadata, and verification status.</span>
+        </div>
+        <div className="release-validation-summary">
+          <MetricCard label="Application Version" value={runtime.releaseMetadata.applicationVersion} />
+          <MetricCard label="Commit Identifier" value={runtime.releaseMetadata.commit} />
+          <MetricCard label="Environment" value={runtime.releaseMetadata.environmentName} />
+          <MetricCard label="Liveness Status" value={runtime.liveness.status} tone={runtime.liveness.status === 'healthy' ? 'positive' : 'danger'} />
+          <MetricCard label="Readiness Status" value={runtime.readiness.status} tone={runtime.readiness.status === 'healthy' ? 'positive' : runtime.readiness.status === 'degraded' ? 'warning' : 'danger'} />
+          <MetricCard label="Performance Budget" value={runtime.readiness.checks.find((item) => item.id === 'performance-budget')?.status ?? 'unknown'} />
+          <MetricCard label="Migration Compatibility" value={runtime.readiness.checks.find((item) => item.id === 'migration-compatibility')?.status ?? 'unknown'} />
+          <MetricCard label="Release Verification" value={runtime.releaseMetadata.releaseVerificationStatus} />
+        </div>
+        <p className="empty-state">
+          {runtime.status} / degraded subsystems {formatNumber(runtime.degradedSubsystems.length)} / refreshed {formatNumber(refreshCount)} times / no deploy, rollback, restart, broker, or order controls.
+        </p>
+        <button type="button" onClick={() => setRefreshCount((count) => Math.min(2, count + 1))} disabled={refreshDisabled} aria-label="Refresh release diagnostics">
+          Refresh
+        </button>
+      </section>
       <div className="release-readiness-list">
         <section>
           <h3>Deployment Blockers</h3>

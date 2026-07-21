@@ -10,6 +10,7 @@ import {
   getClientKey,
 } from '../../../lib/security/requestGuards.js'
 import { TRADING_EVENTS } from '../../../lib/observability/eventLogger.js'
+import { createObservabilityRecord, normalizeErrorCategory } from '../../../lib/system/releaseObservabilityReadinessEngine.js'
 
 export function createRequestId() {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
@@ -112,6 +113,7 @@ export function createApiHandler(resolver, {
   return async (event = {}) => {
     const headers = event.headers ?? {}
     const requestId = headers['x-request-id'] ?? headers['X-Request-Id'] ?? createRequestId()
+    const startedAt = Date.now()
 
     try {
       validateEnvironment(env)
@@ -144,16 +146,32 @@ export function createApiHandler(resolver, {
         return fail(data.statusCode ?? 400, data.error.code, data.error.message, { requestId })
       }
 
+      logger.info('workspace api request completed', createObservabilityRecord({
+        eventType: 'api.request.completed',
+        route: event.path ?? 'netlify-function',
+        category: 'api',
+        status: 'healthy',
+        durationMs: Date.now() - startedAt,
+        requestId,
+      }))
       return ok(data, { requestId })
     } catch (error) {
       const publicError = toPublicError(error)
       logger.error('workspace api request failed', {
-        eventType: TRADING_EVENTS.API_ERROR,
-        requestId,
-        code: publicError.code,
-        statusCode: publicError.statusCode,
-        internalMessage: error?.message,
-        metadata: isAppError(error) ? error.metadata : {},
+        ...createObservabilityRecord({
+          eventType: TRADING_EVENTS.API_ERROR,
+          route: event.path ?? 'netlify-function',
+          category: normalizeErrorCategory(error),
+          status: publicError.statusCode >= 500 ? 'unhealthy' : 'degraded',
+          durationMs: Date.now() - startedAt,
+          requestId,
+          metadata: {
+            code: publicError.code,
+            statusCode: publicError.statusCode,
+            appError: isAppError(error),
+            safeMetadata: isAppError(error) ? error.metadata : {},
+          },
+        }),
       })
       return fail(publicError.statusCode, publicError.code, publicError.message, { requestId })
     }
