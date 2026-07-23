@@ -1413,6 +1413,113 @@ h1 {
   text-transform: uppercase;
 }
 
+.panel-stack {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.panel-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.panel-actions h3 {
+  font-size: 18px;
+}
+
+.panel-actions p {
+  margin: 6px 0 0;
+  color: var(--text);
+}
+
+.order-form,
+.alert-form,
+.scanner-form {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.order-form label,
+.alert-form label,
+.scanner-form label {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.order-form input,
+.order-form select,
+.alert-form input,
+.alert-form select,
+.scanner-form input,
+.scanner-form select,
+.analytics-columns input,
+.analytics-columns select,
+.analytics-columns textarea {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 7px 9px;
+  color: var(--text-strong);
+  background: #0b1220;
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.order-form .button-row,
+.alert-form .button-row,
+.scanner-form .button-row {
+  grid-column: 1 / -1;
+}
+
+.button-row button,
+.order-form button,
+.alert-form button,
+.scanner-form button {
+  min-height: 32px;
+  border: 1px solid var(--border-bright);
+  border-radius: 7px;
+  padding: 0 10px;
+  color: var(--text-strong);
+  background: #0b1220;
+}
+
+.order-preview,
+.notification-line {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background: #0b1220;
+}
+
+.order-preview {
+  display: grid;
+  gap: 5px;
+}
+
+.order-preview span,
+.notification-line,
+.validation-message {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .positions-panel {
   min-width: 0;
 }
@@ -1633,6 +1740,12 @@ tr:last-child td {
   }
 
   .metric-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .order-form,
+  .alert-form,
+  .scanner-form {
     grid-template-columns: 1fr;
   }
 
