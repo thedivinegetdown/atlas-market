@@ -145,12 +145,12 @@ describe('Phase 80A security hardening and abuse resistance', () => {
 describe('Phase 80B performance, accessibility, and UX hardening', () => {
   it('renders bounded release hardening summaries, accessible labels, status text, and paper-only UX language', () => {
     const markup = renderToStaticMarkup(React.createElement(App))
-    expect(markup).toContain('Release Diagnostics')
+    expect(markup).toContain('Dashboard')
     expect(markup).toContain('Loading deferred dashboard feature')
-    expect(markup).toContain('aria-label="Release Diagnostics loading"')
+    expect(markup).toContain('aria-label="Dashboard loading"')
     expect(markup).not.toContain('Final Security &amp; UX Hardening')
     expect(markup).toContain('Paper Trading only')
-    expect(markup).toContain('Workspace actions remain paper trading only')
-    expect(markup).toContain('No live orders')
+    expect(markup).toContain('Trading OS')
+    expect(markup).toContain('System Health')
   })
 })

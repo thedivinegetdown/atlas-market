@@ -35,10 +35,11 @@ describe('Part 10F workspace polish', () => {
     renderWithRoot(<App />)
 
     expect(container.textContent).toContain('Paper Trading')
-    expect(container.textContent).toContain('SPY')
-    expect(container.textContent).toContain('Market Overview')
-    expect(container.textContent).toContain('Signal Panel')
-    expect(container.textContent).toContain('Risk Panel')
+    expect(container.textContent).toContain('Dashboard')
+    expect(container.textContent).toContain('Markets')
+    expect(container.textContent).toContain('Scanner')
+    expect(container.textContent).toContain('Loading deferred dashboard feature')
+    expect(container.textContent).toContain('System Health')
   })
 
   it('highlights active-symbol rows in orders, positions, and journal panels', () => {

@@ -47,9 +47,10 @@ describe('Part 10 workspace', () => {
       await Promise.resolve()
     })
 
-    expect(container.textContent).toContain('Institutional Trading Workspace')
+    expect(container.textContent).toContain('Trading OS')
     expect(container.textContent).toContain('Watchlist')
-    expect(container.textContent).toContain('Order Entry')
+    expect(container.textContent).toContain('Orders (Paper)')
+    expect(container.textContent).toContain('Dashboard')
   })
 
   it('renders a watchlist with active symbols', async () => {

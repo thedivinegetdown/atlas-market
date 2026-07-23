@@ -217,7 +217,8 @@ describe('Phase 90 metadata, endpoint, and diagnostics UI', () => {
       formatNumber,
     }))
     expect(denied).toContain('Release diagnostics access denied')
-    const appSource = readFileSync('src/App.jsx', 'utf8')
-    expect(appSource).toContain("lazy(() => import('./components/ReleaseDiagnosticsPanel.jsx')")
+    const healthSectionsSource = readFileSync('src/workspaces/SystemHealth/healthSections.jsx', 'utf8')
+    expect(healthSectionsSource).toContain("lazy(() => import('../../components/ReleaseDiagnosticsPanel.jsx')")
   })
 })
+

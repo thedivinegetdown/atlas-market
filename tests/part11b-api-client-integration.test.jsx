@@ -123,9 +123,9 @@ describe('Part 11B workspace API client integration', () => {
     await flushApi()
 
     expect(container.textContent).toContain('Paper Trading')
-    expect(container.textContent).toContain('SPY')
     expect(container.textContent).toContain('Watchlist')
-    expect(container.textContent).toContain('Market Overview')
-    expect(container.textContent).toContain('Portfolio Summary')
+    expect(container.textContent).toContain('Dashboard')
+    expect(container.textContent).toContain('Portfolio')
+    expect(container.textContent).toContain('System Health')
   })
 })

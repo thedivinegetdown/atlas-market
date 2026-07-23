@@ -8,7 +8,6 @@ import {
   FeaturePanelFallback,
 } from '../src/components/LazyFeatureBoundary.jsx'
 import {
-  DESIGNATED_HEAVY_FEATURE_IMPORTS,
   evaluatePerformanceBudget,
   findStaticHeavyFeatureImports,
   parseHtmlJavaScriptReferences,
@@ -16,24 +15,24 @@ import {
 
 describe('Phase 89 bundle splitting and lazy feature loading', () => {
   it('uses dynamic imports for designated heavy dashboard features', () => {
-    const source = readFileSync('src/App.jsx', 'utf8')
+    const source = [
+      readFileSync('src/workspaces/AtlasCopilot/copilotSections.jsx', 'utf8'),
+      readFileSync('src/workspaces/SystemHealth/healthSections.jsx', 'utf8'),
+    ].join('\n')
     expect(findStaticHeavyFeatureImports(source)).toEqual([])
-    for (const specifier of DESIGNATED_HEAVY_FEATURE_IMPORTS) {
-      expect(source).toContain(`import('${specifier}')`)
-    }
+    expect(source).toContain("import('../../components/AtlasCopilotPanel.jsx')")
+    expect(source).toContain("import('../../components/ReleaseDiagnosticsPanel.jsx')")
     expect(source.match(/const AtlasCopilotPanel = lazy/g)).toHaveLength(1)
-    expect(source.match(/const AtlasOpportunityReviewPanel = lazy/g)).toHaveLength(1)
-    expect(source.match(/const AtlasPortfolioIntelligencePanel = lazy/g)).toHaveLength(1)
     expect(source.match(/const ReleaseDiagnosticsPanel = lazy/g)).toHaveLength(1)
   })
 
   it('renders the initial shell with accessible deferred-feature fallbacks', () => {
     const markup = renderToStaticMarkup(React.createElement(App))
-    expect(markup).toContain('Portfolio Risk Intelligence')
+    expect(markup).toContain('Dashboard')
+    expect(markup).toContain('Trading OS')
     expect(markup).toContain('Atlas Copilot')
-    expect(markup).toContain('Opportunity Review')
-    expect(markup).toContain('Portfolio Intelligence')
-    expect(markup).toContain('Release Diagnostics')
+    expect(markup).toContain('Portfolio')
+    expect(markup).toContain('System Health')
     expect(markup).toContain('role="status"')
     expect(markup).toContain('Loading deferred dashboard feature')
     expect(markup).not.toContain('Submit Atlas Copilot question')
@@ -108,3 +107,4 @@ describe('Phase 89 performance budget utility', () => {
     expect(gitignore).toMatch(/^dist$/m)
   })
 })
+
