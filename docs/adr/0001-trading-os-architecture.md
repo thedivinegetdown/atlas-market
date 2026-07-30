@@ -90,3 +90,7 @@ Phase 89 release safety additionally requires production bundle metrics, lazy-lo
 Phase 90 release safety additionally requires `npm run release:verify`, runtime liveness/readiness checks, observability redaction tests, release metadata safety checks, diagnostics authorization checks, rollback-guidance review, migration-safety scans, generated-artifact checks, clean worktree verification, pushed-branch confirmation, and explicit advisory-only paper-trading boundary verification.
 
 Phase 91 release safety additionally requires final QA closure, security and authorization review, documentation closure, merge-readiness confirmation, full validation, clean git status, pushed branch, and explicit confirmation that Atlas remains advisory-only and paper-trading-only before RC1 is declared.
+
+## Related files or systems
+
+`src/`, `lib/`, `netlify/functions/`, `lib/db/`, `lib/market/`, `lib/broker/`, `lib/risk/`, `lib/ai/`, `scripts/release-verify.mjs`, `vite.config.js`, and `netlify.toml`.
