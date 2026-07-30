@@ -199,6 +199,7 @@ export function WatchlistPanel({
 export function MarketOverviewPanel({
   symbol,
   quote,
+  regime,
   loading,
   refreshing,
   error,
@@ -206,6 +207,7 @@ export function MarketOverviewPanel({
 }) {
   const fallback = useMarketOverview({ symbol: symbol ?? quote?.symbol, initialQuote: quote })
   const selectedQuote = quote ?? fallback.quote
+  const selectedRegime = regime ?? fallback.regime
   const resolvedLoading = loading ?? fallback.isLoading
   const resolvedRefreshing = refreshing ?? fallback.isRefreshing
   const resolvedError = error ?? fallback.error
@@ -247,7 +249,47 @@ export function MarketOverviewPanel({
         <article><span>Volatility</span><strong>{selectedQuote?.volatility == null ? 'N/A' : formatPercent(selectedQuote.volatility)}</strong></article>
         <article><span>Last Updated</span><strong>{formatTimestamp(selectedQuote?.updatedAt)}</strong></article>
       </div>
+      <MarketRegimeSummary regime={selectedRegime} loading={resolvedLoading} error={resolvedError} />
     </div>
+  )
+}
+
+function formatRegime(value) {
+  return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
+}
+
+export function MarketRegimeSummary({ regime, loading = false, error = null }) {
+  const classification = regime?.classification
+  if (loading && !regime) return <section className="regime-summary" aria-labelledby="regime-heading"><h4 id="regime-heading">Market Regime</h4><StateMessage>Loading regime context...</StateMessage></section>
+  if (error && !regime) return <section className="regime-summary" aria-labelledby="regime-heading"><h4 id="regime-heading">Market Regime</h4><StateMessage type="error">Regime context unavailable.</StateMessage></section>
+  if (!regime) return null
+  const details = [
+    ['Missing', regime.inputCoverage?.missing], ['Stale', regime.inputCoverage?.stale],
+    ['Incompatible', regime.inputCoverage?.incompatible], ['Invalid', regime.inputCoverage?.invalid],
+  ].filter(([, values]) => values?.length)
+  return (
+    <section className="regime-summary" aria-labelledby="regime-heading">
+      <div className="regime-summary__header">
+        <div><h4 id="regime-heading">Market Regime</h4><p>Deterministic, read-only market context</p></div>
+        <span className="status-pill" role="status">{formatRegime(classification?.status)}</span>
+      </div>
+      <div className="metric-grid regime-summary__metrics">
+        <article><span>Trend</span><strong>{formatRegime(classification?.trendRegime)}</strong></article>
+        <article><span>Volatility</span><strong>{formatRegime(classification?.volatilityRegime)}</strong></article>
+        <article><span>Risk</span><strong>{formatRegime(classification?.riskRegime)}</strong></article>
+        <article><span>Confidence</span><strong>{classification?.confidence ?? 0}%</strong></article>
+        <article><span>Freshness</span><strong>{formatRegime(regime.freshness)}</strong></article>
+        <article><span>As of</span><strong>{formatTimestamp(regime.asOf)}</strong></article>
+      </div>
+      {classification?.reasons?.length ? <ul className="regime-summary__reasons">{classification.reasons.slice(0, 3).map((reason) => <li key={reason}>{reason}</li>)}</ul> : null}
+      {details.length || regime.warnings?.length ? (
+        <details><summary>Input coverage details</summary>
+          {details.map(([label, values]) => <p key={label}><strong>{label}:</strong> {values.join(', ')}</p>)}
+          {regime.warnings?.map((warning) => <p key={warning}>{warning}</p>)}
+        </details>
+      ) : null}
+      <p className="regime-summary__boundary">Context only. Paper trading remains enabled; Atlas Copilot remains advisory.</p>
+    </section>
   )
 }
 

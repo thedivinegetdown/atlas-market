@@ -111,8 +111,8 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
       return request('health', {}, 'Unable to load system health')
     },
 
-    getMarketOverview(symbol) {
-      return request('market-overview', { symbol }, 'Unable to load market overview')
+    getMarketOverview(symbol, timeframe = '1D') {
+      return request('market-overview', { symbol, timeframe }, 'Unable to load market overview')
     },
 
     getSignal(symbol) {

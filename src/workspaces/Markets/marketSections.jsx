@@ -11,7 +11,7 @@ export function MarketSections() {
         <div className="metric-grid">
           <MetricCard label="Streaming" value="mock-ready" />
           <MetricCard label="Provider Health" value="diagnostics" />
-          <MetricCard label="Market Regime" value="review" />
+          <MetricCard label="Market Regime" value="read-only" />
           <MetricCard label="Research Score" value="advisory" />
         </div>
       </WorkspacePanel>

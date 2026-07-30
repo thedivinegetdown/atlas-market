@@ -8,6 +8,30 @@ The Market Regime Engine provides a provider-neutral, deterministic description 
 
 The reusable entry point is `classifyMarketRegime(input, options)` from `lib/market/regime/index.js`. The compatibility module at `lib/market/marketRegimeClassificationEngine.js` re-exports the same implementation.
 
+MI.2 adds `createMarketRegimeOrchestrator()` as the provider-neutral boundary between approved market observations and the engine. The orchestrator does not fetch data or calculate indicators.
+
+## Orchestration flow and real data sources
+
+The existing read-only `market-overview` Netlify Function validates `symbol` and daily `timeframe`, delegates to `workspaceDataService`, and uses the existing multi-provider `marketDataService` quote path. The service passes the normalized quote into the orchestrator and returns the quote and regime read model in the existing success envelope. The Markets workspace consumes both through the existing API client and `useMarketOverview` hook, so no second provider request is introduced.
+
+The production path currently supplies only current price, provider, symbol, and quote timestamp. Atlas does not currently expose approved production calculations for moving averages, moving-average slope, ADX, normalized ATR/percentile, breadth, VIX, benchmark condition, or relative strength through this endpoint. Those inputs are reported as missing; no placeholders or duplicate calculations are used to force a classification.
+
+### Normalized observation mapping
+
+Each observation carries `value`, `source`, `symbol`, `timeframe`, `observedAt`, optional `receivedAt`, and `derivation` (`provider-supplied` or `calculated`). Aliases are normalized before engine invocation: `sma20/50/200` map to moving averages, `vix` to volatility index, numeric strings to numbers, `atrRatio` to ATR percentage, and `breadthRatio` to breadth percentage. Invalid values are omitted and recorded. Raw provider payloads and credentials are never included.
+
+## Timeframe and freshness rules
+
+The target timeframe is daily (`1D`); `D`, `DAY`, `DAILY`, and `1DAY` normalize to it. Daily indicators must identify a compatible daily timeframe. Realtime quote price is the sole documented compatible derived input for a daily classification. Intraday indicators such as `1H` are omitted with a warning, and unknown timeframes are not silently mixed.
+
+Freshness states are `FRESH`, `STALE`, and `UNKNOWN`. Daily observations are fresh for 36 hours by default; realtime prices are fresh for five minutes. Rules are configurable at the orchestration boundary. Missing or invalid timestamps produce `UNKNOWN`. Stale and unknown-freshness fields remain visible in provenance and coverage but are excluded from engine input. Cache freshness is not separately modeled because MI.2 reuses the uncached, `no-store` market-overview response and adds no cache.
+
+## Read-only contract and UI
+
+The stable read model contains `symbol`, normalized `timeframe`, `asOf`, aggregate `freshness`, `classification`, `inputCoverage`, field-level `provenance`, `warnings`, `engineVersion`, `paperTrading`, and `advisoryOnly`. Coverage distinguishes available, missing, stale, unknown-freshness, invalid, and incompatible fields. It excludes raw provider responses.
+
+The compact Market Regime section presents trend, volatility, risk, confidence, freshness, as-of time, deterministic reasons, and a disclosure for coverage problems. Loading, error, partial, stale, and insufficient-data states use text as well as styling. It contains no trade action, signal language, strategy activation, or performance claim.
+
 ## Normalized inputs
 
 The engine accepts already calculated numeric indicators. It does not call providers and does not calculate moving averages, ADX, ATR, or breadth from raw candles.
@@ -54,6 +78,8 @@ Missing optional fields do not throw and do not produce reasons for absent evide
 ## Intended downstream consumers
 
 Future, separately approved phases may consume the result for adaptive strategy selection, trade-quality scoring, briefings, paper-trading automation, or risk-aware opportunity ranking. MI.1 does not implement or integrate those behaviors.
+
+MI.2 still excludes adaptive strategy selection, scanner ranking, trade-quality scoring, order or portfolio effects, AI input repair, and additional provider fetching. Additional calculated observations can be attached later through the same orchestration contract after an approved data path exists.
 
 ## Boundaries and limitations
 

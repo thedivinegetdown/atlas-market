@@ -8,6 +8,7 @@ function getErrorMessage(error) {
 
 export function useMarketOverview({ symbol, initialQuote = null, pollingIntervalMs = null } = {}) {
   const [quote, setQuote] = useState(initialQuote)
+  const [regime, setRegime] = useState(null)
   const [isLoading, setIsLoading] = useState(Boolean(symbol) && !initialQuote)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState(null)
@@ -15,6 +16,7 @@ export function useMarketOverview({ symbol, initialQuote = null, pollingInterval
   useEffect(() => {
     if (!symbol) {
       setQuote(null)
+      setRegime(null)
       setIsLoading(false)
       setError(null)
       return
@@ -42,6 +44,7 @@ export function useMarketOverview({ symbol, initialQuote = null, pollingInterval
       const response = await workspaceApiClient.getMarketOverview(symbol)
       const nextQuote = response.quote
       setQuote(nextQuote)
+      setRegime(response.regime ?? null)
       return nextQuote
     } catch (fetchError) {
       setError(getErrorMessage(fetchError))
@@ -70,6 +73,7 @@ export function useMarketOverview({ symbol, initialQuote = null, pollingInterval
 
   return {
     quote,
+    regime,
     isLoading,
     isRefreshing,
     error,

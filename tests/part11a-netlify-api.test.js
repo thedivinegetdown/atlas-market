@@ -51,6 +51,13 @@ describe('Part 11A Netlify workspace API', () => {
 
     expect(overview.json.data.symbol).toBe('SPY')
     expect(overview.json.data.quote.symbol).toBe('SPY')
+    expect(overview.json.data.regime).toMatchObject({
+      symbol: 'SPY',
+      timeframe: '1D',
+      classification: { status: 'INSUFFICIENT_DATA' },
+      paperTrading: true,
+      advisoryOnly: true,
+    })
     expect(signals.json.data.signal.symbol).toBe('SPY')
     expect(risk.json.data.risk.symbol).toBe('SPY')
     expect(risk.json.data.paperTrading).toBe(true)
@@ -108,6 +115,16 @@ describe('Part 11A Netlify workspace API', () => {
     })
     expect(invalid.statusCode).toBe(400)
     expect(invalid.json.error.code).toBe('invalid_symbol')
+  })
+
+  it('validates regime timeframes and keeps market overview read-only', async () => {
+    const invalid = parseResponse(await marketOverviewHandler(event({ symbol: 'SPY', timeframe: '1H' })))
+    const mutation = parseResponse(await marketOverviewHandler({ httpMethod: 'POST', queryStringParameters: { symbol: 'SPY' } }))
+
+    expect(invalid.statusCode).toBe(400)
+    expect(invalid.json.error.code).toBe('invalid_timeframe')
+    expect(mutation.statusCode).toBe(405)
+    expect(mutation.json.error.code).toBe('method_not_allowed')
   })
 
   it('validates journal filters', async () => {

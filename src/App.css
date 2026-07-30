@@ -1499,6 +1499,53 @@ h1 {
   text-transform: uppercase;
 }
 
+.regime-summary {
+  margin-top: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.regime-summary__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.regime-summary__header h4,
+.regime-summary__header p,
+.regime-summary__boundary {
+  margin: 0;
+}
+
+.regime-summary__header p,
+.regime-summary__boundary,
+.regime-summary details {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.regime-summary__metrics {
+  margin-bottom: 12px;
+}
+
+.regime-summary__reasons {
+  margin: 12px 0;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+}
+
+.regime-summary details {
+  margin: 12px 0;
+}
+
+.regime-summary summary {
+  cursor: pointer;
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
 .panel-stack {
   min-width: 0;
   display: grid;
