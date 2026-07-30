@@ -3,7 +3,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { readFileSync } from 'node:fs'
 import App from '../src/App.jsx'
-import { getWorkspaceRoute } from '../src/workspaces/workspaceRoutes.js'
+import { getWorkspaceRoute, workspaceRoutes } from '../src/workspaces/workspaceRoutes.js'
 
 let root = null
 let container = null
@@ -47,6 +47,7 @@ describe('Phase 92D responsive workspace shell', () => {
     expect(menuButton.getAttribute('aria-expanded')).toBe('true')
     expect(shell.className).toContain('sidebar-open')
     expect(document.activeElement?.className).toContain('app-sidebar-link')
+    expect(document.body.style.overflow).toBe('hidden')
 
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
@@ -55,6 +56,7 @@ describe('Phase 92D responsive workspace shell', () => {
     expect(menuButton.getAttribute('aria-expanded')).toBe('false')
     expect(shell.className).not.toContain('sidebar-open')
     expect(document.activeElement).toBe(menuButton)
+    expect(document.body.style.overflow).toBe('')
   })
 
   it('marks the active route accessibly and closes navigation after route selection', () => {
@@ -74,6 +76,7 @@ describe('Phase 92D responsive workspace shell', () => {
 
     expect(rendered.querySelector('.trading-os-shell').className).not.toContain('sidebar-open')
     expect(marketsLink.getAttribute('aria-current')).toBe('page')
+    expect(document.activeElement).toBe(menuButton)
     expect(rendered.textContent).toContain('Markets')
     expect(rendered.textContent).toContain('Data and regimes')
   })
@@ -104,6 +107,31 @@ describe('Phase 92D responsive workspace shell', () => {
     expect(route.description).toBe('Executive overview')
   })
 
+  it('renders one semantic stroked icon and accessible label for every workspace', () => {
+    const rendered = renderAppAt('/')
+    const links = [...rendered.querySelectorAll('.app-sidebar-link')]
+    const expectedIcons = [
+      'dashboard', 'markets', 'scanner', 'watchlist', 'portfolio', 'risk', 'orders',
+      'strategies', 'backtesting', 'research', 'copilot', 'reports', 'health', 'settings',
+    ]
+
+    expect(workspaceRoutes.map((route) => route.icon)).toEqual(expectedIcons)
+    expect(links).toHaveLength(workspaceRoutes.length)
+    links.forEach((link, index) => {
+      expect(link.getAttribute('aria-label')).toBe(workspaceRoutes[index].label)
+      expect(link.getAttribute('title')).toBe(workspaceRoutes[index].label)
+      expect(link.querySelector('svg')?.dataset.workspaceIcon).toBe(expectedIcons[index])
+      expect(link.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+    })
+  })
+
+  it('keeps paper-only and advisory-only boundaries visible in the Copilot route', () => {
+    const rendered = renderAppAt('/copilot')
+
+    expect(rendered.textContent).toContain('Paper Trading only')
+    expect(rendered.textContent.toLowerCase()).toContain('advisory')
+  })
+
   it('keeps responsive shell overflow and breakpoint rules in CSS', () => {
     const css = readFileSync('src/App.css', 'utf8')
 
@@ -113,5 +141,8 @@ describe('Phase 92D responsive workspace shell', () => {
     expect(css).toContain('@media (max-width: 760px)')
     expect(css).toContain('transform: translateX(-104%)')
     expect(css).toContain('scrollbar-gutter: stable')
+    expect(css).toContain('@media (prefers-reduced-motion: reduce)')
+    expect(css).toContain('transition-duration: 0.01ms')
+    expect(css).toContain('.workspace-route-content')
   })
 })

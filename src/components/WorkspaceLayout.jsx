@@ -1,6 +1,7 @@
 import { Component, Suspense, useEffect, useRef, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { FeaturePanelFallback } from './LazyFeatureBoundary.jsx'
+import { WorkspaceIcon } from './WorkspaceIcon.jsx'
 import { getWorkspaceRoute, workspaceRoutes } from '../workspaces/workspaceRoutes.js'
 
 function WorkspaceBreadcrumb({ activeRoute }) {
@@ -68,10 +69,12 @@ function WorkspaceSidebar({ activeRoute, onNavigate, navRef }) {
             to={route.path}
             className={route.page === activeRoute.page ? 'app-sidebar-link active' : 'app-sidebar-link'}
             aria-current={route.page === activeRoute.page ? 'page' : undefined}
+            aria-label={route.label}
+            title={route.label}
             onClick={onNavigate}
           >
-            <span className="app-sidebar-icon" aria-hidden="true">{route.icon}</span>
-            <span>{route.label}</span>
+            <span className="app-sidebar-icon" aria-hidden="true"><WorkspaceIcon name={route.icon} /></span>
+            <span className="app-sidebar-label">{route.label}</span>
           </NavLink>
         ))}
       </nav>
@@ -106,7 +109,19 @@ export function WorkspaceLayout() {
     sidebarRef.current?.querySelector('a')?.focus()
   }, [isSidebarOpen])
 
-  const closeSidebar = () => setSidebarOpen(false)
+  useEffect(() => {
+    if (!isSidebarOpen) return undefined
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [isSidebarOpen])
+
+  const closeSidebar = (restoreFocus = false) => {
+    setSidebarOpen(false)
+    if (restoreFocus && isSidebarOpen) menuButtonRef.current?.focus()
+  }
 
   return (
     <main className={`risk-dashboard trading-os-shell page-${activeRoute.page} ${isSidebarOpen ? 'sidebar-open' : ''}`}>
@@ -117,7 +132,10 @@ export function WorkspaceLayout() {
         aria-controls="workspace-sidebar"
         aria-expanded={isSidebarOpen}
         aria-label={isSidebarOpen ? 'Close workspace navigation' : 'Open workspace navigation'}
-        onClick={() => setSidebarOpen((current) => !current)}
+        onClick={() => {
+          if (isSidebarOpen) closeSidebar(true)
+          else setSidebarOpen(true)
+        }}
       >
         <span className="menu-button-bars" aria-hidden="true">
           <span />
@@ -125,8 +143,8 @@ export function WorkspaceLayout() {
           <span />
         </span>
       </button>
-      <div className="sidebar-backdrop" aria-hidden="true" onClick={closeSidebar} />
-      <WorkspaceSidebar activeRoute={activeRoute} onNavigate={closeSidebar} navRef={sidebarRef} />
+      <button type="button" className="sidebar-backdrop" aria-label="Close workspace navigation" onClick={() => closeSidebar(true)} />
+      <WorkspaceSidebar activeRoute={activeRoute} onNavigate={() => closeSidebar(true)} navRef={sidebarRef} />
       <div className="trading-os-frame">
         <header className="app-top-nav">
           <div className="top-title-area">
@@ -139,11 +157,13 @@ export function WorkspaceLayout() {
             <NavLink to="/settings" className="top-nav-settings">Settings</NavLink>
           </div>
         </header>
-        <WorkspaceRouteErrorBoundary routeKey={location.pathname}>
-          <Suspense fallback={<FeaturePanelFallback label={activeRoute.label} />}>
-            <Outlet />
-          </Suspense>
-        </WorkspaceRouteErrorBoundary>
+        <div className="workspace-route-content" key={location.pathname}>
+          <WorkspaceRouteErrorBoundary routeKey={location.pathname}>
+            <Suspense fallback={<FeaturePanelFallback label={activeRoute.label} />}>
+              <Outlet />
+            </Suspense>
+          </WorkspaceRouteErrorBoundary>
+        </div>
       </div>
     </main>
   )

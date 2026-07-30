@@ -30,6 +30,7 @@
   padding: 18px 14px;
   border-right: 1px solid var(--border);
   background: #090f1b;
+  box-shadow: 8px 0 28px rgba(0, 0, 0, 0.12);
 }
 
 .app-brand,
@@ -53,10 +54,15 @@
   border: 1px solid rgba(56, 189, 248, 0.32);
   border-radius: 7px;
   color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 800;
   background: rgba(56, 189, 248, 0.08);
+  transition: border-color var(--motion-fast) ease, color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.workspace-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
+  vector-effect: non-scaling-stroke;
 }
 
 .app-brand div,
@@ -84,9 +90,12 @@
   gap: 4px;
   overflow: auto;
   padding-right: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-bright) transparent;
 }
 
 .app-sidebar-link {
+  position: relative;
   min-height: 38px;
   display: flex;
   align-items: center;
@@ -97,17 +106,50 @@
   color: var(--text);
   font-size: 13px;
   text-decoration: none;
+  transition: border-color var(--motion-fast) ease, color var(--motion-fast) ease, background-color var(--motion-fast) ease;
 }
 
-.app-sidebar-link:hover,
+.app-sidebar-link:hover {
+  border-color: rgba(148, 163, 184, 0.24);
+  color: var(--text-strong);
+  background: rgba(148, 163, 184, 0.07);
+}
+
 .app-sidebar-link.active {
   border-color: rgba(56, 189, 248, 0.28);
   color: var(--text-strong);
   background: rgba(56, 189, 248, 0.08);
 }
 
+.app-sidebar-link.active::before {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: -1px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--accent);
+  content: '';
+}
+
+.app-sidebar-link:focus-visible {
+  z-index: 1;
+}
+
+.app-sidebar-label {
+  overflow: hidden;
+  font-weight: 560;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-sidebar-link.active .app-sidebar-label {
+  font-weight: 720;
+}
+
 .app-sidebar-link.active .app-sidebar-icon {
   border-color: var(--accent);
+  color: var(--text-strong);
   background: rgba(56, 189, 248, 0.16);
 }
 
@@ -133,6 +175,23 @@
   border-bottom: 1px solid var(--border);
   background: rgba(8, 13, 23, 0.96);
   backdrop-filter: blur(12px);
+}
+
+.workspace-route-content {
+  min-width: 0;
+  animation: workspace-enter var(--motion-standard) ease-out both;
+}
+
+@keyframes workspace-enter {
+  from {
+    opacity: 0.72;
+    transform: translateY(3px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .top-title-area {
@@ -195,6 +254,13 @@
   background: var(--panel);
   font-size: 13px;
   font-weight: 700;
+  transition: border-color var(--motion-fast) ease, color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.top-nav-settings:hover {
+  border-color: rgba(56, 189, 248, 0.38);
+  color: var(--text-strong);
+  background: rgba(56, 189, 248, 0.08);
 }
 
 .page-intro {
@@ -557,6 +623,14 @@ h1 {
   padding: 16px;
   min-width: 0;
   align-self: start;
+  transition: border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+@media (hover: hover) {
+  .panel:hover {
+    border-color: rgba(148, 163, 184, 0.28);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
 }
 
 .panel-heading {
@@ -1602,6 +1676,13 @@ tr:last-child td {
     border-radius: 8px;
     color: var(--text-strong);
     background: #0b1220;
+    cursor: pointer;
+    transition: border-color var(--motion-fast) ease, background-color var(--motion-fast) ease;
+  }
+
+  .sidebar-menu-button:hover {
+    border-color: var(--accent);
+    background: #111c2e;
   }
 
   .menu-button-bars {
@@ -1709,7 +1790,7 @@ tr:last-child td {
     width: min(86vw, 312px);
     height: 100vh;
     transform: translateX(-104%);
-    transition: transform 160ms ease;
+    transition: transform var(--motion-standard) cubic-bezier(0.22, 1, 0.36, 1);
     box-shadow: 16px 0 40px rgba(0, 0, 0, 0.34);
   }
 
@@ -1721,11 +1802,18 @@ tr:last-child td {
     position: fixed;
     inset: 0;
     z-index: 20;
+    border: 0;
+    padding: 0;
     background: rgba(0, 0, 0, 0.48);
+    cursor: default;
   }
 
   .trading-os-shell.sidebar-open .sidebar-backdrop {
     display: block;
+  }
+
+  .app-sidebar-link {
+    min-height: 44px;
   }
 
   .trading-os-frame {
@@ -1817,5 +1905,20 @@ tr:last-child td {
 
   .event-timeline-item div:last-child {
     justify-items: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .workspace-route-content {
+    transform: none;
   }
 }
