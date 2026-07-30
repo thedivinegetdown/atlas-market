@@ -1,0 +1,65 @@
+# Atlas Market Deterministic Market Regime Engine
+
+Version: `market-regime-v1`
+
+## Purpose
+
+The Market Regime Engine provides a provider-neutral, deterministic description of trend, volatility, and risk conditions. It is a classification foundation for future research and paper-trading consumers; it does not select strategies, score trades, generate orders, or change risk controls.
+
+The reusable entry point is `classifyMarketRegime(input, options)` from `lib/market/regime/index.js`. The compatibility module at `lib/market/marketRegimeClassificationEngine.js` re-exports the same implementation.
+
+## Normalized inputs
+
+The engine accepts already calculated numeric indicators. It does not call providers and does not calculate moving averages, ADX, ATR, or breadth from raw candles.
+
+- Price and short-, medium-, and long-term moving averages
+- Moving-average slope percentage
+- ADX
+- Normalized ATR percentage or ATR percentile
+- RSI and relative volume (normalized and reserved for deterministic extension)
+- Market breadth percentage
+- Volatility index value
+- Benchmark change and above-long-average state
+- Relative-strength percentage
+
+Input aliases support existing Atlas naming such as `price`, `last`, `sma20`, `sma50`, `sma200`, `normalizedAtr`, `vix`, and `volumeRatio`. Provider identifiers and raw provider payloads are ignored.
+
+## Classifications
+
+Trend returns `STRONG_BULL`, `BULL`, `RANGE`, `BEAR`, `STRONG_BEAR`, or `UNKNOWN`. Price/long-average position, moving-average ordering, slope, relative strength, and ADX contribute deterministic signed points.
+
+Volatility returns `HIGH_VOLATILITY`, `NORMAL_VOLATILITY`, `LOW_VOLATILITY`, or `UNKNOWN`. ATR percentile, normalized ATR, and volatility-index evidence are normalized to a 0–100 score.
+
+Risk returns `RISK_ON`, `NEUTRAL`, `RISK_OFF`, or `UNKNOWN`. Breadth, volatility index, benchmark condition, relative strength, and the deterministic trend score contribute normalized evidence.
+
+All thresholds are centralized in `regimeConfig.js` and may be overridden through `options.config`. Defaults are classification heuristics, not guarantees of performance.
+
+## Confidence and status
+
+Confidence is an integer from 0 to 100 based on evidence coverage and score separation. Missing expected inputs and invalid inputs apply bounded penalties. `PARTIAL`, `INVALID_INPUT`, and `INSUFFICIENT_DATA` results have confidence caps.
+
+Statuses are:
+
+- `COMPLETE`: all three categories have sufficient evidence.
+- `PARTIAL`: one or two categories have sufficient evidence.
+- `INSUFFICIENT_DATA`: no category has its minimum evidence.
+- `INVALID_INPUT`: at least one supplied recognized field is malformed or outside its accepted range; valid remaining evidence is still reported safely.
+
+The default result has no timestamp, so identical inputs and configuration produce stable serialized output. Callers may explicitly provide `options.timestamp` when an evaluated timestamp is required.
+
+## Missing and invalid data
+
+Missing optional fields do not throw and do not produce reasons for absent evidence. A category returns `UNKNOWN` until its minimum evidence is present. Malformed recognized values are omitted consistently and listed in `invalidInputs`. Expected confidence inputs that are absent appear in `missingInputs`.
+
+## Intended downstream consumers
+
+Future, separately approved phases may consume the result for adaptive strategy selection, trade-quality scoring, briefings, paper-trading automation, or risk-aware opportunity ranking. MI.1 does not implement or integrate those behaviors.
+
+## Boundaries and limitations
+
+- Provider-neutral: no provider calls, credentials, or raw payload logging.
+- Deterministic: no AI, LLM, randomness, or hidden state.
+- Paper/advisory only: no orders, fills, position mutation, execution, or guaranteed recommendation.
+- Risk controls remain authoritative and unchanged.
+- Classification quality depends on the quality, freshness, timeframe consistency, and representativeness of normalized inputs.
+- Thresholds require future empirical review and do not predict returns.

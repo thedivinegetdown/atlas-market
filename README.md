@@ -205,6 +205,7 @@ Atlas Copilot and provider-backed AI features are designed as advisory layers. A
 - [Atlas Market Implementation Roadmap v1.0](docs/roadmap/ATLAS_MARKET_IMPLEMENTATION_ROADMAP_V1.md)
 - [Architectural Decision Record Index](docs/adr/README.md)
 - [Atlas Market Engineering Process](docs/process/ATLAS_MARKET_ENGINEERING_PROCESS.md)
+- [Deterministic Market Regime Engine](docs/market/MARKET_REGIME_ENGINE.md)
 - [Technical Portfolio Documentation](docs/TECHNICAL_PORTFOLIO.md)
 - [v1.0.0 Release Notes](docs/releases/v1.0.0.md)
 - [Release Checklist](docs/RELEASE_CHECKLIST.md)
