@@ -123,6 +123,8 @@ Use `.env.example` as the names-only contract. Do not commit secrets or real val
 - `VITE_APP_TITLE`
 - `VITE_FINNHUB_API_KEY`
 - `VITE_TWELVEDATA_API_KEY`
+- `FINNHUB_API_KEY` (preferred server-side provider credential)
+- `TWELVEDATA_API_KEY` (preferred server-side provider credential)
 - `NETLIFY_SITE_ID`
 - `NETLIFY_AUTH_TOKEN`
 

@@ -85,7 +85,7 @@ MI.2 still excludes adaptive strategy selection, scanner ranking, trade-quality 
 
 MI.3 adds the provider-neutral `lib/market/indicators/` pipeline. Its approved historical-data path is `marketDataService.getCandles(symbol, { interval: '1d', limit: 260 })`, which remains behind the existing provider registry, capability selection, normalization, and fallback behavior. The pipeline requests the symbol, the established configurable benchmark (`SPY` by default), and the existing market-session status server-side. When the symbol is SPY, its candle request is reused as the benchmark request.
 
-The current default provider implementation exposes only a one-candle quote-derived fallback through its candle capability. That is not treated as historical evidence: the pipeline reports unavailable long-window indicators and MI.2 remains insufficient. Providers or injected approved services that return complete daily history can populate the same contract without changing the regime engine or UI.
+Before MI.4, the default provider implemented its candle capability by converting one current quote into a candle. That path could never satisfy an indicator warm-up and is no longer used as historical fallback. Providers or injected approved services that return complete daily history populate the same contract without changing the regime engine or UI.
 
 ### Normalized candle contract
 
@@ -127,10 +127,36 @@ MI.2 converts bundle fields into its observation contract and applies its existi
 
 ### MI.3 limitations
 
-- Production classification only improves when the configured provider actually returns sufficient completed daily history.
+- Production classification improves only when the configured Twelve Data account and symbol are available within its existing quota.
 - Calendar-date alignment is deterministic but does not independently validate exchange holidays.
-- Prices are unadjusted unless the existing provider supplies adjusted candles under the same contract; splits and dividends can therefore affect long-window calculations.
-- The serverless request currently performs one symbol candle request, at most one distinct benchmark candle request, and one market-status request. No new cache or dependency was introduced.
+- Twelve Data requests split-adjusted daily prices. Dividend adjustment is not requested.
+- The serverless request performs one symbol candle request, at most one distinct benchmark candle request, and one market-status request. A five-minute in-memory provider cache, matching the existing candle-cache TTL convention, can reuse identical symbol/timeframe/count requests within a warm function instance.
+
+## MI.4 production historical candles
+
+### Provider and cost audit
+
+Atlas has three implemented market-data sources:
+
+- **Twelve Data:** already configured in the repository. Its existing `/time_series` capability supports `1day` OHLCV, an output size up to 5,000, and costs one API credit per symbol. The provider's Basic tier is free with eight credits per minute and 800 per day, so a 260-candle request requires no provider registration, paid upgrade, premium plan, new SaaS dependency, or additional cloud service.
+- **Finnhub:** already configured for quotes. Finnhub labels stock candles as premium access, so Atlas does not call that endpoint under the mandatory cost constraint.
+- **Mock provider:** deterministic quotes only. A synthesized quote candle is not genuine history and is never used as historical fallback.
+
+Current capability and pricing evidence is maintained by the providers: [Twelve Data time-series documentation](https://twelvedata.com/docs/introduction/overview), [Twelve Data pricing](https://twelvedata.com/pricing), and [Finnhub API documentation](https://api2.finnhub.io/docs/api/crypto-candles).
+
+### Historical flow and fallback
+
+`marketDataService.getCandles()` selects the existing default provider through the provider registry. The default provider requests Twelve Data `/time_series` with `interval=1day`, `outputsize=260`, ascending order, and split adjustment. `historicalCandleNormalizer.js` then creates the canonical Atlas candles consumed by MI.3.
+
+If Twelve Data is unconfigured, rate-limited, unavailable, or malformed, the request returns a structured provider error, warnings, request duration, and fallback-attempt diagnostics. Finnhub is recorded as skipped because its history requires premium access; mock is recorded as skipped because it is synthetic. Atlas does not silently downgrade to one quote or present incomplete synthetic data as history.
+
+### Historical normalization and cache
+
+The canonical normalizer validates timestamps, numeric OHLCV fields, OHLC relationships, and non-negative volume; sorts oldest to newest; retains the last provider record for duplicate timestamps; and reports invalid, duplicate, and truncated records. Responses distinguish `COMPLETE` from `TRUNCATED` against the requested count.
+
+Successful responses are cached for five minutes in the existing warm provider-service lifetime, keyed by symbol, daily interval, and requested count. Cache metadata is separate from candle timestamps, so a recent cache hit cannot make old market observations appear fresh. The cache is process-local and provides no cross-instance guarantee.
+
+Provider credentials are read server-side from `TWELVEDATA_API_KEY` and `FINNHUB_API_KEY`, with the existing `VITE_*` names accepted server-side for deployment compatibility. New deployments should use the non-`VITE` names because browser-prefixed configuration is public.
 
 ## Boundaries and limitations
 
