@@ -215,7 +215,7 @@ Future work follows [Atlas Market Engineering Process](../process/ATLAS_MARKET_E
 | Risk | Impact | Incremental response |
 | --- | --- | --- |
 | Runtime integration is uneven across a very broad modeled surface | Documentation or operators may overstate production capability | Maintain a capability/runtime matrix and mark UI/API/database/provider deployment evidence |
-| `VITE_FINNHUB_API_KEY` and `VITE_TWELVEDATA_API_KEY` imply browser exposure | Credential leakage or provider abuse if treated as secrets | Classify key type; proxy confidential access through Functions; update env contract via approved work |
+| Provider quotas are process-external while cache, deduplication, and budgets are process-local | Concurrent Functions can collectively exceed a provider allowance | Keep conservative per-process ceilings, honor provider backoff, monitor usage, and adopt durable coordination only if scale requires it |
 | Direct serverless PostgreSQL connections | Connection exhaustion and cold-start latency | Document and validate managed pooling before load growth |
 | In-memory coordination primitives | State inconsistency across function instances | Keep their guarantees explicit; introduce durable coordination only for proven needs |
 | Numerous thin functions and repositories | Cross-cutting controls can drift | Add automated endpoint/control inventory and shared-handler conformance tests |

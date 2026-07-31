@@ -156,7 +156,32 @@ The canonical normalizer validates timestamps, numeric OHLCV fields, OHLC relati
 
 Successful responses are cached for five minutes in the existing warm provider-service lifetime, keyed by symbol, daily interval, and requested count. Cache metadata is separate from candle timestamps, so a recent cache hit cannot make old market observations appear fresh. The cache is process-local and provides no cross-instance guarantee.
 
-Provider credentials are read server-side from `TWELVEDATA_API_KEY` and `FINNHUB_API_KEY`, with the existing `VITE_*` names accepted server-side for deployment compatibility. New deployments should use the non-`VITE` names because browser-prefixed configuration is public.
+Provider credentials are read only server-side from `TWELVEDATA_API_KEY` and `FINNHUB_API_KEY`. Provider keys are not accepted through `VITE_*` names, returned by APIs, logged, or required by browser code.
+
+### MI.5 operational guardrails
+
+The only production historical request path is the authenticated, read-only `market-overview` Netlify Function:
+
+`MarketOverviewPanel` → `workspaceApiClient` → authenticated `market-overview` Function → `workspaceDataService` → MI.3 daily indicator pipeline → provider-neutral market-data service → Twelve Data.
+
+Dashboard, Markets, Watchlist, and Research mount the shared panel only when their lazy route is active. The hook performs one initial request and does not poll unless an explicit polling interval is supplied. Unauthenticated requests are rejected before the workspace service is created, so the public deployment cannot spend historical-data credits. The response contains the quote and minimal derived regime read model; the indicator bundle, raw candles, provider payload, and credential are not exposed.
+
+Historical requests accept only the approved daily interval and exactly 260 candles. Custom ranges, arbitrary output sizes, and unsupported intervals are rejected before provider traffic. Successful results retain the five-minute process-local cache. Identical concurrent requests share one in-flight promise. A conservative process-local budget defaults to six requests per minute and 720 per day, capped at the configured free-tier limits of eight and 800. These controls are not a distributed global quota: separate Netlify instances have separate memory and counters.
+
+HTTP rate limits remain structured. Atlas preserves a provider `Retry-After` value when present, blocks additional requests during that process-local backoff window, and does not automatically retry. Diagnostics record cache hit/miss, attempted or deduplicated requests, budget rejection, rate limits, candle count, completeness, duration, provider, and classification status without logging histories or secrets.
+
+### Display and licensing boundary
+
+Atlas conservatively treats Twelve Data free historical capability as private/internal, non-display evidence until provider licensing is reviewed. Authenticated owner operation may use it to derive the compact regime read model. Unauthenticated public visitors cannot trigger provider-backed history. Atlas does not publish raw Twelve Data candles or a historical chart. Public or commercial display, redistribution, or a commercial product launch requires an explicit licensing review; this is an operational constraint, not a legal conclusion.
+
+### Production verification
+
+1. Configure `TWELVEDATA_API_KEY` only in the Netlify server environment; do not use a `VITE_` prefix.
+2. Authenticate to the private Atlas workspace and request `market-overview` for a validated symbol on `1D`.
+3. Confirm server diagnostics report provider `twelvedata`, 260 normalized candles, `COMPLETE` history, cache state, and a derived MI.2 classification.
+4. Repeat within five minutes and confirm a cache hit without a second provider attempt.
+5. Confirm unauthenticated and custom-range/output-size requests are rejected with structured errors.
+6. Inspect the browser network response and built assets for raw candles, `apikey`, or provider-key names. Secret values must never be printed during verification.
 
 ## Boundaries and limitations
 

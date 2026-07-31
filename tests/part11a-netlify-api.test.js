@@ -22,7 +22,7 @@ function parseResponse(response) {
 }
 
 function event(queryStringParameters = {}) {
-  return { queryStringParameters }
+  return { queryStringParameters, headers: { authorization: 'Bearer dev-token' } }
 }
 
 beforeEach(() => {
@@ -125,6 +125,15 @@ describe('Part 11A Netlify workspace API', () => {
     expect(invalid.json.error.code).toBe('invalid_timeframe')
     expect(mutation.statusCode).toBe(405)
     expect(mutation.json.error.code).toBe('method_not_allowed')
+  })
+
+  it('requires authenticated private access and rejects arbitrary historical parameters', async () => {
+    const unauthenticated = parseResponse(await marketOverviewHandler({ queryStringParameters: { symbol: 'SPY' } }))
+    const arbitrarySize = parseResponse(await marketOverviewHandler(event({ symbol: 'SPY', outputsize: '5000' })))
+    expect(unauthenticated.statusCode).toBe(401)
+    expect(unauthenticated.json.error.message).toBe('authentication required')
+    expect(arbitrarySize.statusCode).toBe(400)
+    expect(arbitrarySize.json.error.code).toBe('unsupported_history_parameters')
   })
 
   it('validates journal filters', async () => {

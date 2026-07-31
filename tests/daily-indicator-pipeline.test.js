@@ -188,10 +188,24 @@ describe('daily indicator bundle and MI.2 integration', () => {
     }
     const indicatorPipeline = { build: vi.fn().mockResolvedValue(indicatorBundle) }
     const service = createWorkspaceDataService({ marketDataService, indicatorPipeline })
-    const result = await service.getMarketOverview('SPY', { now: NOW })
+    const result = await service.getMarketOverview('SPY', { now: NOW, includeHistoricalIntelligence: true })
     expect(indicatorPipeline.build).toHaveBeenCalledOnce()
     expect(result.regime.classification.status).toBe('COMPLETE')
-    expect(result.indicatorBundle.pipelineVersion).toBe('daily-indicators-v1')
+    expect(result.indicatorBundle).toBeUndefined()
     expect(result.paperTrading).toBe(true)
+  })
+
+  it('does not request provider-backed history for the unauthenticated/demo service path', async () => {
+    const quote = { symbol: 'SPY', price: 359, provider: 'fixture', updatedAt: NOW }
+    const marketDataService = {
+      getQuote: vi.fn().mockResolvedValue(quote),
+      getCandles: vi.fn(),
+      getWatchlistQuotes: vi.fn(),
+    }
+    const indicatorPipeline = { build: vi.fn() }
+    const result = await createWorkspaceDataService({ marketDataService, indicatorPipeline }).getMarketOverview('SPY', { now: NOW })
+    expect(indicatorPipeline.build).not.toHaveBeenCalled()
+    expect(marketDataService.getCandles).not.toHaveBeenCalled()
+    expect(result.regime.classification.status).toBe('INSUFFICIENT_DATA')
   })
 })

@@ -19,7 +19,7 @@ function values(count = 260) {
 }
 
 function response(payload, { status = 200, ok = status >= 200 && status < 300 } = {}) {
-  return { ok, status, async json() { return payload } }
+  return { ok, status, headers: { get: () => null }, async json() { return payload } }
 }
 
 function provider(fetchImpl, options = {}) {
@@ -122,6 +122,53 @@ describe('production historical candle integration', () => {
     expect(first.cache.state).toBe('MISS')
     expect(second.cache.state).toBe('HIT')
     expect(second.data).toEqual(first.data)
+  })
+
+  it('deduplicates identical in-flight requests', async () => {
+    let resolveRequest
+    const fetchImpl = vi.fn().mockReturnValue(new Promise((resolve) => { resolveRequest = resolve }))
+    const marketProvider = provider(fetchImpl)
+    const first = marketProvider.getCandles('SPY', { interval: '1d' })
+    const second = marketProvider.getCandles('SPY', { interval: '1d' })
+    resolveRequest(response({ status: 'ok', values: values() }))
+    const [firstResult, secondResult] = await Promise.all([first, second])
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(secondResult).toEqual(firstResult)
+  })
+
+  it.each([
+    [{ interval: '1d', limit: 261 }, 'unsupported_history_size'],
+    [{ interval: '1d', range: '5y' }, 'unsupported_history_range'],
+  ])('rejects unsupported request scope without provider traffic', async (options, code) => {
+    const fetchImpl = vi.fn()
+    const result = await provider(fetchImpl).getCandles('SPY', options)
+    expect(result).toMatchObject({ ok: false, error: { code } })
+    expect(fetchImpl).not.toHaveBeenCalled()
+  })
+
+  it('returns structured process-local budget responses', async () => {
+    const historicalBudget = { consume: vi.fn().mockReturnValue({ ok: false, code: 'historical_daily_budget_exceeded', retryAfterSeconds: 120, budget: { scope: 'process-local' } }), inspect: vi.fn() }
+    const result = await provider(vi.fn(), { historicalBudget }).getCandles('SPY', { interval: '1d' })
+    expect(result).toMatchObject({
+      ok: false,
+      statusCode: 429,
+      retryAfterSeconds: 120,
+      error: { code: 'historical_daily_budget_exceeded' },
+      budget: { scope: 'process-local' },
+    })
+  })
+
+  it('preserves provider retry-after and blocks immediate retry without another request', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ...response({}, { status: 429, ok: false }),
+      headers: { get: (name) => name === 'retry-after' ? '30' : null },
+    })
+    const marketProvider = provider(fetchImpl)
+    const first = await marketProvider.getCandles('SPY', { interval: '1d' })
+    const second = await marketProvider.getCandles('SPY', { interval: '1d' })
+    expect(first).toMatchObject({ statusCode: 429, retryAfterSeconds: 30, error: { code: 'provider_rate_limited' } })
+    expect(second).toMatchObject({ statusCode: 429, retryAfterSeconds: expect.any(Number), error: { code: 'provider_backoff_active' } })
+    expect(fetchImpl).toHaveBeenCalledOnce()
   })
 
   it('normalizes raw records independently of provider payload shape', () => {

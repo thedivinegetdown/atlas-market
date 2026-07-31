@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted with follow-up required for market-provider key classification
+Accepted
 
 ## Context
 
@@ -10,11 +10,11 @@ Atlas needs runtime mode, database, provider, logging, and deployment configurat
 
 ## Decision
 
-Treat `.env.example` as a names-only contract; keep values out of source. Validate required server configuration centrally, redact sensitive keys/URLs from logs, and scan releases for sensitive material. Treat all `VITE_*` variables as public browser configuration. Classify current `VITE_FINNHUB_API_KEY` and `VITE_TWELVEDATA_API_KEY` before using them as confidential credentials.
+Treat `.env.example` as a names-only contract; keep values out of source. Validate required server configuration centrally, redact sensitive keys/URLs from logs, and scan releases for sensitive material. Treat all `VITE_*` variables as public browser configuration. Provider credentials use only server-side `FINNHUB_API_KEY` and `TWELVEDATA_API_KEY`; browser-prefixed provider-key aliases are not accepted.
 
 ## Consequences
 
-Server configuration is reviewable without secret values and release scans reduce accidental disclosure. External secret storage/rotation remains an operator concern. Confidential provider keys must move behind Functions or be replaced by intentionally public, tightly constrained keys through approved work.
+Server configuration is reviewable without secret values and release scans reduce accidental disclosure. External secret storage/rotation remains an operator concern. Provider-backed historical intelligence stays behind an authenticated Netlify Function; public browser code receives only the minimal derived read model and never raw candle history.
 
 ## Related files or systems
 

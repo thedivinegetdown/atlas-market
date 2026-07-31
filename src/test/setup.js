@@ -76,7 +76,9 @@ globalThis.fetch = async (input, init) => {
     queryStringParameters,
     httpMethod: init?.method ?? 'GET',
     body: init?.body ?? null,
-    headers: init?.headers ?? {},
+    headers: functionName === 'market-overview'
+      ? { authorization: 'Bearer test-session', ...(init?.headers ?? {}) }
+      : (init?.headers ?? {}),
   })
 
   return {
