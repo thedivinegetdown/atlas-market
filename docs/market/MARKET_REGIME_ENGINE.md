@@ -81,6 +81,57 @@ Future, separately approved phases may consume the result for adaptive strategy 
 
 MI.2 still excludes adaptive strategy selection, scanner ranking, trade-quality scoring, order or portfolio effects, AI input repair, and additional provider fetching. Additional calculated observations can be attached later through the same orchestration contract after an approved data path exists.
 
+## MI.3 deterministic daily indicator pipeline
+
+MI.3 adds the provider-neutral `lib/market/indicators/` pipeline. Its approved historical-data path is `marketDataService.getCandles(symbol, { interval: '1d', limit: 260 })`, which remains behind the existing provider registry, capability selection, normalization, and fallback behavior. The pipeline requests the symbol, the established configurable benchmark (`SPY` by default), and the existing market-session status server-side. When the symbol is SPY, its candle request is reused as the benchmark request.
+
+The current default provider implementation exposes only a one-candle quote-derived fallback through its candle capability. That is not treated as historical evidence: the pipeline reports unavailable long-window indicators and MI.2 remains insufficient. Providers or injected approved services that return complete daily history can populate the same contract without changing the regime engine or UI.
+
+### Normalized candle contract
+
+Daily candles contain `timestamp`, `open`, `high`, `low`, `close`, `volume`, `symbol`, `timeframe: 1D`, `source`, and `completed`. Normalization:
+
+- orders valid records oldest to newest;
+- resolves duplicate timestamps by retaining the last normalized source record;
+- rejects invalid timestamps, non-positive OHLC values, inconsistent high/low bounds, and negative volume;
+- excludes explicitly incomplete candles;
+- excludes a candle dated today while the existing market-status path reports the regular session open;
+- preserves provider source without retaining raw provider payloads.
+
+Malformed and incomplete records appear in structured coverage and warnings. Calculations never use a single quote as a substitute for a historical series.
+
+### Indicator definitions and minimum history
+
+Windows are centralized in `indicatorConfig.js`.
+
+| Indicator | Definition | Minimum completed candles |
+| --- | --- | ---: |
+| SMA 20 / 50 / 200 | Arithmetic mean of the latest closing prices | 20 / 50 / 200 |
+| Short and medium SMA slope | Percentage change in the SMA over five SMA observations | 25 / 55 |
+| ATR 14 | Wilder-smoothed true range | 15 |
+| ATR percentage | Latest ATR divided by latest completed close, multiplied by 100 | 15 |
+| ATR percentile | Percent-rank of the latest ATR within 100 ATR observations | 114 |
+| ADX 14 | Wilder directional movement, DI, DX, then Wilder ADX | 28 |
+| RSI 14 | Wilder-smoothed gains and losses | 15 |
+| Relative volume | Latest completed volume divided by the prior 20-candle average | 21 |
+| Benchmark condition | Benchmark close above its SMA 200 plus its 20-session return | 200 for long-average condition; 21 for return |
+| Relative strength | Symbol 20-session return minus benchmark 20-session return, aligned by trading date | 21 aligned observations |
+
+Zero historical average volume, inadequate warm-up, and inadequate benchmark overlap return missing values. Breadth, VIX, sector breadth, and advance/decline data remain absent because no trustworthy approved source exists.
+
+### Daily indicator bundle and provenance
+
+`buildDailyIndicatorBundle()` returns a stable serializable `daily-indicators-v1` bundle containing the symbol, `1D` timeframe, latest completed as-of time, normalized indicators, available/missing/invalid coverage, warnings, and field-level provenance. Provenance records provider source, symbol, optional benchmark, timeframe, observation time, calculation time, calculation name/window, derivation, and source-candle count. Full candle arrays and credentials are not exposed in the bundle.
+
+MI.2 converts bundle fields into its observation contract and applies its existing freshness and timeframe checks before invoking MI.1. A realtime quote can still override the bundle’s latest close as current price. Indicator calculation remains outside React, order execution, strategies, scanners, AI, portfolios, risk controls, and persistence.
+
+### MI.3 limitations
+
+- Production classification only improves when the configured provider actually returns sufficient completed daily history.
+- Calendar-date alignment is deterministic but does not independently validate exchange holidays.
+- Prices are unadjusted unless the existing provider supplies adjusted candles under the same contract; splits and dividends can therefore affect long-window calculations.
+- The serverless request currently performs one symbol candle request, at most one distinct benchmark candle request, and one market-status request. No new cache or dependency was introduced.
+
 ## Boundaries and limitations
 
 - Provider-neutral: no provider calls, credentials, or raw payload logging.
