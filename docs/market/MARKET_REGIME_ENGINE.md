@@ -77,7 +77,7 @@ Missing optional fields do not throw and do not produce reasons for absent evide
 
 ## Intended downstream consumers
 
-Future, separately approved phases may consume the result for adaptive strategy selection, trade-quality scoring, briefings, paper-trading automation, or risk-aware opportunity ranking. MI.1 does not implement or integrate those behaviors.
+SI.1 now consumes the read model through the separately versioned, deterministic `adaptive-strategy-v1` suitability engine documented in [Adaptive Strategy Selection](../strategy/ADAPTIVE_STRATEGY_SELECTION.md). Trade-quality scoring, briefings, paper-trading automation, and risk-aware opportunity ranking remain future, separately approved consumers.
 
 MI.2 still excludes adaptive strategy selection, scanner ranking, trade-quality scoring, order or portfolio effects, AI input repair, and additional provider fetching. Additional calculated observations can be attached later through the same orchestration contract after an approved data path exists.
 

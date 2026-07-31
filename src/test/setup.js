@@ -10,6 +10,7 @@ import { handler as evaluateScannersHandler } from '../../netlify/functions/eval
 import { handler as healthHandler } from '../../netlify/functions/health.js'
 import { handler as journalSummaryHandler } from '../../netlify/functions/journal-summary.js'
 import { handler as marketOverviewHandler } from '../../netlify/functions/market-overview.js'
+import { handler as strategySuitabilityHandler } from '../../netlify/functions/strategy-suitability.js'
 import { handler as ordersHandler } from '../../netlify/functions/orders.js'
 import { handler as portfolioSummaryHandler } from '../../netlify/functions/portfolio-summary.js'
 import { handler as positionsHandler } from '../../netlify/functions/positions.js'
@@ -37,6 +38,7 @@ const handlers = {
   health: healthHandler,
   'journal-summary': journalSummaryHandler,
   'market-overview': marketOverviewHandler,
+  'strategy-suitability': strategySuitabilityHandler,
   orders: ordersHandler,
   'portfolio-summary': portfolioSummaryHandler,
   positions: positionsHandler,
@@ -76,7 +78,7 @@ globalThis.fetch = async (input, init) => {
     queryStringParameters,
     httpMethod: init?.method ?? 'GET',
     body: init?.body ?? null,
-    headers: functionName === 'market-overview'
+    headers: ['market-overview', 'strategy-suitability'].includes(functionName)
       ? { authorization: 'Bearer test-session', ...(init?.headers ?? {}) }
       : (init?.headers ?? {}),
   })

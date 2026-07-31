@@ -115,6 +115,10 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
       return request('market-overview', { symbol, timeframe }, 'Unable to load market overview')
     },
 
+    getStrategySuitability(symbol, timeframe = '1D') {
+      return request('strategy-suitability', { symbol, timeframe }, 'Unable to load strategy suitability')
+    },
+
     getSignal(symbol) {
       return request('signals', { symbol }, 'Unable to load signal')
     },
