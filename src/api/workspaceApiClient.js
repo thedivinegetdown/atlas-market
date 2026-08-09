@@ -135,6 +135,9 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
     runPaperEvaluation() {
       return request('paper-evaluation', {}, 'Unable to run paper evaluation', { method: 'POST', body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', symbol: 'SPY' } })
     },
+    simulateApprovedPaperTrades() {
+      return request('paper-order-simulation', {}, 'Unable to simulate approved paper trades', { method: 'POST', body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' } })
+    },
 
     getSignal(symbol) {
       return request('signals', { symbol }, 'Unable to load signal')

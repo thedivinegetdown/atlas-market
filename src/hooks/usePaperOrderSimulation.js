@@ -1,0 +1,3 @@
+import { useCallback, useState } from 'react'
+import { workspaceApiClient } from '../api/workspaceApiClient.js'
+export function usePaperOrderSimulation(){const[results,setResults]=useState([]);const[meta,setMeta]=useState(null);const[isLoading,setIsLoading]=useState(false);const[error,setError]=useState(null);const run=useCallback(async()=>{setIsLoading(true);setError(null);try{const response=await workspaceApiClient.simulateApprovedPaperTrades();setResults(response.results??[]);setMeta(response);return response}catch(cause){setError(cause instanceof Error?cause.message:'Unable to simulate approved paper trades');return null}finally{setIsLoading(false)}},[]);return{results,meta,isLoading,error,run}}

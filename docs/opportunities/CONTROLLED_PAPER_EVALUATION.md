@@ -1,5 +1,7 @@
 # Controlled Automated Paper Evaluation
 
+PA.2 may consume an approved result only through the separately documented [Guarded Paper Order Simulation](./GUARDED_PAPER_ORDER_SIMULATION.md) manual, kill-switched boundary. PA.1 itself still never creates an order.
+
 Version: `paper-evaluation-v1`
 
 ## Purpose and execution boundary

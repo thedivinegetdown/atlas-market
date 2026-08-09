@@ -4,6 +4,7 @@ import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../component
 import { useScanners } from '../../hooks/useScanners.js'
 import { useTradeQuality } from '../../hooks/useTradeQuality.js'
 import { usePaperEvaluation } from '../../hooks/usePaperEvaluation.js'
+import { usePaperOrderSimulation } from '../../hooks/usePaperOrderSimulation.js'
 
 function display(value) {
   return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
@@ -49,6 +50,18 @@ export function PaperEvaluationPanel({ state } = {}) {
   </WorkspacePanel>
 }
 
+export function PaperSimulationPanel({ state }={}) {
+  const live=usePaperOrderSimulation();const resolved=state??live
+  return <WorkspacePanel id="paper-simulation" title="Guarded Paper Simulation" subtitle="Manual, kill-switched, PAPER ONLY">
+    <p><strong>PAPER ONLY</strong> · Kill switch: {resolved.meta?.killSwitchEnabled?'ENABLED':'OFF / unknown'} · Cycle limit: {resolved.meta?.cycleLimit??3}</p>
+    <button type="button" onClick={resolved.run} disabled={resolved.isLoading}>{resolved.isLoading?'Simulating…':'Simulate Approved Paper Trades'}</button>
+    {resolved.isLoading?<p role="status">Revalidating risk and simulating up to three approved evaluations…</p>:null}
+    {resolved.error?<p role="alert">Paper simulation is unavailable.</p>:null}
+    {resolved.meta?.blocker?<p role="status">Blocked: {resolved.meta.blocker}</p>:null}
+    {resolved.results?.map(item=><article key={`${item.evaluationId}-${item.status}`} className="strategy-manager-card"><h3>{item.symbol} · {display(item.status)}</h3><p>{item.strategyId} · Guardrail: {item.orderPlan?.guardrailResult?.approved?'APPROVED':display(item.orderPlan?.guardrailResult?.reason??'NOT RUN')}</p><p>{item.orderPlan?.quantity?`Quantity: ${item.orderPlan.quantity} · `:''}Simulation: {display(item.simulation?.fillStatus??item.status)}</p>{item.blockers?.length?<p>Blocker: {item.blockers[0]}</p>:null}<p>Simulated paper lifecycle only. No live broker or unattended execution.</p></article>)}
+  </WorkspacePanel>
+}
+
 export function ScannerSections() {
   const scanners = useScanners()
   const [candidate, setCandidate] = useState(null)
@@ -75,6 +88,7 @@ export function ScannerSections() {
       </WorkspacePanel>
       <TradeQualityPanel candidate={candidate} />
       <PaperEvaluationPanel />
+      <PaperSimulationPanel />
     </>
   )
 }
