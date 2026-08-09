@@ -157,6 +157,9 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
     getPaperPerformanceReview() {
       return request('paper-performance-review', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load paper performance review')
     },
+    getPaperLearningEvidence() {
+      return request('paper-learning', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load paper learning evidence')
+    },
     getPaperExitPositions() {
       return request('paper-position-exit', { organizationId: 'org-atlas-local' }, 'Unable to load simulated paper positions')
     },

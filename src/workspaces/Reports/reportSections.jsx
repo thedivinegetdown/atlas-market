@@ -1,5 +1,12 @@
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { usePaperPerformanceReview } from '../../hooks/usePaperPerformanceReview.js'
+import { usePaperLearning } from '../../hooks/usePaperLearning.js'
+
+const display=value=>String(value??'UNKNOWN').replaceAll('_',' ')
+export function PaperLearningPanel({state}={}){const live=usePaperLearning(),resolved=state??live,e=resolved.evidence;return <WorkspacePanel id="paper-learning" title="Paper Learning / Evidence" subtitle="What is working, weak, inconclusive, or changing">
+ {resolved.isLoading?<p role="status">Loading realized paper evidence…</p>:null}{resolved.error?<p role="alert">Paper learning evidence is unavailable.</p>:null}{!resolved.isLoading&&!resolved.error&&!e?<EmptyWorkspaceState>No realized paper learning evidence is available.</EmptyWorkspaceState>:null}
+ {e?<><p><strong>{display(e.status)}</strong> · {e.sample.completedTrades??0} realized trades · Performance: {display(e.performanceStatus)} · Recent: {display(e.recentTrend)}</p><div className="metric-grid"><MetricCard label="Evidence Maturity" value={display(e.sample.status)}/><MetricCard label="Quality Calibration" value={display(e.qualityCalibration.status)}/><MetricCard label="Strategies Reviewed" value={e.strategyEvidence.length}/><MetricCard label="Coverage" value={`${e.coverage.percentage??0}%`}/></div>{e.sample.status==='INSUFFICIENT_SAMPLE'?<p role="status">Sample too small for strong conclusions; continue paper observation.</p>:null}<details open><summary>Strategy evidence</summary>{e.strategyEvidence.length?e.strategyEvidence.map(x=><p key={x.strategyId}><strong>{x.strategyId}: {display(x.evidenceState)}</strong> · {x.sampleSize} trades · expectancy {x.performance?.expectancyPerTrade??'unavailable'}</p>):<p>No strategy group has realized evidence.</p>}</details><details><summary>Quality and regime evidence</summary><p>Calibration: {display(e.qualityCalibration.status)} — {e.qualityCalibration.reason}</p><p>Trend groups: {e.regimeEvidence.trend.map(x=>`${display(x.regime)} (${x.sampleSize})`).join(', ')||'insufficient'}</p><p>Volatility groups: {e.regimeEvidence.volatility.map(x=>`${display(x.regime)} (${x.sampleSize})`).join(', ')||'insufficient'}</p><p>Risk groups: {e.regimeEvidence.risk.map(x=>`${display(x.regime)} (${x.sampleSize})`).join(', ')||'insufficient'}</p></details><h3>Operator observations</h3><ul>{e.observations.map(x=><li key={x}>{x}</li>)}</ul><p>Review actions: {e.reviewActions.map(display).join(' · ')||'Continue observation'}</p><p>PAPER ONLY · Descriptive correlation, not causation. No strategy, scoring, regime, risk, or execution setting changes automatically.</p></>:null}
+ </WorkspacePanel>}
 
 export function PaperPerformanceReviewPanel({state}={}){const live=usePaperPerformanceReview();const resolved=state??live,review=resolved.review;return <WorkspacePanel id="paper-performance-review" title="Paper Performance Review" subtitle="Deterministic strategy feedback · advisory only">
   {resolved.isLoading?<p role="status">Loading completed paper performance…</p>:null}{resolved.error?<p role="alert">Paper performance review is unavailable.</p>:null}
@@ -22,6 +29,7 @@ export function ReportSections() {
         <EmptyWorkspaceState>Exports remain report artifacts only and do not change trading state.</EmptyWorkspaceState>
       </WorkspacePanel>
       <PaperPerformanceReviewPanel />
+      <PaperLearningPanel />
     </>
   )
 }

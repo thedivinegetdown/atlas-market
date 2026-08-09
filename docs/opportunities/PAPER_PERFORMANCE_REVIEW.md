@@ -25,3 +25,5 @@ Breakdowns cover strategy, Trade Quality band/range, trend/volatility/risk regim
 The Reports workspace exposes a compact authenticated review with explicit paper-only and advisory-only boundaries. Dashboard integration remains out of scope to avoid unnecessary density.
 
 PA.4 [paper position exits](./PAPER_POSITION_EXIT_LIFECYCLE.md) provide the genuine closing/reducing lifecycle records consumed by this review.
+
+PA.5 derives the read-only [Paper Learning and Evidence Dashboard](./PAPER_LEARNING_EVIDENCE.md) from this bounded read model without changing these formulas.
