@@ -23,3 +23,5 @@ The last ten completed trades are compared with the preceding sample using conse
 Breakdowns cover strategy, Trade Quality band/range, trend/volatility/risk regime, PA.1 status, symbol, asset type, and month where linkage exists. Feedback is deterministic and advisory. It may identify insufficient samples, positive expectancy with controlled drawdown, elevated drawdown, or recent deterioration. It cannot edit SI.1 rules, TQ.1 weights, MI thresholds, risk limits, scanner ranking, or execution.
 
 The Reports workspace exposes a compact authenticated review with explicit paper-only and advisory-only boundaries. Dashboard integration remains out of scope to avoid unnecessary density.
+
+PA.4 [paper position exits](./PAPER_POSITION_EXIT_LIFECYCLE.md) provide the genuine closing/reducing lifecycle records consumed by this review.

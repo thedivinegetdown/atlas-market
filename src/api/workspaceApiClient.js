@@ -157,6 +157,12 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
     getPaperPerformanceReview() {
       return request('paper-performance-review', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load paper performance review')
     },
+    getPaperExitPositions() {
+      return request('paper-position-exit', { organizationId: 'org-atlas-local' }, 'Unable to load simulated paper positions')
+    },
+    exitPaperPosition(positionId, quantity) {
+      return request('paper-position-exit', {}, 'Unable to simulate paper position exit', { method: 'POST', body: { organizationId: 'org-atlas-local', positionId, quantity, confirmed: true, paperTrading: true } })
+    },
 
     getEquityCurve() {
       return request('equity-curve', {}, 'Unable to load equity curve')
