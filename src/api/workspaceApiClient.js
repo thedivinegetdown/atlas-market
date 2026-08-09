@@ -74,6 +74,7 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
       headers: {
         accept: 'application/json',
         ...(options.body ? { 'content-type': 'application/json' } : {}),
+        ...(options.body ? { 'x-csrf-token': 'atlas-client-request' } : {}),
       },
       ...(options.body ? { body: JSON.stringify(options.body) } : {}),
     })
@@ -130,6 +131,9 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
 
     getDailyBriefing(symbol = 'SPY', timeframe = '1D') {
       return request('daily-briefing', { symbol, timeframe, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load daily briefing')
+    },
+    runPaperEvaluation() {
+      return request('paper-evaluation', {}, 'Unable to run paper evaluation', { method: 'POST', body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', symbol: 'SPY' } })
     },
 
     getSignal(symbol) {

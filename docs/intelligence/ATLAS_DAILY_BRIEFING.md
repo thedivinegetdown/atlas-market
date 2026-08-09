@@ -32,6 +32,8 @@ Historical candles are requested once through the existing MI.5-guarded market-o
 
 Opportunity eligibility requires `saved` or `reviewed` lifecycle state, valid symbol and strategy context, a deterministic `trade-quality-v1` score, preserved confidence and freshness, and unexpired retention. `dismissed`, explicitly `expired`, retention-expired, malformed, or missing-score records are excluded. Results are ordered by score, confidence, freshness/as-of time, and stable ID, then capped at three for the briefing.
 
+When PA.1 has evaluated an eligible record, the compact opportunity section also shows its paper-evaluation status, risk status, evaluation time, and human-review requirement. The briefing never triggers evaluation itself and never progresses an evaluation into an order lifecycle.
+
 ## Status model
 
 - `READY`: core market, strategy, and portfolio evidence is complete and fresh, with no elevated review priority.

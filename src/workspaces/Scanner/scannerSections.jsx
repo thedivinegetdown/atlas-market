@@ -3,6 +3,7 @@ import { AlertsPanel, ScannerPanel, SignalPanel } from '../../components/panels.
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useScanners } from '../../hooks/useScanners.js'
 import { useTradeQuality } from '../../hooks/useTradeQuality.js'
+import { usePaperEvaluation } from '../../hooks/usePaperEvaluation.js'
 
 function display(value) {
   return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
@@ -37,6 +38,17 @@ export function TradeQualityPanel({ candidate, state }) {
   )
 }
 
+export function PaperEvaluationPanel({ state } = {}) {
+  const live = usePaperEvaluation(); const resolved = state ?? live
+  return <WorkspacePanel id="paper-evaluation" title="Controlled Paper Evaluation" subtitle="Manual, bounded, evaluation only">
+    <button type="button" onClick={resolved.run} disabled={resolved.isLoading}>{resolved.isLoading ? 'Evaluating…' : 'Run Paper Evaluation'}</button>
+    {resolved.isLoading ? <p role="status">Evaluating up to five reviewed candidates…</p> : null}
+    {resolved.error ? <p role="alert">Paper evaluation is unavailable.</p> : null}
+    {resolved.evaluations?.map((item) => <article key={item.evaluationId} className="strategy-manager-card"><h3>{item.symbol} · {display(item.status)}</h3><p>{item.strategyId} · {item.tradeQuality?.score ?? 'No score'} {display(item.tradeQuality?.band)} · {item.tradeQuality?.confidence ?? 0}% confidence</p><p>Regime: {display(item.regime?.trendRegime)} · Risk: {display(item.riskSafety?.status)} · Freshness: {display(item.freshness)}</p>{item.blockers?.length ? <p>Blockers: {item.blockers.join(', ')}</p> : null}<p>Human paper review required. No order or portfolio action occurred.</p></article>)}
+    {!resolved.isLoading && !resolved.error && resolved.evaluations?.length === 0 ? <EmptyWorkspaceState>No eligible reviewed candidates have been evaluated.</EmptyWorkspaceState> : null}
+  </WorkspacePanel>
+}
+
 export function ScannerSections() {
   const scanners = useScanners()
   const [candidate, setCandidate] = useState(null)
@@ -62,6 +74,7 @@ export function ScannerSections() {
         <EmptyWorkspaceState>No live trading actions are available from scanner opportunities.</EmptyWorkspaceState>
       </WorkspacePanel>
       <TradeQualityPanel candidate={candidate} />
+      <PaperEvaluationPanel />
     </>
   )
 }

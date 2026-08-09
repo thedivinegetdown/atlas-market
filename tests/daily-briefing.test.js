@@ -61,7 +61,7 @@ describe('deterministic Daily Briefing', () => {
   })
   it('exposes an authenticated compact endpoint', async () => {
     const service = { getDailyBriefing: vi.fn().mockResolvedValue({ briefing: buildDailyBriefing(base()) }) }
-    const opportunityRepository = { listTradeQualityReviews: vi.fn().mockResolvedValue([]) }
+    const opportunityRepository = { listTradeQualityReviews: vi.fn().mockResolvedValue([]), listPaperEvaluations: vi.fn().mockResolvedValue([]) }
     const organizationMembershipRepository = { getMembership: vi.fn().mockResolvedValue({ organizationId: 'org-atlas-local', userId: 'local-development:local-operator', role: 'owner', status: 'active' }) }
     const handler = createDailyBriefingHandler({ serviceFactory: () => service, opportunityRepository, organizationMembershipRepository, repositoryFactory: () => ({ end: vi.fn() }), logger: { info: vi.fn(), error: vi.fn() }, env: {} })
     expect((await handler({ httpMethod: 'GET', queryStringParameters: {}, headers: {} })).statusCode).toBe(401)

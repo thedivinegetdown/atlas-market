@@ -17,7 +17,10 @@ export function createDailyBriefingHandler({ serviceFactory = createWorkspaceDat
     if (!ALLOWED_TIMEFRAMES.has(timeframe)) return { ok: false, statusCode: 400, error: { code: 'invalid_timeframe', message: 'timeframe is invalid' } }
     const accountId = requireAccountContext(query.accountId ?? 'paper-portfolio')
     const repository = opportunityRepository ?? createAtlasAiRepository(handlerOptions)
-    const reviewedOpportunities = await repository.listTradeQualityReviews({ tenantContext, accountId, userId: tenantContext.userId ?? user.id, limit: 3 })
+    const context = { tenantContext, accountId, userId: tenantContext.userId ?? user.id }
+    const [reviewedOpportunities, evaluations] = await Promise.all([repository.listTradeQualityReviews({ ...context, limit: 3 }), repository.listPaperEvaluations(context)])
+    const byCandidate = new Map(evaluations.map((item) => [item.candidateId, item]))
+    for (const opportunity of reviewedOpportunities) opportunity.paperEvaluation = byCandidate.get(opportunity.opportunityId) ?? null
     return serviceFactory().getDailyBriefing(symbol.symbol, { timeframe, reviewedOpportunities })
   }, { requiredPermission: 'dashboard.read', workspaceAction: 'read', routeId: 'daily-briefing', ...handlerOptions })
 }
