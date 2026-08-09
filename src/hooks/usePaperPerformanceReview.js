@@ -1,0 +1,3 @@
+import { useCallback,useEffect,useState } from 'react'
+import { workspaceApiClient } from '../api/workspaceApiClient.js'
+export function usePaperPerformanceReview(){const[review,setReview]=useState(null),[isLoading,setIsLoading]=useState(true),[error,setError]=useState(null);const refresh=useCallback(async()=>{setIsLoading(true);setError(null);try{const value=await workspaceApiClient.getPaperPerformanceReview();setReview(value);return value}catch(cause){setError(cause instanceof Error?cause.message:'Unable to load paper performance review');return null}finally{setIsLoading(false)}},[]);useEffect(()=>{const timer=setTimeout(()=>void refresh(),0);return()=>clearTimeout(timer)},[refresh]);return{review,isLoading,error,refresh}}

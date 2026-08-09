@@ -154,6 +154,9 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
     getPortfolioSummary() {
       return request('portfolio-summary', {}, 'Unable to load portfolio summary')
     },
+    getPaperPerformanceReview() {
+      return request('paper-performance-review', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load paper performance review')
+    },
 
     getEquityCurve() {
       return request('equity-curve', {}, 'Unable to load equity curve')

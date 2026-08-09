@@ -18,3 +18,5 @@ PA.2 reuses `simulateRealtimePaperExecution`. That existing lifecycle atomically
 No raw candles, provider payloads, credentials, or AI payloads are stored. The endpoint makes no market-data request. Scanner is labeled **PAPER ONLY**; Dashboard has no execution control.
 
 Statuses are `SIMULATED_FILLED`, `SIMULATION_REJECTED`, `DUPLICATE_SUPPRESSED`, `STALE`, `INSUFFICIENT_ORDER_CONTEXT`, and `ERROR`. They describe simulated outcomes only, never real orders or unattended authorization.
+
+Completed closing/reducing lifecycles can be reviewed by the read-only [Paper Performance Review](./PAPER_PERFORMANCE_REVIEW.md). Opening fills are not treated as completed performance outcomes.
