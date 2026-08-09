@@ -21,4 +21,12 @@ describe('Dashboard Daily Briefing', () => {
     expect(view.textContent).not.toMatch(/place order|buy|sell/i)
   })
   it('renders the no-reviewed-opportunity state explicitly', () => expect(render(<DailyBriefingPanel state={{ briefing: briefing(), isLoading: false }} />).textContent).toContain('No bounded reviewed opportunities'))
+  it('renders compact reviewed opportunity context', () => {
+    const value = briefing('CAUTION')
+    value.opportunities = [{ opportunityId: 'opp-aapl', symbol: 'AAPL', strategyId: 'index-pullback-v1', score: 84, band: 'STRONG', confidence: 79, freshness: 'FRESH', reviewState: 'saved', reasons: ['Trend evidence aligned'], blockers: ['Review liquidity'] }]
+    const view = render(<DailyBriefingPanel state={{ briefing: value, isLoading: false }} />)
+    expect(view.textContent).toContain('AAPL: 84')
+    expect(view.textContent).toContain('index-pullback-v1')
+    expect(view.textContent).toContain('1 blocker(s)')
+  })
 })

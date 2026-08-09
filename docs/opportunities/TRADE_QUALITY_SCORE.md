@@ -82,6 +82,16 @@ The Scanner opportunity-review surface displays score/band, confidence, coverage
 
 Diagnostics contain engine version, band, status, confidence, missing-input count, blocker count, and duration only. They exclude raw candidates, candles, provider credentials, and secrets.
 
+## Bounded opportunity-intelligence retention
+
+OI.1 reuses `atlas_ai_opportunity_analysis_history`, the existing tenant/account/user-scoped opportunity review history. It adds no repository table or migration. An explicit approved review may retain a compact `tradeQualitySnapshot` inside the existing history payload with opportunity ID, symbol, strategy ID, score, band, confidence, quality status, up to three deterministic reasons and blockers, missing-input names, freshness/as-of metadata, review state, and engine version.
+
+Only `saved` and `reviewed` snapshots with valid symbol and strategy context, a valid `trade-quality-v1` score, and unexpired retention are eligible for the Daily Briefing feed. Compact snapshots default to the existing 30-day opportunity-history retention window unless an earlier valid expiry is supplied. `dismissed` and `expired` records are excluded. Raw candles, provider responses, prompts, secrets, and oversized market payloads are neither accepted into nor returned from the compact snapshot.
+
+The feed is capped at five by contract and three for DB.1. Ordering is deterministic: score descending, confidence descending, as-of time descending, then stable opportunity ID. This ordering applies only to the briefing feed and never changes scanner ranking. Stale results retain `STALE` freshness and receive conservative briefing treatment.
+
+Snapshot retention is an explicit human review action. It does not start background scoring, rescore scanner matches, call providers or AI, activate strategies, create orders, or mutate portfolios.
+
 ## Limitations and future work
 
 - Current production scanner matches are intentionally lean and do not carry canonical strategy, liquidity, risk/reward, or normalized indicator evidence. They therefore commonly return `UNKNOWN` until an approved opportunity composition path supplies those fields.

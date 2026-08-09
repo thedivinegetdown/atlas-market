@@ -20,7 +20,7 @@ The engine has no provider, persistence, AI, order, or portfolio dependencies.
 | --- | --- | --- |
 | Market Environment | MI.1–MI.5 regime read model | Preserves trend, volatility, risk regime, confidence, status, freshness, and as-of time |
 | Strategy Environment | SI.1 suitability read model | Preserves decision counts, strategy decisions, and suitability confidence |
-| Opportunity Review | Bounded, already-reviewed TQ.1 read models | Includes at most three compact results; does not evaluate scanner matches automatically |
+| Opportunity Review | Tenant-scoped compact TQ.1 snapshots in existing opportunity review history | Includes at most three eligible results; does not evaluate scanner matches automatically |
 | Portfolio and Risk | Existing portfolio summary | Preserves account value, open risk, drawdown, risk tier, and warnings when available |
 | Alerts and Operations | Existing alerts plus health on the already-resolved market quote | Summarizes open and critical alerts and provider degradation without another provider request |
 
@@ -28,7 +28,9 @@ The authenticated production flow is:
 
 `Dashboard route` → `daily-briefing` Netlify Function → `workspaceDataService.getDailyBriefing()` → one historical market overview plus local portfolio and alert reads → SI.1 from the same regime object → deterministic briefing engine → compact Dashboard read model.
 
-Historical candles are requested once through the existing MI.5-guarded market-overview path. The regime is reused for SI.1. DB.1 does not invoke TQ.1 for every scanner result, request data per strategy, poll in the background, or expose raw candles or provider credentials.
+Historical candles are requested once through the existing MI.5-guarded market-overview path. The regime is reused for SI.1. Before aggregation, the endpoint makes one bounded local read from the existing tenant/account/user-scoped opportunity history. DB.1 does not invoke TQ.1 for scanner results, request data per opportunity or strategy, poll in the background, or expose raw candles or provider credentials.
+
+Opportunity eligibility requires `saved` or `reviewed` lifecycle state, valid symbol and strategy context, a deterministic `trade-quality-v1` score, preserved confidence and freshness, and unexpired retention. `dismissed`, explicitly `expired`, retention-expired, malformed, or missing-score records are excluded. Results are ordered by score, confidence, freshness/as-of time, and stable ID, then capped at three for the briefing.
 
 ## Status model
 
@@ -56,7 +58,7 @@ Priority text is human-review guidance only. Prohibited execution or guaranteed-
 
 The briefing retains the regime as-of time and freshness rather than creating a new market timestamp. Coverage flags separately identify market, strategy, opportunity, portfolio, and operations evidence. Missing fields remain unavailable and generate concise warnings; DB.1 never creates placeholder values.
 
-The existing portfolio summary does not currently expose concentration. DB.1 reports it as unavailable instead of estimating it. Likewise, TQ.1 review results are currently transient and not persisted, so the production briefing shows an empty opportunity section until a separately approved bounded read path exists.
+The existing portfolio summary does not currently expose concentration. DB.1 reports it as unavailable instead of estimating it. When no eligible compact quality snapshots exist, the opportunity section remains explicitly empty.
 
 Diagnostics record briefing version, top-level status, priority count, warning count, and duration. They exclude raw candidates, provider payloads, candles, secrets, and credentials.
 
@@ -69,7 +71,7 @@ The Dashboard route remains lazy-loaded. Other workspaces do not import or reque
 ## Limitations and future scope
 
 - Live historical verification remains dependent on the already-configured server-side Twelve Data key. DB.1 adds no provider or paid capability.
-- Current production opportunity review does not persist TQ.1 results, so opportunity aggregation is empty by default.
+- Opportunity snapshots appear only after an explicit approved save/review action; Atlas does not automatically score or retain scanner matches.
 - Portfolio concentration is absent from the existing summary contract.
 - Broader runtime health exists across specialized endpoints; DB.1 conservatively uses the already-resolved quote health to avoid another provider request.
 - Optional Atlas Copilot narrative summarization remains future scope. The core briefing will remain deterministic and must never rely on AI availability or fabricate facts.

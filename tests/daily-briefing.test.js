@@ -61,10 +61,13 @@ describe('deterministic Daily Briefing', () => {
   })
   it('exposes an authenticated compact endpoint', async () => {
     const service = { getDailyBriefing: vi.fn().mockResolvedValue({ briefing: buildDailyBriefing(base()) }) }
-    const handler = createDailyBriefingHandler({ serviceFactory: () => service, repositoryFactory: () => ({ end: vi.fn() }), logger: { info: vi.fn(), error: vi.fn() }, env: {} })
+    const opportunityRepository = { listTradeQualityReviews: vi.fn().mockResolvedValue([]) }
+    const organizationMembershipRepository = { getMembership: vi.fn().mockResolvedValue({ organizationId: 'org-atlas-local', userId: 'local-development:local-operator', role: 'owner', status: 'active' }) }
+    const handler = createDailyBriefingHandler({ serviceFactory: () => service, opportunityRepository, organizationMembershipRepository, repositoryFactory: () => ({ end: vi.fn() }), logger: { info: vi.fn(), error: vi.fn() }, env: {} })
     expect((await handler({ httpMethod: 'GET', queryStringParameters: {}, headers: {} })).statusCode).toBe(401)
-    const response = await handler({ httpMethod: 'GET', queryStringParameters: { symbol: 'SPY' }, headers: { authorization: 'Bearer private-session' } })
+    const response = await handler({ httpMethod: 'GET', queryStringParameters: { symbol: 'SPY', organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, headers: { authorization: 'Bearer private-session' } })
     expect(response.statusCode).toBe(200)
+    expect(opportunityRepository.listTradeQualityReviews).toHaveBeenCalledWith(expect.objectContaining({ accountId: 'paper-portfolio', limit: 3, tenantContext: expect.objectContaining({ organizationId: 'org-atlas-local' }) }))
     expect(JSON.stringify(JSON.parse(response.body))).not.toMatch(/candles|apikey|private-session|rawProvider/i)
   })
   it('keeps briefing requests behind the lazy Dashboard route', () => {

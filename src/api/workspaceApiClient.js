@@ -129,7 +129,7 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
     },
 
     getDailyBriefing(symbol = 'SPY', timeframe = '1D') {
-      return request('daily-briefing', { symbol, timeframe }, 'Unable to load daily briefing')
+      return request('daily-briefing', { symbol, timeframe, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load daily briefing')
     },
 
     getSignal(symbol) {
