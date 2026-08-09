@@ -78,4 +78,4 @@ Diagnostics record engine version, regime status, decision counts, missing-evide
 - The production environment still requires a server-side Twelve Data key for live historical evidence; deterministic fixture validation remains complete without it.
 - Atlas has no production-persisted strategy registry exposed to this workspace today. The single supported record remains modeled and human-review-only.
 - Intraday strategies are excluded because SI.1 uses the daily regime and no explicit cross-timeframe compatibility rule exists.
-- Trade Quality Score may consume this versioned read model only in a separately approved execution order.
+- Trade Quality Score TQ.1 consumes this versioned read model as resolved evidence. It does not change SI.1 decisions or activate strategies; future scanner ranking remains separately governed.

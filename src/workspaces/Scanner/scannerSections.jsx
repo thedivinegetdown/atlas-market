@@ -1,14 +1,52 @@
+import { useState } from 'react'
 import { AlertsPanel, ScannerPanel, SignalPanel } from '../../components/panels.jsx'
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
+import { useScanners } from '../../hooks/useScanners.js'
+import { useTradeQuality } from '../../hooks/useTradeQuality.js'
+
+function display(value) {
+  return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
+}
+
+export function TradeQualityPanel({ candidate, state }) {
+  const liveState = useTradeQuality(state ? null : candidate)
+  const resolved = state ?? liveState
+  const quality = resolved.quality
+  return (
+    <WorkspacePanel id="trade-quality" title="Trade Quality" subtitle="Deterministic, read-only opportunity review">
+      {!candidate && !quality ? <EmptyWorkspaceState>Select Review quality on a scanner match. No score affects scanner order.</EmptyWorkspaceState> : null}
+      {candidate && !quality && !resolved.isLoading && !resolved.error ? <button type="button" onClick={resolved.evaluate}>Evaluate {candidate.symbol}</button> : null}
+      {resolved.isLoading ? <p role="status">Evaluating trade quality…</p> : null}
+      {resolved.error ? <p role="alert">Trade quality is unavailable.</p> : null}
+      {quality ? <>
+        <div className="metric-grid">
+          <MetricCard label="Symbol" value={quality.symbol} />
+          <MetricCard label="Score" value={quality.score == null ? 'Not scored' : `${quality.score}/100`} />
+          <MetricCard label="Band" value={display(quality.band)} />
+          <MetricCard label="Confidence" value={`${quality.confidence}%`} />
+          <MetricCard label="Coverage" value={`${quality.evidenceCoverage}%`} />
+          <MetricCard label="Freshness" value={display(quality.freshness)} />
+        </div>
+        <h3>Dimension breakdown</h3>
+        <div className="metric-grid">{Object.entries(quality.dimensions ?? {}).map(([name, value]) => <MetricCard key={name} label={display(name)} value={value == null ? 'Missing' : value} />)}</div>
+        {quality.reasons?.length ? <ul>{quality.reasons.slice(0, 5).map((reason) => <li key={reason}>{reason}</li>)}</ul> : null}
+        {quality.missingInputs?.length || quality.blockingReasons?.length ? <details><summary>Evidence and blockers</summary>{quality.blockingReasons?.map((reason) => <p key={reason}>{reason}</p>)}{quality.missingInputs?.length ? <p>Missing: {quality.missingInputs.join(', ')}</p> : null}</details> : null}
+        <p>Advisory only. Paper trading remains mandatory; this score cannot rank scanners, activate strategies, place orders, or override risk controls.</p>
+      </> : null}
+    </WorkspacePanel>
+  )
+}
 
 export function ScannerSections() {
+  const scanners = useScanners()
+  const [candidate, setCandidate] = useState(null)
   return (
     <>
       <WorkspacePanel id="signal-panel" title="Signal Panel" subtitle="Selected symbol signal context">
         <SignalPanel symbol="SPY" />
       </WorkspacePanel>
       <WorkspacePanel id="scanner" title="Scanner" subtitle="Configured scans and matches">
-        <ScannerPanel />
+        <ScannerPanel scannersState={scanners} onReviewOpportunity={setCandidate} />
       </WorkspacePanel>
       <WorkspacePanel id="alerts" title="Alerts" subtitle="Opportunity alert rules">
         <AlertsPanel activeSymbol="SPY" />
@@ -23,6 +61,7 @@ export function ScannerSections() {
       <WorkspacePanel id="opportunity-review" title="Opportunity Review" subtitle="Safe review state">
         <EmptyWorkspaceState>No live trading actions are available from scanner opportunities.</EmptyWorkspaceState>
       </WorkspacePanel>
+      <TradeQualityPanel candidate={candidate} />
     </>
   )
 }

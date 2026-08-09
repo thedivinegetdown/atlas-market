@@ -119,6 +119,15 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
       return request('strategy-suitability', { symbol, timeframe }, 'Unable to load strategy suitability')
     },
 
+    getTradeQuality(candidate, timeframe = '1D') {
+      return request('trade-quality', {
+        symbol: candidate?.symbol,
+        asOf: candidate?.evaluatedAt,
+        scannerSource: candidate?.scannerName,
+        timeframe,
+      }, 'Unable to evaluate trade quality')
+    },
+
     getSignal(symbol) {
       return request('signals', { symbol }, 'Unable to load signal')
     },

@@ -1154,7 +1154,7 @@ const defaultScannerForm = {
   enabled: true,
 }
 
-export function ScannerPanel({ scannersState }) {
+export function ScannerPanel({ scannersState, onReviewOpportunity }) {
   const fallback = useScanners()
   const scanners = scannersState ?? fallback
   const [form, setForm] = useState(defaultScannerForm)
@@ -1299,6 +1299,7 @@ export function ScannerPanel({ scannersState }) {
               <th>Asset</th>
               <th>Matched Criteria</th>
               <th>Evaluated</th>
+              <th>Review</th>
             </tr>
           </thead>
           <tbody>
@@ -1309,6 +1310,7 @@ export function ScannerPanel({ scannersState }) {
                 <td>{match.assetType}</td>
                 <td>{match.matchedCriteria.join(', ')}</td>
                 <td>{formatTimestamp(match.evaluatedAt)}</td>
+                <td><button type="button" onClick={() => onReviewOpportunity?.(match)}>Review quality</button></td>
               </tr>
             ))}
           </tbody>
