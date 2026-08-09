@@ -128,6 +128,10 @@ export function createWorkspaceApiClient({ fetchImpl } = {}) {
       }, 'Unable to evaluate trade quality')
     },
 
+    getDailyBriefing(symbol = 'SPY', timeframe = '1D') {
+      return request('daily-briefing', { symbol, timeframe }, 'Unable to load daily briefing')
+    },
+
     getSignal(symbol) {
       return request('signals', { symbol }, 'Unable to load signal')
     },

@@ -1,0 +1,24 @@
+import { act } from 'react'
+import { createRoot } from 'react-dom/client'
+import { afterEach, describe, expect, it } from 'vitest'
+import { DailyBriefingPanel } from '../src/workspaces/Dashboard/dashboardSections.jsx'
+
+let root; let container
+function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
+afterEach(() => { act(() => root?.unmount()); container?.remove(); root = null; container = null })
+function briefing(status = 'READY') { return { status, asOf: '2026-07-30T20:00:00Z', market: { trendRegime: status === 'INSUFFICIENT_DATA' ? 'UNKNOWN' : 'BULL', riskRegime: 'RISK_ON', confidence: 85, freshness: 'FRESH' }, strategies: { enabled: 1, conditional: status === 'CAUTION' ? 1 : 0 }, opportunities: [], portfolioRisk: { openRisk: 500, drawdown: 2 }, operations: { criticalAlerts: 0 }, priorities: [{ id: 'review', level: status === 'CAUTION' ? 'MEDIUM' : 'INFORMATIONAL', title: 'Review current briefing', reason: 'Human review only.' }], warnings: [] } }
+
+describe('Dashboard Daily Briefing', () => {
+  it('renders loading and error states accessibly', () => {
+    expect(render(<DailyBriefingPanel state={{ isLoading: true }} />).querySelector('[role="status"]').textContent).toContain('Loading')
+    act(() => root.unmount()); root = createRoot(container); act(() => root.render(<DailyBriefingPanel state={{ error: 'failed', isLoading: false }} />))
+    expect(container.querySelector('[role="alert"]').textContent).toContain('unavailable')
+  })
+  it.each(['READY', 'CAUTION', 'INSUFFICIENT_DATA'])('renders the %s briefing state', (status) => {
+    const view = render(<DailyBriefingPanel state={{ briefing: briefing(status), isLoading: false }} />)
+    expect(view.textContent).toContain(status.replaceAll('_', ' '))
+    expect(view.textContent).toContain('Paper trading remains mandatory')
+    expect(view.textContent).not.toMatch(/place order|buy|sell/i)
+  })
+  it('renders the no-reviewed-opportunity state explicitly', () => expect(render(<DailyBriefingPanel state={{ briefing: briefing(), isLoading: false }} />).textContent).toContain('No bounded reviewed opportunities'))
+})
