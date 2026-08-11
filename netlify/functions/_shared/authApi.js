@@ -1,5 +1,5 @@
 import { AppError, ERROR_CODES } from '../../../lib/errors/appError.js'
-import { createLocalDevelopmentAuthAdapter, validateAuthenticatedSession } from '../../../lib/auth/authenticationProvider.js'
+import { createAuthenticationProvider, validateAuthenticatedSession } from '../../../lib/auth/authenticationProvider.js'
 import { createAuthorizationService } from '../../../lib/auth/authorizationService.js'
 import { resolveWorkspaceAccess } from '../../../lib/auth/organizationWorkspaceAccess.js'
 import { createOrganizationMembershipRepository } from '../../../lib/auth/organizationRepository.js'
@@ -17,7 +17,7 @@ export function extractBearerOrCookieToken(event = {}) {
   const authorization = getHeader(headers, 'authorization')
   if (authorization?.match(/^Bearer\s+/i)) return authorization.replace(/^Bearer\s+/i, '').trim()
   const cookie = getHeader(headers, 'cookie') ?? ''
-  const match = String(cookie).match(/atlas_session=([^;]+)/)
+  const match = String(cookie).match(/(?:^|;\s*)(?:nf_jwt|atlas_session)=([^;]+)/)
   return match ? decodeURIComponent(match[1]) : null
 }
 
@@ -49,11 +49,13 @@ export function assertCsrfReady(event = {}) {
 
 export function createAuthenticatedApiHandler(resolver, {
   requiredPermission = 'dashboard.read',
-  authProvider = createLocalDevelopmentAuthAdapter(),
+  authProvider,
   authorizationService = createAuthorizationService(),
   allowedOrigins,
+  env = process.env,
   ...options
 } = {}) {
+  const resolvedAuthProvider = authProvider ?? createAuthenticationProvider({ env })
   return createPersistenceApiHandler(async (context) => {
     assertOriginAllowed(context.event, allowedOrigins)
     assertCsrfReady(context.event)
@@ -64,7 +66,7 @@ export function createAuthenticatedApiHandler(resolver, {
         publicMessage: 'authentication required',
       })
     }
-    const authentication = await authProvider.authenticate({
+    const authentication = await resolvedAuthProvider.authenticate({
       headers: context.event.headers ?? {},
       token,
     })
@@ -100,7 +102,7 @@ export function createAuthenticatedApiHandler(resolver, {
       user: authentication.user,
       session: authentication.session,
     })
-  }, options)
+  }, { ...options, env })
 }
 
 export function createOrganizationAuthenticatedApiHandler(resolver, {

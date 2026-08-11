@@ -97,6 +97,7 @@ This allows direct navigation and browser refresh on workspace routes.
 - ESLint
 - Netlify hosting and functions
 - PostgreSQL client support through `pg`
+- Netlify Identity for invite-only production authentication
 - JavaScript modules with route-level lazy loading
 
 ## Local Installation
@@ -120,6 +121,8 @@ Use `.env.example` as the names-only contract. Do not commit secrets or real val
 - `TRADING_MODE`
 - `LOG_LEVEL`
 - `DATABASE_URL`
+- `ATLAS_AUTH_MODE` (`development` locally; must be `netlify-identity` in production)
+- `NETLIFY_IDENTITY_URL` (optional when Netlify supplies `URL`; otherwise the site Identity base URL)
 - `VITE_APP_TITLE`
 - `FINNHUB_API_KEY` (preferred server-side provider credential)
 - `TWELVEDATA_API_KEY` (preferred server-side provider credential)
@@ -129,6 +132,16 @@ Use `.env.example` as the names-only contract. Do not commit secrets or real val
 - `NETLIFY_AUTH_TOKEN`
 
 Provider-backed market data depends on valid provider keys and service availability. The UI can still operate with mock or degraded provider states when configured that way.
+
+### Netlify Identity production setup
+
+1. In the linked Netlify site, enable Identity and set registration to **Invite only**.
+2. Leave external OAuth providers disabled for AUTH.1.
+3. Invite the initial owner through Netlify and assign an explicit Atlas-safe role (`owner`, `admin`, `analyst`, or `viewer`) in verified Identity role metadata. Missing or unknown roles are denied.
+4. Set `NODE_ENV=production`, `ATLAS_AUTH_MODE=netlify-identity`, `DATABASE_URL`, and, only if Netlify does not supply `URL`, `NETLIFY_IDENTITY_URL=https://atlas-market.netlify.app/.netlify/identity`.
+5. Verify invite acceptance, direct-route callback, login, refresh/restoration, expired-session return to sign-in, logout, and an authenticated read-only Function journey before release.
+
+Do not commit Identity tokens, passwords, invitation links, `NETLIFY_AUTH_TOKEN`, or raw request authorization headers. Vite-only development does not emulate Functions or Identity; use `npm run netlify:dev` for integrated local checks. Public signup, account self-registration, and social login are intentionally absent.
 
 ## Commands
 
@@ -204,6 +217,7 @@ Atlas Copilot and provider-backed AI features are designed as advisory layers. A
 ## Technical Documentation
 
 - [Production-Readiness Baseline (2026-08-11)](docs/audit/PRODUCTION_READINESS_BASELINE_2026-08-11.md)
+- [ADR-0016: Netlify Identity Production Authentication](docs/adr/0016-netlify-identity-production-authentication.md)
 - [Generated API Control Inventory](docs/architecture/API_CONTROL_INVENTORY.md)
 - [Atlas Market Enterprise Architecture v1.0](docs/architecture/ATLAS_MARKET_ENTERPRISE_ARCHITECTURE_V1.md)
 - [Atlas Market Implementation Roadmap v1.0](docs/roadmap/ATLAS_MARKET_IMPLEMENTATION_ROADMAP_V1.md)

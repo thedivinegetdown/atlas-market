@@ -162,11 +162,11 @@ Tenant-aware repositories must include organization/team-workspace scope in quer
 
 ## 14. Security model
 
-The shared API layer supplies safe response/error contracts and request IDs. Auth modules model authentication, permissions, organization/team membership, session security, invitation/administration, and tenant isolation. Security modules provide request guards, policy evaluation, and rate limiting. Database access is parameterized through repositories. Logging recursively redacts sensitive key names and PostgreSQL URLs.
+The shared API layer supplies safe response/error contracts and request IDs. Netlify Identity owns production credential/session proof; the browser root handles invite/login/logout/restoration and the central API client sends the current access token. The production adapter verifies the session with Netlify and cannot fall back to local development authentication. Atlas auth modules remain authoritative for permissions, organization/team membership, and tenant isolation; verified users without an explicit safe role default-deny. Security modules provide request guards, policy evaluation, and rate limiting. Database access is parameterized through repositories. Logging recursively redacts sensitive key names and PostgreSQL URLs.
 
 Security invariants are server enforcement, least privilege, tenant-scoped access, safe identifiers/payloads, secret-free source and diagnostics, paper-only execution, and no trust in provider output. Browser code is public. Consequently, `VITE_*` values cannot be treated as secrets. The current market-provider variable naming should be resolved by either formally accepting public client keys with constrained provider privileges or moving confidential provider calls behind Functions.
 
-The repository provides extensive security/readiness tests, but it does not prove production identity-provider configuration, WAF policy, centralized secret rotation, penetration testing, or continuous vulnerability scanning.
+The repository provides deterministic Identity adapter and browser-flow tests, but it does not prove deployed invite-only configuration, first-owner provisioning, production callbacks/refresh, WAF policy, centralized secret rotation, penetration testing, or continuous vulnerability scanning. Presence-only CSRF is explicitly deferred to AUTH.2.
 
 ## 15. Observability
 

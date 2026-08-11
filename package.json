@@ -18,6 +18,7 @@
     "release:verify": "node scripts/release-verify.mjs"
   },
   "dependencies": {
+    "@netlify/identity": "^1.2.0",
     "pg": "^8.22.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",

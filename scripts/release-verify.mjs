@@ -126,6 +126,8 @@ export function runReleaseVerification({
       PAPER_TRADING_ONLY: 'true',
       LIVE_TRADING_ENABLED: 'false',
       DATABASE_URL: env.DATABASE_URL ?? 'configured-for-verification',
+      ATLAS_AUTH_MODE: env.ATLAS_AUTH_MODE ?? 'netlify-identity',
+      NETLIFY_IDENTITY_URL: env.NETLIFY_IDENTITY_URL ?? 'https://atlas-market.netlify.app/.netlify/identity',
     },
     databaseConfigured: true,
     tenantConfiguration: { configured: true },

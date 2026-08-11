@@ -1,4 +1,5 @@
 import { clientLogger } from '../utils/clientLogger.js'
+import { notifySessionExpired, readIdentityAccessToken } from '../auth/identitySession.js'
 
 const defaultBasePath = '/.netlify/functions'
 const diagnosticListeners = new Set()
@@ -62,23 +63,28 @@ async function readJsonResponse(response, fallbackMessage) {
   }
 }
 
-export function createWorkspaceApiClient({ fetchImpl } = {}) {
+export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = readIdentityAccessToken } = {}) {
   async function request(path, params, fallbackMessage, options = {}) {
     const transport = fetchImpl ?? globalThis.fetch
     if (typeof transport !== 'function') {
       throw new Error('Workspace API is unavailable')
     }
 
+    const tokenResult = accessTokenProvider?.()
+    const accessToken = tokenResult && typeof tokenResult.then === 'function' ? await tokenResult : tokenResult
     const response = await transport(buildUrl(path, params), {
       method: options.method ?? 'GET',
       headers: {
         accept: 'application/json',
         ...(options.body ? { 'content-type': 'application/json' } : {}),
         ...(options.body ? { 'x-csrf-token': 'atlas-client-request' } : {}),
+        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
       },
       ...(options.body ? { body: JSON.stringify(options.body) } : {}),
     })
     const payload = await readJsonResponse(response, fallbackMessage)
+
+    if (response.status === 401) notifySessionExpired()
 
     if (!response.ok || payload?.ok === false) {
       const message = getErrorMessage(payload, fallbackMessage)

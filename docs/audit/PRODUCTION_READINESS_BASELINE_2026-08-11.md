@@ -12,7 +12,7 @@ This document records source and read-only runtime findings. It does not authori
 
 Atlas has a reachable Netlify deployment, a passing production build, extensive deterministic test coverage, shared API controls, and explicit paper-only trading boundaries. It is not ready to be represented as a complete authenticated production application.
 
-The browser does not establish or send an authenticated session, the server defaults to a non-production local authentication adapter, 28 Functions lack an authenticated wrapper, production persistence is unverified and optional, quote fallback can return mock data, and CI enforces fewer checks than the local release command.
+AUTH.1 now supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. The 28 plain-wrapper Functions remain unchanged, production persistence is unverified and optional, quote fallback can return mock data, CSRF remains presence-only, and CI enforces fewer checks than the local release command.
 
 ## Authentication architecture and browser gap
 
@@ -105,8 +105,8 @@ Local `npm run release:verify` is broader: focused security/release tests, the f
 
 ## Production-readiness blockers
 
-1. No production identity provider or production-safe session adapter is configured.
-2. The browser does not implement sign-in/session transport for protected APIs.
+1. Netlify Identity site configuration, invite-only enforcement, first-owner invitation/explicit role assignment, and authenticated production smoke evidence remain external release gates.
+2. AUTH.1 browser/session and production-verifier code exists, but deployed callback, refresh, expiry, and logout behavior is not yet evidenced.
 3. Twelve plain-wrapper mutation endpoints include paper-order and state-changing operations.
 4. Eight sensitive paper/portfolio/operational reads use the plain wrapper.
 5. CSRF control verifies header presence rather than a server-bound token value.
@@ -119,12 +119,12 @@ Local `npm run release:verify` is broader: focused security/release tests, the f
 ## Remediation order
 
 1. Review and accept this baseline and generated inventory.
-2. Select a production identity provider in a separate owner-approved phase; do not extend the local adapter into production.
-3. Implement browser authentication/session transport and production origin/CSRF design.
+2. Complete the Netlify Identity manual setup and production smoke evidence described in ADR-0016.
+3. Implement AUTH.2 origin/CSRF hardening without weakening bearer verification.
 4. Protect P0 paper-order mutations, then the remaining P0 state mutations.
 5. Protect P1 sensitive reads and establish tenant scope.
 6. Approve or protect the P2 intentionally-public candidates.
 7. Verify production persistence and market-data operational contracts.
 8. Align CI with release-critical checks and add authenticated read-only smoke coverage.
 
-No identity provider, runtime behavior, trading logic, market provider, dependency, billing configuration, or database schema is changed by this baseline.
+AUTH.1 changes identity/session runtime behavior and adds `@netlify/identity`; it does not change trading logic, market providers, billing configuration, or database schema.

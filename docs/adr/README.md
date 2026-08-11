@@ -19,6 +19,7 @@ This index records major decisions already represented in the repository. “Ret
 | [0013](0013-environment-variable-handling.md) | Environment Variable and Secret Handling | Accepted with follow-up | Names-only env contract, redaction, scans; `VITE_*` is public | env validation, logging, release verifier |
 | [0014](0014-observability-and-release-verification.md) | Observability and Release Verification | Accepted (retrospective) | Structured safe events, readiness, deterministic release gate | logging, health, release scripts, CI |
 | [0015](0015-netlify-spa-deployment.md) | Netlify SPA Deployment and Route Fallback | Accepted (retrospective) | Static SPA plus Functions and history fallback | `netlify.toml`, routes, CI |
+| [0016](0016-netlify-identity-production-authentication.md) | Netlify Identity Production Authentication | Accepted | Invite-only managed identity with fail-closed production verification; Atlas retains authorization | browser auth, Functions adapter, API client, environment validation |
 
 ## Record format and governance
 
