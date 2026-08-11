@@ -15,6 +15,7 @@ import { useWatchlist } from '../hooks/useWatchlist.js'
 import { useDecision } from '../hooks/useDecision.js'
 import { createSignalEngine } from '../../lib/signals/signalEngine.js'
 import { ErrorDisplay } from './ErrorDisplay.jsx'
+import { MarketDataStatus } from './MarketDataStatus.jsx'
 
 const signalEngine = createSignalEngine()
 
@@ -119,7 +120,7 @@ export function WatchlistPanel({
       <div className="panel-actions">
         <div>
           <h3>Watchlist</h3>
-          <p>Live symbols from the market data layer</p>
+          <p>Tracked symbols with explicit market-data provenance</p>
         </div>
         <div className="panel-actions-right">
           <label className="inline-control">
@@ -160,6 +161,7 @@ export function WatchlistPanel({
               <th>Volume</th>
               <th>Trend</th>
               <th>Signal</th>
+              <th>Data status</th>
             </tr>
           </thead>
           <tbody>
@@ -184,6 +186,7 @@ export function WatchlistPanel({
                 <td>{formatNumber(quote.volume)}</td>
                 <td>{quote.trendDirection}</td>
                 <td><span className={`signal-badge ${quote.signal.action.toLowerCase()}`}>{quote.signal.action}</span></td>
+                <td><MarketDataStatus provenance={quote.provenance} compact /></td>
               </tr>
             ))}
           </tbody>
@@ -235,6 +238,7 @@ export function MarketOverviewPanel({
       </div>
       {resolvedLoading && !selectedQuote ? <StateMessage>Loading market overview...</StateMessage> : null}
       {resolvedError ? <StateMessage type="error">{resolvedError}</StateMessage> : null}
+      <MarketDataStatus provenance={selectedQuote?.provenance} />
       <div className="metric-grid">
         <article><span>Active Symbol</span><strong>{selectedQuote?.symbol ?? symbol}</strong></article>
         <article><span>Current Price</span><strong>{formatCurrency(selectedQuote?.price)}</strong></article>
@@ -273,6 +277,7 @@ export function MarketRegimeSummary({ regime, loading = false, error = null }) {
         <div><h4 id="regime-heading">Market Regime</h4><p>Deterministic, read-only market context</p></div>
         <span className="status-pill" role="status">{formatRegime(classification?.status)}</span>
       </div>
+      <MarketDataStatus provenance={regime.marketData} />
       <div className="metric-grid regime-summary__metrics">
         <article><span>Trend</span><strong>{formatRegime(classification?.trendRegime)}</strong></article>
         <article><span>Volatility</span><strong>{formatRegime(classification?.volatilityRegime)}</strong></article>
@@ -529,6 +534,7 @@ export function PortfolioSummaryPanel({ summary, loading, error }) {
   return (
     <div className="panel-stack">
       <h3>Portfolio Summary</h3>
+      <MarketDataStatus provenance={resolvedSummary.marketData} />
       {resolvedLoading ? <StateMessage>Loading portfolio summary...</StateMessage> : null}
       {resolvedError ? <StateMessage type="error">{resolvedError}</StateMessage> : null}
       <div className="metric-grid large-grid">
@@ -860,6 +866,7 @@ export function PositionsPanel({ positions, activeSymbol, onRefresh }) {
         <div>
           <h3>Positions</h3>
           <p>Open paper positions from filled orders</p>
+          <MarketDataStatus provenance={{ dataStatus: 'UNKNOWN', provider: 'paper-position-store' }} />
         </div>
         <button type="button" aria-label="Refresh positions" onClick={refresh}>Refresh</button>
       </div>
@@ -1299,6 +1306,7 @@ export function ScannerPanel({ scannersState, onReviewOpportunity }) {
               <th>Asset</th>
               <th>Matched Criteria</th>
               <th>Evaluated</th>
+              <th>Data status</th>
               <th>Review</th>
             </tr>
           </thead>
@@ -1310,6 +1318,7 @@ export function ScannerPanel({ scannersState, onReviewOpportunity }) {
                 <td>{match.assetType}</td>
                 <td>{match.matchedCriteria.join(', ')}</td>
                 <td>{formatTimestamp(match.evaluatedAt)}</td>
+                <td><MarketDataStatus provenance={match.marketData} compact /></td>
                 <td><button type="button" onClick={() => onReviewOpportunity?.(match)}>Review quality</button></td>
               </tr>
             ))}

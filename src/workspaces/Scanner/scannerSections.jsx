@@ -5,6 +5,7 @@ import { useScanners } from '../../hooks/useScanners.js'
 import { useTradeQuality } from '../../hooks/useTradeQuality.js'
 import { usePaperEvaluation } from '../../hooks/usePaperEvaluation.js'
 import { usePaperOrderSimulation } from '../../hooks/usePaperOrderSimulation.js'
+import { MarketDataStatus } from '../../components/MarketDataStatus.jsx'
 
 function display(value) {
   return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
@@ -21,6 +22,7 @@ export function TradeQualityPanel({ candidate, state }) {
       {resolved.isLoading ? <p role="status">Evaluating trade quality…</p> : null}
       {resolved.error ? <p role="alert">Trade quality is unavailable.</p> : null}
       {quality ? <>
+        <MarketDataStatus provenance={quality.marketData} />
         <div className="metric-grid">
           <MetricCard label="Symbol" value={quality.symbol} />
           <MetricCard label="Score" value={quality.score == null ? 'Not scored' : `${quality.score}/100`} />
@@ -45,7 +47,7 @@ export function PaperEvaluationPanel({ state } = {}) {
     <button type="button" onClick={resolved.run} disabled={resolved.isLoading}>{resolved.isLoading ? 'Evaluating…' : 'Run Paper Evaluation'}</button>
     {resolved.isLoading ? <p role="status">Evaluating up to five reviewed candidates…</p> : null}
     {resolved.error ? <p role="alert">Paper evaluation is unavailable.</p> : null}
-    {resolved.evaluations?.map((item) => <article key={item.evaluationId} className="strategy-manager-card"><h3>{item.symbol} · {display(item.status)}</h3><p>{item.strategyId} · {item.tradeQuality?.score ?? 'No score'} {display(item.tradeQuality?.band)} · {item.tradeQuality?.confidence ?? 0}% confidence</p><p>Regime: {display(item.regime?.trendRegime)} · Risk: {display(item.riskSafety?.status)} · Freshness: {display(item.freshness)}</p>{item.blockers?.length ? <p>Blockers: {item.blockers.join(', ')}</p> : null}<p>Human paper review required. No order or portfolio action occurred.</p></article>)}
+    {resolved.evaluations?.map((item) => <article key={item.evaluationId} className="strategy-manager-card"><h3>{item.symbol} · {display(item.status)}</h3><MarketDataStatus provenance={item.marketData} /><p>{item.strategyId} · {item.tradeQuality?.score ?? 'No score'} {display(item.tradeQuality?.band)} · {item.tradeQuality?.confidence ?? 0}% confidence</p><p>Regime: {display(item.regime?.trendRegime)} · Risk: {display(item.riskSafety?.status)} · Freshness: {display(item.freshness)}</p>{item.blockers?.length ? <p>Blockers: {item.blockers.join(', ')}</p> : null}<p>Human paper review required. No order or portfolio action occurred.</p></article>)}
     {!resolved.isLoading && !resolved.error && resolved.evaluations?.length === 0 ? <EmptyWorkspaceState>No eligible reviewed candidates have been evaluated.</EmptyWorkspaceState> : null}
   </WorkspacePanel>
 }

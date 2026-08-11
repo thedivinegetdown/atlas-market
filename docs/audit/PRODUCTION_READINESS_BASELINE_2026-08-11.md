@@ -111,7 +111,7 @@ Local `npm run release:verify` is broader: focused security/release tests, the f
 4. Eight sensitive paper/portfolio/operational reads use the plain wrapper.
 5. CSRF control verifies header presence rather than a server-bound token value.
 6. Durable production persistence, pooling, tenant isolation, backup, restore, and retention are unverified.
-7. Real, stale, degraded, and mock market data are not yet proven unambiguous across every production workspace.
+7. MD.1 now makes live, delayed, stale, degraded, mock, unavailable, and unknown provenance explicit in the principal market workspaces; production provider entitlement, delay, and freshness evidence remains unverified.
 8. CI does not enforce all local release gates.
 9. No repeatable authenticated production smoke/E2E evidence exists.
 10. Documentation must avoid treating deterministic engines and tests as proof of production integration.
@@ -124,7 +124,7 @@ Local `npm run release:verify` is broader: focused security/release tests, the f
 4. Protect P0 paper-order mutations, then the remaining P0 state mutations.
 5. Protect P1 sensitive reads and establish tenant scope.
 6. Approve or protect the P2 intentionally-public candidates.
-7. Verify production persistence and market-data operational contracts.
+7. Verify production persistence and production market-data credentials, entitlements, delay flags, and operational freshness contracts.
 8. Align CI with release-critical checks and add authenticated read-only smoke coverage.
 
 AUTH.1 changes identity/session runtime behavior and adds `@netlify/identity`; it does not change trading logic, market providers, billing configuration, or database schema.

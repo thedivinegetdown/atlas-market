@@ -1,0 +1,7 @@
+.market-data-status { display:flex; flex-wrap:wrap; gap:.4rem .8rem; align-items:center; padding:.65rem .8rem; border:1px solid #46566d; border-radius:.5rem; background:rgba(20,28,40,.72); }
+.market-data-status strong { letter-spacing:.04em; }
+.market-data-status span { font-size:.85rem; }
+.market-data-status .market-data-warning { flex-basis:100%; font-weight:600; }
+.market-data-status.status-mock,.market-data-status.status-unavailable,.market-data-status.status-unknown { border-color:#d59436; }
+.market-data-status.status-live { border-color:#3b9b73; }
+.market-data-status.compact { display:inline-flex; padding:.35rem .5rem; }
