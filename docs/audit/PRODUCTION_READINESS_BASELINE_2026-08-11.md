@@ -87,6 +87,8 @@ Atlas uses server-side `pg`, code-managed migrations, and repository abstraction
 
 Several core repositories—orders, portfolio/accounting, journal, alerts, and scanner state—still use process-memory arrays and are neither durable nor consistent across serverless instances. SQL-capable opportunity/AI and release repositories are disabled by their default Function construction unless a database adapter is explicitly injected. The detailed inventory and production contract are in `docs/persistence/PRODUCTION_PERSISTENCE_ARCHITECTURE.md`.
 
+PI.1 traces the active paper workflow in `docs/persistence/PAPER_WORKFLOW_PERSISTENCE_GAP_ANALYSIS.md`. It confirms that the browser Trade Quality result is not handed off to the durable-capable opportunity-review repository, PA.1/PA.2 AI history repositories are disconnected by default, PA.2 begins from process-local/default account state, and simulation evidence and position state are separate writes. Paper positions can be durable-capable through the generic PostgreSQL store, but Atlas does not yet have one canonical account/execution ledger that preserves cash, cost basis, realized P&L, idempotency, and entry/exit linkage across instances.
+
 The repository contains no Supabase SDK, Supabase Auth, Realtime, Storage, or vendor-specific integration. A Supabase-hosted PostgreSQL URL is compatible in principle but is not a verified Supabase integration. No approved database target was configured for DB.1, so live connectivity, migration rehearsal, tenant denial, rollback, backup, restore, retention, and RPO/RTO execution remain **NOT VERIFIED / OWNER ACTION REQUIRED**. No schema change is authorized by this baseline.
 
 ## Market-data degraded and mock behavior
@@ -110,7 +112,7 @@ Local `npm run release:verify` uses the same gates and additionally runs the foc
 3. Twelve plain-wrapper mutation endpoints include paper-order and state-changing operations.
 4. Eight sensitive paper/portfolio/operational reads use the plain wrapper.
 5. CSRF control verifies header presence rather than a server-bound token value.
-6. The PostgreSQL connection/pool and tenant-query contracts are code-verified, but deployed database execution, global capacity, migration ownership, backup, restore, retention, and RPO/RTO remain unverified; core business stores remain process-local.
+6. The PostgreSQL connection/pool and tenant-query contracts are code-verified, but the paper workflow lacks a canonical transactional account/execution/position ledger; reviewed opportunity and PA.1/PA.2 evidence are not wired to PostgreSQL by default, while deployed database execution, capacity, migration ownership, backup, restore, retention, and RPO/RTO remain unverified.
 7. MD.1 now makes live, delayed, stale, degraded, mock, unavailable, and unknown provenance explicit in the principal market workspaces; production provider entitlement, delay, and freshness evidence remains unverified.
 8. CI gates are deterministic repository checks and do not replace deployed authenticated smoke/E2E evidence.
 9. No repeatable authenticated production smoke/E2E evidence exists.
