@@ -12,7 +12,7 @@ This document records source and read-only runtime findings. It does not authori
 
 Atlas has a reachable Netlify deployment, a passing production build, extensive deterministic test coverage, shared API controls, and explicit paper-only trading boundaries. It is not ready to be represented as a complete authenticated production application.
 
-AUTH.1 now supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. The 28 plain-wrapper Functions remain unchanged, production persistence is unverified and optional, quote fallback can return mock data, CSRF remains presence-only, and CI enforces fewer checks than the local release command.
+AUTH.1 now supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. The 28 plain-wrapper Functions remain unchanged, production persistence is unverified and optional, quote fallback can return mock data, CSRF remains presence-only, and CI now enforces the repository's deterministic release gates through the shared release verifier.
 
 ## Authentication architecture and browser gap
 
@@ -99,9 +99,9 @@ Provider credentials, quotas, entitlements, and production freshness are deploym
 
 ## CI and release-gate gaps
 
-GitHub Actions currently runs Node 22, `npm ci`, the API inventory freshness check added with this baseline, the full Vitest suite, and the production build on pull requests and pushes to `main`.
+GitHub Actions uses Node 22 and locked `npm ci`, then runs `npm run ci:verify` on pull requests and pushes to `main`. The shared verifier enforces production configuration validation, API-control inventory freshness, the full Vitest suite, lint with the approved warning baseline, production build, performance budget, migration safety, sensitive-material scanning, and generated-artifact checks. Superseded runs on the same ref are cancelled.
 
-Local `npm run release:verify` is broader: focused security/release tests, the full suite, lint with a warning baseline, build, performance budget, migration safety scan, sensitive-material scan, and generated-artifact checks. CI still does not independently enforce lint, performance, migration safety, or sensitive-material scanning. Production browser smoke testing and authenticated critical-journey testing are also absent.
+Local `npm run release:verify` uses the same gates and additionally runs the focused security/release subset before the full suite for fast local diagnosis. CI mode omits that redundant subset because those tests are already in the full suite. Neither mode proves Netlify Identity email delivery, production provider credentials/entitlements, production database connectivity/backups, deployed route behavior, or authenticated browser journeys; those remain manual/deployed evidence.
 
 ## Production-readiness blockers
 
@@ -112,7 +112,7 @@ Local `npm run release:verify` is broader: focused security/release tests, the f
 5. CSRF control verifies header presence rather than a server-bound token value.
 6. Durable production persistence, pooling, tenant isolation, backup, restore, and retention are unverified.
 7. MD.1 now makes live, delayed, stale, degraded, mock, unavailable, and unknown provenance explicit in the principal market workspaces; production provider entitlement, delay, and freshness evidence remains unverified.
-8. CI does not enforce all local release gates.
+8. CI gates are deterministic repository checks and do not replace deployed authenticated smoke/E2E evidence.
 9. No repeatable authenticated production smoke/E2E evidence exists.
 10. Documentation must avoid treating deterministic engines and tests as proof of production integration.
 
@@ -125,6 +125,6 @@ Local `npm run release:verify` is broader: focused security/release tests, the f
 5. Protect P1 sensitive reads and establish tenant scope.
 6. Approve or protect the P2 intentionally-public candidates.
 7. Verify production persistence and production market-data credentials, entitlements, delay flags, and operational freshness contracts.
-8. Align CI with release-critical checks and add authenticated read-only smoke coverage.
+8. Add authenticated read-only production smoke/E2E coverage after AUTH.1 is operationally unblocked.
 
 AUTH.1 changes identity/session runtime behavior and adds `@netlify/identity`; it does not change trading logic, market providers, billing configuration, or database schema.

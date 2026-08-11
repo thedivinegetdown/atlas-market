@@ -15,6 +15,7 @@
     "audit:api-controls": "node scripts/generate-api-control-inventory.mjs",
     "audit:api-controls:check": "node scripts/generate-api-control-inventory.mjs --check",
     "performance:check": "node scripts/check-build-performance.mjs",
+    "ci:verify": "node scripts/release-verify.mjs --ci",
     "release:verify": "node scripts/release-verify.mjs"
   },
   "dependencies": {

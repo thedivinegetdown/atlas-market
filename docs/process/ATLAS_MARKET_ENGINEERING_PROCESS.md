@@ -76,6 +76,8 @@ A validation cycle is one planned sequence, not necessarily one shell command. R
 6. manual acceptance checks identified by the phase;
 7. `git diff --check` and scope review.
 
+GitHub Actions runs `npm run ci:verify`, which shares the release verifier while avoiding a duplicate focused-test pass already covered by the full suite. CI is repository-deterministic and does not replace production auth, provider, database, deployment, or browser smoke evidence.
+
 If validation fails, the execution order remains open. Diagnose and correct only the in-scope cause, then run one replacement validation cycle. Do not commit known failures or hide new warnings by changing baselines without approval.
 
 ### 6. One commit
