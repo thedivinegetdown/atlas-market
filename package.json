@@ -12,6 +12,8 @@
     "test:watch": "vitest",
     "netlify:dev": "netlify dev",
     "lint": "eslint .",
+    "audit:api-controls": "node scripts/generate-api-control-inventory.mjs",
+    "audit:api-controls:check": "node scripts/generate-api-control-inventory.mjs --check",
     "performance:check": "node scripts/check-build-performance.mjs",
     "release:verify": "node scripts/release-verify.mjs"
   },

@@ -1,0 +1,130 @@
+# Atlas Market Production-Readiness Baseline
+
+Status: authoritative repository baseline for follow-up remediation
+
+Verified: 2026-08-11
+
+Scope: authentication, API controls, persistence, market-data degradation, CI/release gates, and release blockers
+
+This document records source and read-only runtime findings. It does not authorize an identity-provider selection, deployment, provider-plan change, database migration, or trading-behavior change. Atlas remains analysis and paper/simulated execution only.
+
+## Executive conclusion
+
+Atlas has a reachable Netlify deployment, a passing production build, extensive deterministic test coverage, shared API controls, and explicit paper-only trading boundaries. It is not ready to be represented as a complete authenticated production application.
+
+The browser does not establish or send an authenticated session, the server defaults to a non-production local authentication adapter, 28 Functions lack an authenticated wrapper, production persistence is unverified and optional, quote fallback can return mock data, and CI enforces fewer checks than the local release command.
+
+## Authentication architecture and browser gap
+
+The shared authenticated Function path is implemented by `netlify/functions/_shared/authApi.js`:
+
+1. extract a bearer token or `atlas_session` cookie;
+2. apply an origin allowlist;
+3. require an `x-csrf-token` header for authenticated mutations;
+4. call the configured authentication adapter;
+5. validate session status and expiry;
+6. evaluate role permissions;
+7. optionally enforce organization and team membership boundaries.
+
+The default adapter in `lib/auth/authenticationProvider.js` is `local-development`. It is explicitly marked `productionSafe: false`. Any supplied bearer value is used to construct a local session, and the default development role is owner. An external provider contract exists, but no production provider is selected or configured in this scope.
+
+The browser client in `src/api/workspaceApiClient.js` sends JSON and a fixed CSRF-presence header for mutations, but it does not send an Authorization header or create/manage an authenticated session. Unit/UI test setup injects a test bearer header, so test success does not prove the production browser flow.
+
+Read-only production checks on 2026-08-11 returned HTTP 200 for the SPA root, `/dashboard`, `/markets`, and the public health Function. An unauthenticated `market-overview?symbol=SPY` request returned HTTP 401. This proves deployment reachability and enforcement at that endpoint, not a working browser sign-in flow.
+
+## API control inventory
+
+The generated [Markdown inventory](../architecture/API_CONTROL_INVENTORY.md) and [JSON inventory](../architecture/api-control-inventory.json) cover every `netlify/functions/*.js` entry point. Regenerate them with `npm run audit:api-controls`; CI checks freshness with `npm run audit:api-controls:check`.
+
+| Wrapper/control | Count | Boundary represented in source |
+| --- | ---: | --- |
+| Team-authenticated | 8 | Organization and team |
+| Organization-authenticated | 216 | Organization |
+| Authenticated | 18 | Authenticated user/workspace role |
+| Plain shared API | 28 | None |
+| Unknown | 0 | N/A |
+| **Total** | **270** | |
+
+Method classification is 75 read-only, 56 mutation-only, and 139 mixed read/mutation Functions. Source classification produces 12 P0, eight P1, eight P2, and 242 P3 entries.
+
+### P0 plain-wrapper mutations
+
+These endpoints have shared request validation, error handling, process-local rate limiting, and observability, but no authenticated wrapper, role decision, tenant boundary, or authenticated CSRF check:
+
+- `cancel-paper-order`
+- `create-alert`
+- `create-scanner`
+- `delete-alert`
+- `delete-scanner`
+- `evaluate-alerts`
+- `evaluate-scanners`
+- `recalculate-portfolio`
+- `submit-paper-order`
+- `update-alert`
+- `update-scanner`
+- `workspace-configurations` (`GET` and `POST`)
+
+Paper semantics prevent real brokerage execution, but unauthenticated paper-order and state mutation remain production security defects. Recommended priority: protect paper-order mutations first, then other state mutation, with the narrowest applicable user/organization/team scope and verified CSRF behavior.
+
+### P1 sensitive plain reads
+
+- `journal-summary`
+- `operator-actions`
+- `orders`
+- `portfolio-summary`
+- `positions`
+- `risk-summary`
+- `signals`
+- `system-events`
+
+These expose paper trading, operational, portfolio, or decision context without an authenticated wrapper. Recommended priority: require authenticated access and add organization/team scope wherever the data model supports it.
+
+The remaining eight plain reads are P2 until their intentionally-public contract is approved or they are migrated to authenticated wrappers. The inventory records the exact endpoint, path, methods, wrapper, boundary, CSRF classification, risk, priority, and remediation for all Functions.
+
+## Persistence limitations
+
+Atlas uses server-side `pg`, code-managed migrations, and repository abstractions. `DATABASE_URL` is optional. When absent, the PostgreSQL adapter reports disabled/degraded persistence and returns non-durable fallback results. Several core trading repositories use process-memory state, which is not durable or consistent across serverless instances.
+
+The repository contains no Supabase SDK, Supabase Auth, Realtime, Storage, or vendor-specific integration. A Supabase-hosted PostgreSQL URL is compatible in principle but is not a verified Supabase integration.
+
+Production readiness requires external evidence for the database host, credentials, pooling/capacity, migration ownership, tenant-scoped query behavior, backups, restore testing, retention, and recovery objectives. No schema change is authorized by this baseline.
+
+## Market-data degraded and mock behavior
+
+Current quote routing attempts Finnhub, then Twelve Data, then the deterministic mock provider. Quote responses retain provider attribution, but a successful mock fallback can keep the application usable when provider credentials or services are unavailable. UI and operator surfaces must therefore distinguish real provider data, stale data, degraded state, and mock data without implying that mock values are live.
+
+Historical daily candles use Twelve Data only for the approved 260-candle request. They use a five-minute process-local cache, in-flight request deduplication, process-local request budgets, timeout handling, and retry-after backoff. No mock or synthetic historical fallback is approved. Failure is returned transparently when genuine historical candles are unavailable.
+
+Provider credentials, quotas, entitlements, and production freshness are deployment facts outside repository evidence. No provider or billing change is authorized here.
+
+## CI and release-gate gaps
+
+GitHub Actions currently runs Node 22, `npm ci`, the API inventory freshness check added with this baseline, the full Vitest suite, and the production build on pull requests and pushes to `main`.
+
+Local `npm run release:verify` is broader: focused security/release tests, the full suite, lint with a warning baseline, build, performance budget, migration safety scan, sensitive-material scan, and generated-artifact checks. CI still does not independently enforce lint, performance, migration safety, or sensitive-material scanning. Production browser smoke testing and authenticated critical-journey testing are also absent.
+
+## Production-readiness blockers
+
+1. No production identity provider or production-safe session adapter is configured.
+2. The browser does not implement sign-in/session transport for protected APIs.
+3. Twelve plain-wrapper mutation endpoints include paper-order and state-changing operations.
+4. Eight sensitive paper/portfolio/operational reads use the plain wrapper.
+5. CSRF control verifies header presence rather than a server-bound token value.
+6. Durable production persistence, pooling, tenant isolation, backup, restore, and retention are unverified.
+7. Real, stale, degraded, and mock market data are not yet proven unambiguous across every production workspace.
+8. CI does not enforce all local release gates.
+9. No repeatable authenticated production smoke/E2E evidence exists.
+10. Documentation must avoid treating deterministic engines and tests as proof of production integration.
+
+## Remediation order
+
+1. Review and accept this baseline and generated inventory.
+2. Select a production identity provider in a separate owner-approved phase; do not extend the local adapter into production.
+3. Implement browser authentication/session transport and production origin/CSRF design.
+4. Protect P0 paper-order mutations, then the remaining P0 state mutations.
+5. Protect P1 sensitive reads and establish tenant scope.
+6. Approve or protect the P2 intentionally-public candidates.
+7. Verify production persistence and market-data operational contracts.
+8. Align CI with release-critical checks and add authenticated read-only smoke coverage.
+
+No identity provider, runtime behavior, trading logic, market provider, dependency, billing configuration, or database schema is changed by this baseline.

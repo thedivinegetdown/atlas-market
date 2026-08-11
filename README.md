@@ -203,6 +203,8 @@ Atlas Copilot and provider-backed AI features are designed as advisory layers. A
 
 ## Technical Documentation
 
+- [Production-Readiness Baseline (2026-08-11)](docs/audit/PRODUCTION_READINESS_BASELINE_2026-08-11.md)
+- [Generated API Control Inventory](docs/architecture/API_CONTROL_INVENTORY.md)
 - [Atlas Market Enterprise Architecture v1.0](docs/architecture/ATLAS_MARKET_ENTERPRISE_ARCHITECTURE_V1.md)
 - [Atlas Market Implementation Roadmap v1.0](docs/roadmap/ATLAS_MARKET_IMPLEMENTATION_ROADMAP_V1.md)
 - [Architectural Decision Record Index](docs/adr/README.md)

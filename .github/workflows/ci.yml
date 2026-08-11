@@ -27,6 +27,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify API control inventory
+        run: npm run audit:api-controls:check
+
       - name: Run tests
         run: npm run test:ci
 
