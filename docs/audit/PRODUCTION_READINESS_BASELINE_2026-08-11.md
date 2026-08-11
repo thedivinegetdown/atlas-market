@@ -12,7 +12,7 @@ This document records source and read-only runtime findings. It does not authori
 
 Atlas has a reachable Netlify deployment, a passing production build, extensive deterministic test coverage, shared API controls, and explicit paper-only trading boundaries. It is not ready to be represented as a complete authenticated production application.
 
-AUTH.1 now supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. The 28 plain-wrapper Functions remain unchanged, production persistence is unverified and optional, quote fallback can return mock data, CSRF remains presence-only, and CI now enforces the repository's deterministic release gates through the shared release verifier.
+AUTH.1 now supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. The 28 plain-wrapper Functions remain unchanged, the production PostgreSQL contract is code-hardened but deployment/backup execution remains unverified and core stores remain process-local, quote fallback can return mock data, CSRF remains presence-only, and CI now enforces the repository's deterministic release gates through the shared release verifier.
 
 ## Authentication architecture and browser gap
 
@@ -83,11 +83,11 @@ The remaining eight plain reads are P2 until their intentionally-public contract
 
 ## Persistence limitations
 
-Atlas uses server-side `pg`, code-managed migrations, and repository abstractions. `DATABASE_URL` is optional. When absent, the PostgreSQL adapter reports disabled/degraded persistence and returns non-durable fallback results. Several core trading repositories use process-memory state, which is not durable or consistent across serverless instances.
+Atlas uses server-side `pg`, code-managed migrations, and repository abstractions. DB.1 wires the canonical adapter to the server-only `DATABASE_URL`, requires it in production, enforces verified TLS, bounds connection/query timeouts, and reuses one pool per warm serverless process (default 5, hard maximum 10). Local/test execution without a URL remains explicitly disabled. Public persistence errors do not include driver messages.
 
-The repository contains no Supabase SDK, Supabase Auth, Realtime, Storage, or vendor-specific integration. A Supabase-hosted PostgreSQL URL is compatible in principle but is not a verified Supabase integration.
+Several core repositories—orders, portfolio/accounting, journal, alerts, and scanner state—still use process-memory arrays and are neither durable nor consistent across serverless instances. SQL-capable opportunity/AI and release repositories are disabled by their default Function construction unless a database adapter is explicitly injected. The detailed inventory and production contract are in `docs/persistence/PRODUCTION_PERSISTENCE_ARCHITECTURE.md`.
 
-Production readiness requires external evidence for the database host, credentials, pooling/capacity, migration ownership, tenant-scoped query behavior, backups, restore testing, retention, and recovery objectives. No schema change is authorized by this baseline.
+The repository contains no Supabase SDK, Supabase Auth, Realtime, Storage, or vendor-specific integration. A Supabase-hosted PostgreSQL URL is compatible in principle but is not a verified Supabase integration. No approved database target was configured for DB.1, so live connectivity, migration rehearsal, tenant denial, rollback, backup, restore, retention, and RPO/RTO execution remain **NOT VERIFIED / OWNER ACTION REQUIRED**. No schema change is authorized by this baseline.
 
 ## Market-data degraded and mock behavior
 
@@ -110,7 +110,7 @@ Local `npm run release:verify` uses the same gates and additionally runs the foc
 3. Twelve plain-wrapper mutation endpoints include paper-order and state-changing operations.
 4. Eight sensitive paper/portfolio/operational reads use the plain wrapper.
 5. CSRF control verifies header presence rather than a server-bound token value.
-6. Durable production persistence, pooling, tenant isolation, backup, restore, and retention are unverified.
+6. The PostgreSQL connection/pool and tenant-query contracts are code-verified, but deployed database execution, global capacity, migration ownership, backup, restore, retention, and RPO/RTO remain unverified; core business stores remain process-local.
 7. MD.1 now makes live, delayed, stale, degraded, mock, unavailable, and unknown provenance explicit in the principal market workspaces; production provider entitlement, delay, and freshness evidence remains unverified.
 8. CI gates are deterministic repository checks and do not replace deployed authenticated smoke/E2E evidence.
 9. No repeatable authenticated production smoke/E2E evidence exists.

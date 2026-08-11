@@ -106,7 +106,8 @@ describe('Phase 26A PostgreSQL persistence foundation', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error.message).toBe('database operation failed')
-    expect(result.error.internalMessage).toContain('internal details')
+    expect(result.error).not.toHaveProperty('internalMessage')
+    expect(JSON.stringify(result)).not.toContain('internal details')
   })
 
   it('emits database persistence initialized events with repository metadata', async () => {
