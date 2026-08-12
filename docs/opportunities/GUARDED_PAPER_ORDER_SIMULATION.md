@@ -13,9 +13,11 @@ PA.2 is an authenticated, CSRF-protected, manual paper-simulation boundary. It a
 
 ## Simulation and accounting boundary
 
-PA.2 reuses `simulateRealtimePaperExecution`. That existing lifecycle atomically calculates a simulated fill, paper-accounting result, and journal result in memory. PA.2 does not call a live broker and does not independently mutate portfolio repositories. It stores compact linkage in the existing opportunity-analysis history.
+PA.2 reuses `simulateRealtimePaperExecution`. That existing lifecycle calculates a simulated fill, paper-accounting result, and journal result in memory. PA.2 does not call a live broker. Before any filled compatibility projection is written, it durably claims an append-safe execution-intent record in `atlas_ai_opportunity_analysis_history`, including reviewed candidate identity, PA.1 evaluation id and evidence fingerprint, proposed plan, guardrail outcome, simulation status, strategy, symbol, and versions. A database conflict returns `DUPLICATE_SUPPRESSED` and does not rewrite the position projection.
 
-No raw candles, provider payloads, credentials, or AI payloads are stored. The endpoint makes no market-data request. Scanner is labeled **PAPER ONLY**; Dashboard has no execution control.
+No raw candles, provider payloads, credentials, or AI payloads are stored. The endpoint makes no market-data request and fails closed with `durable_paper_evidence_unavailable` if the canonical database repository is disconnected. Scanner is labeled **PAPER ONLY**; Dashboard has no execution control.
+
+The durable PA.2 record is execution intent/audit evidence, not the cash/account/position ledger. The current portfolio summary input, daily-limit calculation, and paper-position aggregate are compatibility projections pending PI.3. PI.3 must add the canonical account, execution ledger, account-scoped positions, exits, realized P&L, and the transaction that applies them atomically.
 
 Statuses are `SIMULATED_FILLED`, `SIMULATION_REJECTED`, `DUPLICATE_SUPPRESSED`, `STALE`, `INSUFFICIENT_ORDER_CONTEXT`, and `ERROR`. They describe simulated outcomes only, never real orders or unattended authorization.
 

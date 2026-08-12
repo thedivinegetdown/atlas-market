@@ -41,8 +41,8 @@ The database owner must compare the provider's connection limit with expected fu
 | Identity user mapping | PostgreSQL auth repository | Durable-capable | Netlify subject/user record; organization membership resolved separately | Single statements | Repository contract present; deployed execution unverified |
 | Organizations and memberships | PostgreSQL auth repository | Durable-capable | organization + user | Single statements | Tenant predicates present; deployed execution unverified |
 | Team workspaces and invitations | PostgreSQL auth repositories | Durable-capable | organization + team; user/invite fields as applicable | Single statements | Some team lookups rely on the authenticated service layer to cross-check organization ownership |
-| Opportunity/AI history | `createAtlasAiRepository` SQL | Disabled by default in current Functions | organization + team + account + user | Single statements | Functions construct this repository without a database adapter; writes return disabled and lists are empty |
-| Paper evaluations and simulation history | Atlas AI history table | Disabled by default in current Functions | organization + team + account + user | Single statements | SQL is correctly scoped, but the default Function construction does not provide a database |
+| Opportunity/AI history | `createAtlasAiRepository` SQL | Durable for the PI.2 canonical review path when DB.1 is connected | organization + team + account + user | Single statements | Eligible reviewed TQ evidence uses the authenticated Function's pooled DB.1 adapter; disconnected persistence fails closed |
+| Paper evaluations and simulation history | Atlas AI history table | Durable for canonical PA.1/PA.2 evidence when DB.1 is connected | organization + team + account + user | Single statements | Tenant-scoped hashed ids and database conflicts suppress unchanged evidence across instances; deployed DB execution remains unverified |
 | Paper positions and exit history | `operatorActions` PostgreSQL store | Durable-capable | organization + team + user, plus owner check | Single statements | DB.1 adds user filtering and prevents cross-tenant conflict updates; deployed execution unverified |
 | Paper simulation fill | AI history write + paper-position write | Mixed / not atomic | organization + team + account + user | Two independent writes | A failure between writes can leave partial state; documented, not redesigned in DB.1 |
 | Orders | `lib/repositories/store.js` array | Process-local only | No repository-level tenant key | None | Unsafe for multi-instance persistence; resets on cold start/redeploy |
@@ -94,9 +94,11 @@ Production rollout must assign one migration owner, rehearse against a restored 
 4. Run migrations once under a named owner, capture the migration ledger, and verify failed migrations block release.
 5. Execute two-tenant organization/team/account/user read/write denial tests and a transaction rollback probe on the approved target.
 6. Decide how to replace each process-local business store before making durable production claims.
-7. Wire SQL-capable AI/release repositories to the canonical adapter only in a separately approved phase because doing so changes runtime persistence behavior.
+7. Verify the PI.2 canonical opportunity/PA.1/PA.2 adapter wiring against the approved non-production target; separately approve any wiring of other AI/release repositories.
 8. Complete and evidence the backup/restore runbook.
 
 ## Explicit non-changes
 
 DB.1 did not change AUTH.1/AUTH.2, trading decisions, AI behavior, provider order or credentials, database vendor, database schema, risk logic, billing, or paid-service behavior. No migration or dependency was added.
+
+PI.2 reused the same adapter and existing AI history table for reviewed opportunity and PA.1/PA.2 intent evidence. It did not add a migration or dependency and did not change authentication, scoring, strategy, risk formulas, AI, providers, live trading, database vendor, billing, or paid-service behavior.

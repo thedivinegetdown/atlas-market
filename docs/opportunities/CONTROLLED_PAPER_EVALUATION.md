@@ -35,9 +35,9 @@ Existing evidence remains authoritative. Disabled SI.1 strategies, TQ.1 liquidit
 
 ## Deduplication and persistence
 
-The evidence fingerprint contains candidate ID, strategy ID, regime version/as-of, TQ version/as-of, and suitability decision. An unchanged fingerprint reuses the existing result and creates no duplicate history. Changed evidence creates a new evaluation.
+The evidence fingerprint contains candidate ID, strategy ID, the reviewed TQ compact-evidence fingerprint, regime version/as-of, TQ version/as-of, and suitability decision. An unchanged fingerprint reuses the existing result and creates no duplicate history. Changed reviewed or downstream evidence creates a new evaluation.
 
-Compact results reuse `atlas_ai_opportunity_analysis_history` with category `paper_evaluation`; no table or migration is added. Persistence contains identifiers, statuses, compact regime/suitability/risk summaries, reasons, blockers, missing evidence, timestamps, versions, and the fingerprint. Raw candles, provider payloads, credentials, prompts, AI responses, and unnecessary portfolio internals are excluded. Reads and writes retain organization/team/account/user isolation.
+Compact results reuse `atlas_ai_opportunity_analysis_history` with category `paper_evaluation`; no table or migration is added. The authenticated Function supplies the existing DB.1 pooled repository and fails with `durable_paper_evidence_unavailable` when durable storage is disconnected. Tenant-scoped hashed record ids and `ON CONFLICT` provide a database-level duplicate claim even if a bounded history read misses an older evaluation. Persistence contains identifiers, statuses, compact regime/suitability/risk summaries, reasons, blockers, missing evidence, timestamps, versions, and the fingerprint. Raw candles, provider payloads, credentials, prompts, AI responses, and unnecessary portfolio internals are excluded. Reads and writes retain organization/team/account/user isolation.
 
 ## Request and briefing integration
 

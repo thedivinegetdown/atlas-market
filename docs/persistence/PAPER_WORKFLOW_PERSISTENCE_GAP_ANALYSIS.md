@@ -1,7 +1,7 @@
 # Atlas Market paper workflow persistence gap analysis
 
-Status: PI.1 audit and architecture decision record
-Reviewed baseline: `342a75a97f1f1fc25f71b73643f29d1f5fa9498a`
+Status: PI.1 audit and architecture decision record; PI.2 canonical evidence handoff implemented
+PI.2 baseline: `9d6570d36596118311b1d0f6fef45c4944884d66`
 Review date: 2026-08-11
 
 ## Decision
@@ -17,7 +17,21 @@ The smallest reliable design is not to persist every output. It is to make four 
 
 Paper Performance, Paper Learning, Daily Briefing, scanner matches, Trade Quality calculations, and most portfolio metrics should be recomputed from those durable sources plus fresh market data.
 
-PI.1 makes no runtime, schema, provider, authentication, AI, risk, or trading change.
+PI.1 made no runtime, schema, provider, authentication, AI, risk, or trading change. PI.2 implements only the first two durable source-of-truth groups above: reviewed opportunity/PA.1 evidence and append-safe PA.2 execution-intent evidence.
+
+## PI.2 canonical workflow closure
+
+The production intelligence workflow is now explicitly:
+
+**Reviewed Opportunity → PA.1 Controlled Paper Evaluation → PA.2 Guarded Paper Simulation → future PI.3 ledger**
+
+An eligible Trade Quality review is sent from the browser to the authenticated `opportunity-intelligence` mutation. That Function, `paper-evaluation`, and `paper-order-simulation` all resolve the same DB.1 PostgreSQL repository supplied by the authenticated persistence wrapper. A disconnected repository returns the stable 503 code `durable_paper_evidence_unavailable`; production never accepts these records into an implicit memory fallback. Test/development memory repositories must be explicitly injected and are rejected when marked as memory in production.
+
+The existing `atlas_ai_opportunity_analysis_history` table remains the durable evidence source. Records retain organization, nullable team, account, and user scope. Tenant-scoped SHA-256 record ids plus `ON CONFLICT` enforce idempotency across cold starts, instances, deployments, and retries without a schema change. Reviewed TQ snapshots carry a deterministic compact-evidence fingerprint; PA.1 includes it in its evaluation fingerprint; PA.2 stores the PA.1 evidence fingerprint with the proposed plan, guardrail outcome, status, and version metadata. Raw candles, provider payloads, credentials, and prompts are excluded.
+
+Legacy `submit-paper-order` and the process-memory order/portfolio/journal repositories are compatibility-only and are not called by this canonical intelligence workflow. PA.2 still reads the existing portfolio summary as a temporary sizing/guardrail input and writes the existing paper-position compatibility projection after a newly committed filled intent. Neither is accounting truth. PI.3 remains responsible for the canonical account, immutable execution ledger, positions/cost basis, exits, realized P&L, and atomic account/position continuity. The PA.2 intent and position projection remain separate writes until PI.3.
+
+No migration, dependency, database vendor, live broker, account mutation repository, authentication, scoring, strategy, risk-formula, AI, or provider change was added by PI.2.
 
 ## Scope and classification
 
@@ -41,10 +55,10 @@ This review followed only the workflow named in PI.1 and the overlapping legacy 
 | Scanner definition | User-created rules and enabled state | Legacy `scannerRepository` arrays in `lib/repositories/store.js` | Lost on cold start/redeploy and not shared between scanner Functions | Scanner cannot reproduce the user's configured discovery workflow | P1; reuse the existing `atlas_realtime_scanner_subscriptions` SQL contract after choosing team/user ownership |
 | Scanner match | Evaluated symbols, signals, risks, match reasons | Computed from scanner rules and current market data | Lost immediately | Re-run scanner from durable definition and fresh market data | P2; recompute, optionally retain bounded audit evidence only if later required |
 | Alerts | Alert definitions, lifecycle, trigger results | Legacy alert arrays; a separate `atlas_realtime_alerts` durable-capable repository also exists but is not the legacy UI path | Legacy definitions and trigger history disappear or diverge across Functions | Does not corrupt paper accounting, but users can miss expected monitoring | P1 for definitions/lifecycle; trigger display can be derived or retained as bounded history |
-| Trade Quality | Deterministic score, band, evidence coverage, blockers, market provenance | Returned to browser state by `trade-quality`; not persisted by `useTradeQuality` | Browser refresh loses it | Safely recomputable from equivalent evidence, but exact reviewed evidence is not recoverable if market inputs move | P2 for raw computation; P0 once a human accepts/saves it as the downstream gate |
-| Opportunity review | Human-reviewed Trade Quality snapshot and review state | `atlas_ai_opportunity_analysis_history` SQL exists, but default `createAtlasAiRepository(options)` has no database; the browser has no save call to `opportunity-intelligence` | Current production path supplies no durable reviewed candidate to PA.1 | PA.1 sees no candidates; exact human gate and evidence lineage are lost | P0; existing AI history table is sufficient once the canonical DB adapter and browser handoff are wired |
-| PA.1 Paper Evaluation | Evaluation id, evidence fingerprint, approval/watch/reject status, strategy/regime/risk snapshot | SQL-capable `paper_evaluation` record in AI history; default Function repository is disconnected | Save reports disabled; later Functions receive no evaluation | PA.2 has no approved input; reuse/duplicate evaluation checks fail; audit lineage is incomplete | P0; existing AI history table can remain the source |
-| PA.2 Paper Order Simulation | Evaluation-to-order plan, guardrail result, execution/fill status, fingerprint, position/account snapshots | SQL-capable `paper_simulation` record in AI history, disconnected by default; legacy `submit-paper-order` instead writes process-local order/portfolio/journal arrays | Simulation history disappears; legacy orders disappear or may not be visible to another Function | Duplicate detection and daily limit reset; paper-order history is lost; existing state may be recreated inconsistently | P0; canonical immutable execution record with unique tenant/account/fingerprint |
+| Trade Quality | Deterministic score, band, evidence coverage, blockers, market provenance | Raw calculation remains browser/recomputable; eligible explicit review is posted to durable history | Raw calculation can be recomputed; the accepted compact snapshot survives when DB.1 is connected | Exact reviewed evidence and its fingerprint are available to PA.1; ineligible/unknown-strategy results are not persisted as eligible | P2 raw computation; PI.2 closes the P0 reviewed-evidence handoff |
+| Opportunity review | Human-reviewed Trade Quality snapshot and review state | Canonical DB.1 adapter + `atlas_ai_opportunity_analysis_history` | Tenant-scoped record survives cold starts, instances, and deployments; disconnected storage returns 503 | PA.1 reads the same compact durable source; raw candles/provider/prompt data are excluded | P0 evidence handoff implemented in PI.2; deployed DB proof pending |
+| PA.1 Paper Evaluation | Evaluation id, evidence fingerprint, approval/watch/reject status, strategy/regime/risk snapshot | Canonical DB.1 adapter + `paper_evaluation` history record | Scoped id + database conflict suppress unchanged evidence after restart/retry | PA.2 reads the durable evaluation and linkage; changed evidence produces a new record | P0 evaluation evidence implemented in PI.2; deployed DB proof pending |
+| PA.2 Paper Order Simulation | Evaluation-linked plan, guardrail result, simulation status, fingerprint, and versions | Canonical DB.1 adapter + append-safe `paper_simulation` intent/audit record | Scoped id + database conflict suppress duplicate intent and prevents repeated position projection | Intent/audit survives; account/position accounting continuity still awaits PI.3 | P0 intent evidence implemented in PI.2; PI.3 owns ledger/account/positions |
 | PA.2 account input | Cash, equity, buying power, drawdown/risk summary used for sizing/guardrails | `getPortfolioSummary()` reads process-local order/portfolio/journal arrays or defaults to a new $100,000 account | Resets to defaults; separate instances see different accounts | Position sizing and buying-power decisions can use an incorrect account | P0; one durable account row/ledger per organization, team, account, and owner |
 | PA.3 Paper Position | Quantity, side, average price/cost basis, originating evaluation/candidate, strategy | Generic `atlas_operator_actions` record through `paperPositionStore`; durable-capable with DB.1 configuration, but deployed execution is unverified | Survives only when PostgreSQL is configured and reachable; otherwise save is disabled | Without the row Atlas forgets the open position and cannot perform PA.4 exit | P0; dedicated/account-queryable position projection or a strengthened canonical paper store |
 | PA.3 multi-position account continuity | Cash/account snapshot after entry | Embedded separately inside each paper-position aggregate | Each position carries its own account snapshot; PA.2 simulates every selected evaluation against the same starting portfolio | Even without restart, multiple fills can produce mutually inconsistent cash/equity snapshots | P0; update one canonical account in the same transaction as execution and position |
@@ -61,8 +75,8 @@ This review followed only the workflow named in PI.1 and the overlapping legacy 
 
 ### P0 — required before trusted paper production
 
-- Explicit reviewed-opportunity record and PA.1 evaluation evidence used by the order gate.
-- Canonical PA.2 order/execution record with a durable uniqueness fingerprint.
+- Explicit reviewed-opportunity record and PA.1 evaluation evidence used by the order gate. **Implemented by PI.2; deployed DB verification pending.**
+- Canonical PA.2 execution-intent/audit record with a durable uniqueness fingerprint. **Implemented by PI.2; accounting execution remains PI.3.**
 - One paper account source for cash, equity/buying power, and cumulative realized P&L.
 - Account-scoped open/closed positions with quantity, side, and cost basis.
 - PA.4 exit executions, realized P&L, and immutable entry/evaluation/position/exit linkage.
@@ -93,15 +107,11 @@ No P3 store is part of the intended production workflow. Injected test repositor
 
 ### Browser-to-PA.1 handoff
 
-The Scanner UI calls `trade-quality` and stores the result only in React state. The repository contains a write-capable `opportunity-intelligence` Function, but `workspaceApiClient` and `useTradeQuality` do not submit the reviewed snapshot. PA.1 reads only `listTradeQualityReviews()`. Therefore the visible Trade Quality review is not the durable candidate PA.1 expects.
-
-This is a workflow-integration gap as well as a persistence gap. A future phase must preserve the existing human/advisory boundary while making the explicit review action durable.
+PI.2 closes this gap for eligible reviewed results. The browser passes compact opportunity and strategy identity into Trade Quality and submits an eligible result through `opportunity-intelligence` with review state `reviewed`. Results without a score or valid strategy identity remain visible but are not represented as eligible durable PA.1 evidence.
 
 ### Disconnected SQL-capable repositories
 
-The AI opportunity repository and the real-time scanner/alert/paper repositories accept a `database` dependency. Their default Functions construct them from ordinary handler options, not from `createDatabaseAdapter()`. With no injected database they return `disabled: true` or empty lists even when `DATABASE_URL` exists.
-
-Schema presence therefore does not establish runtime durability.
+PI.2 closes this gap for the canonical opportunity-review, PA.1, and PA.2 Functions by exposing the DB.1 repository's parameterized query path and supplying that same pooled adapter to the AI history repository. Other SQL-capable scanner, alert, release, and legacy repositories remain outside PI.2 and schema presence alone still does not establish their runtime durability.
 
 ### Competing paper-order paths
 
@@ -110,7 +120,7 @@ Atlas exposes both:
 - legacy `submit-paper-order`, which writes process-local order, portfolio, and journal arrays; and
 - guarded PA.2 `paper-order-simulation`, which writes AI simulation history and a generic paper-position aggregate.
 
-They do not share one order, account, position, or journal source. Production must not operate two independent paper ledgers. Owner decision: make guarded PA.2 the recommended canonical path, or explicitly choose and harden the legacy path. PI.1 recommends guarded PA.2 because it carries evaluation, risk, and evidence fingerprints.
+PI.2 adopts guarded PA.2 as the canonical intelligence workflow because it carries durable evaluation, risk, and evidence fingerprints. The legacy path remains compatibility-only and must not be described as production truth. PI.3 must route or retire it when the canonical account/execution/position ledger is introduced.
 
 ## Cold-start and deployment failure risks
 

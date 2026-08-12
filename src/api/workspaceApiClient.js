@@ -131,8 +131,17 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
         symbol: candidate?.symbol,
         asOf: candidate?.evaluatedAt,
         scannerSource: candidate?.scannerName,
+        opportunityId: candidate?.opportunityId ?? candidate?.id,
+        strategyId: candidate?.strategyId,
         timeframe,
       }, 'Unable to evaluate trade quality')
+    },
+
+    saveReviewedOpportunity(qualitySnapshot) {
+      return request('opportunity-intelligence', {}, 'Unable to save reviewed opportunity', {
+        method: 'POST',
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', qualitySnapshot },
+      })
     },
 
     getDailyBriefing(symbol = 'SPY', timeframe = '1D') {
