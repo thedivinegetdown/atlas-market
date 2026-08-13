@@ -1,5 +1,5 @@
-import { createApiHandler } from './_shared/api.js'
+import { createProtectedWorkspaceApiHandler } from './_shared/protectedWorkspaceApi.js'
 
-export const handler = createApiHandler(({ service }) => {
+export const handler = createProtectedWorkspaceApiHandler(({ service }) => {
   return service.evaluateScanners()
-}, { allowedMethods: ['POST'] })
+}, { allowedMethods: ['POST'], mutation: true, routeId: 'evaluate-scanners' })

@@ -23,12 +23,14 @@ import { handler as cancelPaperOrderHandler } from '../../netlify/functions/canc
 import { handler as watchlistHandler } from '../../netlify/functions/watchlist.js'
 import { handler as updateAlertHandler } from '../../netlify/functions/update-alert.js'
 import { handler as updateScannerHandler } from '../../netlify/functions/update-scanner.js'
+import { handler as csrfTokenHandler } from '../../netlify/functions/csrf-token.js'
 
 const handlers = {
   alerts: alertsHandler,
   'cancel-paper-order': cancelPaperOrderHandler,
   'create-alert': createAlertHandler,
   'create-scanner': createScannerHandler,
+  'csrf-token': csrfTokenHandler,
   'delete-alert': deleteAlertHandler,
   'delete-scanner': deleteScannerHandler,
   decision: decisionHandler,
@@ -53,6 +55,7 @@ const handlers = {
 }
 
 const originalFetch = globalThis.fetch
+if (globalThis.document) globalThis.document.cookie = 'nf_jwt=dev-token; path=/'
 
 globalThis.fetch = async (input, init) => {
   const requestUrl = typeof input === 'string' ? input : input?.url

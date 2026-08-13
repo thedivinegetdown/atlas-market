@@ -1,7 +1,7 @@
-import { createApiHandler } from './_shared/api.js'
+import { createProtectedWorkspaceApiHandler } from './_shared/protectedWorkspaceApi.js'
 import { normalizeSymbol, isValidSymbol } from '../../lib/workspace/validators.js'
 
-export const handler = createApiHandler(({ query, service }) => {
+export const handler = createProtectedWorkspaceApiHandler(({ query, service }) => {
   const symbol = query.symbol && String(query.symbol).toLowerCase() !== 'all'
     ? normalizeSymbol(query.symbol)
     : 'all'
@@ -32,4 +32,4 @@ export const handler = createApiHandler(({ query, service }) => {
     symbol,
     result,
   })
-})
+}, { routeId: 'journal-summary' })

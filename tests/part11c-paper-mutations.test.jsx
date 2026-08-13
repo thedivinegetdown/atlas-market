@@ -8,6 +8,7 @@ import { OrderEntryPanel } from '../src/components/OrderEntryPanel.jsx'
 import { OrdersPanel } from '../src/components/OrdersPanel.jsx'
 import { orderRepository } from '../src/hooks/tradingRuntime.js'
 import { resetStore } from '../lib/repositories/store.js'
+import { auth2Body, auth2Headers } from './helpers/auth2Fixtures.js'
 
 const quote = {
   symbol: 'AAPL',
@@ -33,8 +34,8 @@ function renderWithRoot(ui) {
 async function invoke(handler, body) {
   const response = await handler({
     httpMethod: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: auth2Headers(),
+    body: JSON.stringify(auth2Body(body)),
   })
 
   return {

@@ -12,6 +12,7 @@ import {
 import { DECISION_ACTIONS } from '../lib/decision/decisionActions.js'
 import { createDecisionEngine } from '../lib/decision/decisionEngine.js'
 import { handler as decisionHandler } from '../netlify/functions/decision.js'
+import { auth2Headers, auth2Query } from './helpers/auth2Fixtures.js'
 import { DecisionPanel } from '../src/components/panels.jsx'
 
 let root = null
@@ -146,8 +147,8 @@ describe('Part 14A decision intelligence engine', () => {
   })
 
   it('returns decision API success and invalid symbol responses', async () => {
-    const success = parseResponse(await decisionHandler({ queryStringParameters: { symbol: 'spy' } }))
-    const invalid = parseResponse(await decisionHandler({ queryStringParameters: { symbol: '$bad' } }))
+    const success = parseResponse(await decisionHandler({ headers: auth2Headers(), queryStringParameters: auth2Query({ symbol: 'spy' }) }))
+    const invalid = parseResponse(await decisionHandler({ headers: auth2Headers(), queryStringParameters: auth2Query({ symbol: '$bad' }) }))
 
     expect(success.statusCode).toBe(200)
     expect(success.json).toMatchObject({

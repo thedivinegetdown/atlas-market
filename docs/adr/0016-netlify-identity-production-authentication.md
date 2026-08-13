@@ -21,7 +21,7 @@ Use Netlify Identity and `@netlify/identity` for invite-only email/password auth
 - Atlas organization/team membership and tenant boundaries remain authoritative and unchanged.
 - Public signup and OAuth controls are not exposed. The site must be configured for invite-only registration before release.
 - The local adapter remains available only under explicit development/test selection and cannot be selected when `NODE_ENV=production`.
-- Existing CSRF behavior is preserved in AUTH.1. Its presence-only header design remains a blocker for AUTH.2.
+- AUTH.2 issues short-lived, random, HMAC-signed CSRF tokens bound to the independently verified bearer/user/session. The central browser API client attaches them only to mutations, refreshes/retries once on expiry, and clears them on logout or user change.
 
 ## Consequences
 
@@ -37,4 +37,4 @@ Netlify platform coupling is accepted at the authentication edge. The existing a
 
 ## Follow-up
 
-AUTH.2 must harden CSRF/origin enforcement and migrate the highest-risk plain-wrapper state mutations, beginning with paper-order endpoints. Production release evidence must also prove invite-only site configuration, explicit owner role assignment, login/logout/refresh, and authenticated critical journeys.
+AUTH.2 source hardening is complete: former P0/P1 plain routes are protected, only documented public reads remain plain, and deployment origins are environment-aware. Production release evidence must still prove invite-only site configuration, explicit owner role assignment, login/recovery/logout/refresh, CSRF establishment and denial, tenant/role denial, and authenticated critical journeys.

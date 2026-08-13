@@ -134,13 +134,17 @@ describe('PI.4 durable paper workflow integration', () => {
       accessTokenProvider: () => 'test-token',
       fetchImpl: vi.fn(async (url, options) => {
         calls.push({ url, options })
+        if (url.includes('csrf-token')) {
+          return { ok: true, status: 200, json: async () => ({ ok: true, data: { token: 'signed-test-csrf', expiresAt: new Date(Date.now() + 60_000).toISOString() } }) }
+        }
         return { ok: true, status: 200, json: async () => ({ ok: true, data: {} }) }
       }),
     })
     await client.createScanner({ name: 'S' })
     await client.createAlert({ label: 'A' })
-    expect(calls.every(({ options }) => options.method === 'POST' && options.headers['x-csrf-token'] === 'atlas-client-request')).toBe(true)
-    expect(calls.map(({ url }) => url)).toEqual([
+    const mutationCalls = calls.filter(({ url }) => !url.includes('csrf-token'))
+    expect(mutationCalls.every(({ options }) => options.method === 'POST' && options.headers['x-csrf-token'] === 'signed-test-csrf')).toBe(true)
+    expect(mutationCalls.map(({ url }) => url)).toEqual([
       expect.stringContaining('scanner-configurations'),
       expect.stringContaining('alert-configurations'),
     ])

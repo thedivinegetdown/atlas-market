@@ -1,7 +1,7 @@
-import { createApiHandler } from './_shared/api.js'
+import { createProtectedWorkspaceApiHandler } from './_shared/protectedWorkspaceApi.js'
 import { tradingEventLogger, TRADING_EVENTS } from '../../lib/observability/eventLogger.js'
 
-export const handler = createApiHandler(async ({ service, requestId }) => {
+export const handler = createProtectedWorkspaceApiHandler(async ({ service, requestId }) => {
   const [portfolio, equityCurve] = await Promise.all([
     service.getPortfolioSummary(),
     service.getEquityCurve(),
@@ -16,4 +16,4 @@ export const handler = createApiHandler(async ({ service, requestId }) => {
     portfolio: portfolio.summary,
     equityCurve,
   }
-}, { allowedMethods: ['POST'] })
+}, { allowedMethods: ['POST'], mutation: true, routeId: 'recalculate-portfolio' })

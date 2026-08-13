@@ -9,6 +9,7 @@ import {
   onAuthChange,
   updateUser,
 } from '@netlify/identity'
+import { clearWorkspaceCsrfState } from '../api/workspaceApiClient.js'
 import { setSessionExpiredListener } from './identitySession.js'
 import { IdentityAuthContext, useIdentityAuth } from './identityAuthContext.js'
 
@@ -162,6 +163,7 @@ export function IdentityAuthProvider({ children, identityClient = defaultIdentit
       try {
         await identityClient.logout()
       } finally {
+        clearWorkspaceCsrfState()
         setUser(null)
         setStatus('unauthenticated')
         setError(null)

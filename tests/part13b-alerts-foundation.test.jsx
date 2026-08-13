@@ -12,6 +12,7 @@ import { handler as deleteAlertHandler } from '../netlify/functions/delete-alert
 import { handler as evaluateAlertsHandler } from '../netlify/functions/evaluate-alerts.js'
 import { handler as updateAlertHandler } from '../netlify/functions/update-alert.js'
 import { AlertsPanel } from '../src/components/panels.jsx'
+import { auth2Body, auth2Headers, auth2Query } from './helpers/auth2Fixtures.js'
 
 let root = null
 let container = null
@@ -38,8 +39,8 @@ function parseResponse(response) {
 function postEvent(body) {
   return {
     httpMethod: 'POST',
-    headers: { 'content-type': 'application/json', 'x-request-id': 'req-alerts' },
-    body: JSON.stringify(body),
+    headers: { ...auth2Headers(), 'x-request-id': 'req-alerts' },
+    body: JSON.stringify(auth2Body(body)),
   }
 }
 
@@ -140,7 +141,7 @@ describe('Part 13B alerts foundation', () => {
       threshold: 100,
       enabled: true,
     })))
-    const listed = parseResponse(await alertsHandler({ httpMethod: 'GET', headers: { 'x-request-id': 'req-alerts' } }))
+    const listed = parseResponse(await alertsHandler({ httpMethod: 'GET', headers: { ...auth2Headers(), 'x-request-id': 'req-alerts' }, queryStringParameters: auth2Query() }))
     const updated = parseResponse(await updateAlertHandler(postEvent({
       id: created.json.data.alert.id,
       symbol: 'AAPL',

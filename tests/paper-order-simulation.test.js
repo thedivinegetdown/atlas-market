@@ -1,6 +1,7 @@
 import { describe,expect,it,vi } from 'vitest'
 import { simulateApprovedPaperEvaluations } from '../lib/opportunities/paperSimulation/index.js'
 import { createPaperOrderSimulationHandler } from '../netlify/functions/paper-order-simulation.js'
+import { auth2Body, auth2Headers } from './helpers/auth2Fixtures.js'
 const now='2026-08-09T12:00:00.000Z';const portfolio={id:'paper',cash:100000,equity:100000,buyingPower:100000,positions:[]};const portfolioRisk={account:{accountValue:100000,cash:100000,buyingPower:100000},summary:{openRisk:0,openRiskPct:0,drawdownPct:0}}
 function evaluation(overrides={}){return {evaluationId:'eval-1',candidateId:'candidate-1',symbol:'AAPL',strategyId:'momentum',status:'APPROVED_FOR_PAPER_REVIEW',freshness:'FRESH',evaluatedAt:now,engineVersions:{tradeQuality:'trade-quality-v1'},orderContext:{assetType:'equity',side:'buy',orderType:'market',price:100,stopPrice:98},...overrides}}
 function run(overrides={},options={}){return simulateApprovedPaperEvaluations({evaluations:[evaluation()],portfolio,portfolioRisk,enabled:true,...overrides},{now,...options})}
@@ -15,4 +16,4 @@ describe('guarded paper order simulation',()=>{
  it('marks expired evidence stale',()=>expect(simulateApprovedPaperEvaluations({evaluations:[evaluation({evaluatedAt:'2026-08-01T00:00:00.000Z'})],portfolio,portfolioRisk,enabled:true},{now}).results[0].status).toBe('STALE'))
  it('stores no sensitive payload and calls no external subsystem',()=>{const spy=vi.fn();const x=run({provider:spy,broker:spy,ai:spy}).results[0];expect(spy).not.toHaveBeenCalled();expect(JSON.stringify(x)).not.toMatch(/rawCandles|apiKey|prompt|providerCredential/i)})
 })
-describe('endpoint security',()=>{it('requires authenticated CSRF request',async()=>{const handler=createPaperOrderSimulationHandler({env:{PAPER_AUTOMATION_ENABLED:'true'}});expect((await handler({httpMethod:'POST',headers:{'content-type':'application/json'},body:'{}'})).statusCode).toBe(403)})})
+describe('endpoint security',()=>{it('requires authenticated CSRF request',async()=>{const handler=createPaperOrderSimulationHandler({env:{PAPER_AUTOMATION_ENABLED:'true'}});expect((await handler({httpMethod:'POST',headers:auth2Headers({csrf:false}),body:JSON.stringify(auth2Body())})).statusCode).toBe(403)})})

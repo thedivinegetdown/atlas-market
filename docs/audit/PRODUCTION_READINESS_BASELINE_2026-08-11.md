@@ -12,23 +12,23 @@ This document records source and read-only runtime findings. It does not authori
 
 Atlas has a reachable Netlify deployment, a passing production build, extensive deterministic test coverage, shared API controls, and explicit paper-only trading boundaries. It is not ready to be represented as a complete authenticated production application.
 
-AUTH.1 now supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. The 28 plain-wrapper Functions remain unchanged, the production PostgreSQL contract is code-hardened but deployment/backup execution remains unverified and core stores remain process-local, quote fallback can return mock data, CSRF remains presence-only, and CI now enforces the repository's deterministic release gates through the shared release verifier.
+AUTH.1 supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. AUTH.2 protects the former 12 P0 mutations and eight P1 sensitive reads, leaving only two explicitly public reads, and replaces presence-only CSRF with a short-lived server-issued session-bound token. The production PostgreSQL contract is code-hardened but production rollout/backup execution remains unverified, compatibility stores remain process-local, market-data degradation remains operationally dependent on provider credentials, and CI enforces deterministic repository gates.
 
 ## Authentication architecture and browser gap
 
 The shared authenticated Function path is implemented by `netlify/functions/_shared/authApi.js`:
 
 1. extract a bearer token or `atlas_session` cookie;
-2. apply an origin allowlist;
-3. require an `x-csrf-token` header for authenticated mutations;
-4. call the configured authentication adapter;
-5. validate session status and expiry;
+2. apply an environment-aware exact-origin allowlist;
+3. call the configured authentication adapter;
+4. validate session status and expiry;
+5. cryptographically validate an expiring bearer/user/session-bound `x-csrf-token` for authenticated mutations;
 6. evaluate role permissions;
 7. optionally enforce organization and team membership boundaries.
 
-The default adapter in `lib/auth/authenticationProvider.js` is `local-development`. It is explicitly marked `productionSafe: false`. Any supplied bearer value is used to construct a local session, and the default development role is owner. An external provider contract exists, but no production provider is selected or configured in this scope.
+The local adapter remains explicitly `productionSafe: false` and is restricted to development/test selection. Production selects the Netlify Identity adapter, verifies the provider session through the site Identity service, and fails closed when verification is missing, invalid, expired, rejected, or unavailable. Atlas organization/team membership remains authoritative after provider verification.
 
-The browser client in `src/api/workspaceApiClient.js` sends JSON and a fixed CSRF-presence header for mutations, but it does not send an Authorization header or create/manage an authenticated session. Unit/UI test setup injects a test bearer header, so test success does not prove the production browser flow.
+The browser session layer attaches the current Identity bearer. The shared API client establishes CSRF only for mutations, stores it only in closure memory, retries once after expiry/invalidity, and clears it at logout or bearer change. Repository tests remain deterministic and do not prove the deployed Identity browser flow.
 
 Read-only production checks on 2026-08-11 returned HTTP 200 for the SPA root, `/dashboard`, `/markets`, and the public health Function. An unauthenticated `market-overview?symbol=SPY` request returned HTTP 401. This proves deployment reachability and enforcement at that endpoint, not a working browser sign-in flow.
 
@@ -39,17 +39,17 @@ The generated [Markdown inventory](../architecture/API_CONTROL_INVENTORY.md) and
 | Wrapper/control | Count | Boundary represented in source |
 | --- | ---: | --- |
 | Team-authenticated | 8 | Organization and team |
-| Organization-authenticated | 219 | Organization |
-| Authenticated | 18 | Authenticated user/workspace role |
-| Plain shared API | 28 | None |
+| Organization-authenticated | 243 | Organization |
+| Authenticated | 21 | Authenticated user/workspace role |
+| Plain shared API | 2 | Intentional public read |
 | Unknown | 0 | N/A |
-| **Total** | **273** | |
+| **Total** | **274** | |
 
-Method classification is 76 read-only, 56 mutation-only, and 141 mixed read/mutation Functions. Source classification produces 12 P0, eight P1, eight P2, and 245 P3 entries.
+Method classification is 77 read-only, 56 mutation-only, and 141 mixed read/mutation Functions. Source classification produces zero P0, zero P1, zero P2, and 274 P3 entries.
 
-### P0 plain-wrapper mutations
+### Remediated P0 plain-wrapper mutations
 
-These endpoints have shared request validation, error handling, process-local rate limiting, and observability, but no authenticated wrapper, role decision, tenant boundary, or authenticated CSRF check:
+These former P0 endpoints now require organization membership, account context, owner/admin workspace-write authority, and verified CSRF:
 
 - `cancel-paper-order`
 - `create-alert`
@@ -64,9 +64,9 @@ These endpoints have shared request validation, error handling, process-local ra
 - `update-scanner`
 - `workspace-configurations` (`GET` and `POST`)
 
-Paper semantics prevent real brokerage execution, but unauthenticated paper-order and state mutation remain production security defects. Recommended priority: protect paper-order mutations first, then other state mutation, with the narrowest applicable user/organization/team scope and verified CSRF behavior.
+The legacy paper-order, alert/scanner, and recalculation routes are explicitly compatibility-only; PI.3/PI.4 remain canonical. Paper-only and no-broker boundaries are unchanged.
 
-### P1 sensitive plain reads
+### Remediated P1 sensitive plain reads
 
 - `journal-summary`
 - `operator-actions`
@@ -77,9 +77,9 @@ Paper semantics prevent real brokerage execution, but unauthenticated paper-orde
 - `signals`
 - `system-events`
 
-These expose paper trading, operational, portfolio, or decision context without an authenticated wrapper. Recommended priority: require authenticated access and add organization/team scope wherever the data model supports it.
+These now require organization membership plus account/user scope. Process-memory legacy projections remain compatibility-only and non-durable; operator/system/configuration persistence uses scoped repository methods.
 
-The remaining eight plain reads are P2 until their intentionally-public contract is approved or they are migrated to authenticated wrappers. The inventory records the exact endpoint, path, methods, wrapper, boundary, CSRF classification, risk, priority, and remediation for all Functions.
+Only `health` and `watchlist` remain plain. Both are documented `PUBLIC_READ` routes with no mutation, tenant data, or privileged operational diagnostics. Database and release runtime health are now admin-authenticated. The inventory records the exact classification and reason for every reconciled route.
 
 ## Persistence limitations
 
@@ -109,27 +109,26 @@ Local `npm run release:verify` uses the same gates and additionally runs the foc
 
 1. Netlify Identity site configuration, invite-only enforcement, first-owner invitation/explicit role assignment, and authenticated production smoke evidence remain external release gates.
 2. AUTH.1 browser/session and production-verifier code exists, but deployed callback, refresh, expiry, and logout behavior is not yet evidenced.
-3. Twelve plain-wrapper mutation endpoints include paper-order and state-changing operations.
-4. Eight sensitive paper/portfolio/operational reads use the plain wrapper.
-5. CSRF control verifies header presence rather than a server-bound token value.
-6. PI.3 provides the repository-level canonical transactional paper account/execution/position ledger, but deployed migration, database execution, concurrency, capacity, migration ownership, backup, restore, retention, and RPO/RTO remain unverified. The legacy paper-order path and non-distributed daily quota remain limitations.
-7. MD.1 now makes live, delayed, stale, degraded, mock, unavailable, and unknown provenance explicit in the principal market workspaces; production provider entitlement, delay, and freshness evidence remains unverified.
-8. CI gates are deterministic repository checks and do not replace deployed authenticated smoke/E2E evidence.
-9. No repeatable authenticated production smoke/E2E evidence exists.
-10. Documentation must avoid treating deterministic engines and tests as proof of production integration.
+3. AUTH.2 source controls require deployed verification against real Netlify Identity sessions, origins, roles, memberships, and CSRF lifecycle behavior.
+4. PI.3 provides the repository-level canonical transactional paper account/execution/position ledger, but production migration, capacity, migration ownership, backup, restore, retention, and RPO/RTO remain unverified. The legacy paper-order path and non-distributed daily quota remain limitations.
+5. MD.1 makes live, delayed, stale, degraded, mock, unavailable, and unknown provenance explicit in the principal market workspaces; production provider entitlement, delay, and freshness evidence remains unverified.
+6. CI gates are deterministic repository checks and do not replace deployed authenticated smoke/E2E evidence.
+7. No repeatable authenticated production smoke/E2E evidence exists.
+8. Documentation must avoid treating deterministic engines and tests as proof of production integration.
 
 ## Remediation order
 
 1. Review and accept this baseline and generated inventory.
 2. Complete the Netlify Identity manual setup and production smoke evidence described in ADR-0016.
-3. Implement AUTH.2 origin/CSRF hardening without weakening bearer verification.
-4. Protect P0 paper-order mutations, then the remaining P0 state mutations.
-5. Protect P1 sensitive reads and establish tenant scope.
-6. Approve or protect the P2 intentionally-public candidates.
-7. Verify production persistence and production market-data credentials, entitlements, delay flags, and operational freshness contracts.
-8. Add authenticated read-only production smoke/E2E coverage after AUTH.1 is operationally unblocked.
+3. Complete deploy-preview AUTH.1/AUTH.2 smoke: login/recovery/session/logout, authenticated read, CSRF establishment and invalid-token denial, safe paper mutation, viewer denial, tenant denial, and old-session denial.
+4. Verify production persistence rollout/backups and production market-data credentials, entitlements, delay flags, and freshness contracts.
+5. Run the approved final authenticated production-safe smoke/E2E and collect release evidence.
 
 AUTH.1 changes identity/session runtime behavior and adds `@netlify/identity`; it does not change trading logic, market providers, billing configuration, or database schema.
+
+## AUTH.2 API security update
+
+AUTH.2 adds no identity provider, dependency, database migration, trading/provider/AI/risk behavior, broker path, or paid service. It protects the 26 previously sensitive/plain legacy routes, adds the authenticated CSRF bootstrap Function, centralizes signed-token browser transport, preserves `health` and `watchlist` as documented public reads, and records the compatibility-only status of legacy memory mutations. Deployed Identity email/recovery and authenticated E2E evidence remain pending.
 
 ## PI.3 persistence update
 

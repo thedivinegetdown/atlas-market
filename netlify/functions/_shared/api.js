@@ -20,7 +20,7 @@ export function getCorsHeaders() {
   return {
     'access-control-allow-origin': '*',
     'access-control-allow-methods': 'GET,POST,OPTIONS',
-    'access-control-allow-headers': 'content-type,authorization,x-request-id',
+    'access-control-allow-headers': 'content-type,authorization,x-request-id,x-csrf-token',
     'x-content-type-options': 'nosniff',
     'referrer-policy': 'no-referrer',
   }

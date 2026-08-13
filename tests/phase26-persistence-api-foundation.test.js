@@ -17,6 +17,7 @@ import { createDatabaseHealthHandler } from '../netlify/functions/database-healt
 import { createWorkspaceConfigurationsHandler } from '../netlify/functions/workspace-configurations.js'
 import { createSystemEventsHandler } from '../netlify/functions/system-events.js'
 import { createOperatorActionsHandler } from '../netlify/functions/operator-actions.js'
+import { auth2Body, auth2Headers, auth2Query } from './helpers/auth2Fixtures.js'
 
 function parseResponse(response) {
   return {
@@ -29,10 +30,10 @@ function jsonEvent(body, method = 'POST') {
   return {
     httpMethod: method,
     headers: {
-      'content-type': 'application/json',
+      ...auth2Headers(),
       'x-request-id': 'req-phase26',
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify(auth2Body(body)),
   }
 }
 
@@ -43,6 +44,9 @@ function createMockRepository(rowsByStore = {}) {
       stores.set(name, {
         list: vi.fn(async () => rowsByStore[name] ?? []),
         upsert: vi.fn(async (id, payload) => ({ ok: true, data: { id, payload } })),
+        listScoped: vi.fn(async () => rowsByStore[name] ?? []),
+        getScoped: vi.fn(async (id) => (rowsByStore[name] ?? []).find((row) => row.id === id) ?? null),
+        upsertScoped: vi.fn(async (id, payload) => ({ ok: true, data: { id, payload } })),
       })
     }
     return stores.get(name)
@@ -58,6 +62,10 @@ function createMockRepository(rowsByStore = {}) {
     end: vi.fn(async () => {}),
     stores,
   }
+}
+
+const organizationMembershipRepository = {
+  getMembership: vi.fn(async (organizationId, userId) => ({ id: 'phase26-membership', organizationId, userId, role: 'owner', status: 'active' })),
 }
 
 describe('Phase 26A PostgreSQL persistence foundation', () => {
@@ -152,7 +160,7 @@ describe('Phase 26B Netlify Functions API foundation', () => {
       env: { TRADING_MODE: 'paper' },
     })
 
-    const response = parseResponse(await handler({ httpMethod: 'GET', headers: { 'x-request-id': 'req-db-health' } }))
+    const response = parseResponse(await handler({ httpMethod: 'GET', headers: { ...auth2Headers(), 'x-request-id': 'req-db-health' } }))
 
     expect(response.statusCode).toBe(200)
     expect(response.headers['x-request-id']).toBe('req-db-health')
@@ -162,24 +170,26 @@ describe('Phase 26B Netlify Functions API foundation', () => {
   })
 
   it('reads and writes workspace configurations with sanitized inputs', async () => {
-    const repository = createMockRepository({ workspaceConfigurations: [{ id: 'workspace-1', payload: { density: 'operator' } }] })
+    const repository = createMockRepository({ workspaceConfigurations: [{ id: 'workspace-1', payload: { density: 'operator', accountId: 'paper-portfolio' } }] })
     const handler = createWorkspaceConfigurationsHandler({
       repositoryFactory: () => repository,
+      organizationMembershipRepository,
       env: { TRADING_MODE: 'paper' },
     })
 
     const write = parseResponse(await handler(jsonEvent({ id: 'workspace-1', payload: { density: 'operator' } })))
-    const read = parseResponse(await handler({ httpMethod: 'GET', queryStringParameters: { limit: '10' } }))
+    const read = parseResponse(await handler({ httpMethod: 'GET', headers: auth2Headers(), queryStringParameters: auth2Query({ limit: '10' }) }))
 
     expect(write.statusCode).toBe(200)
     expect(write.json.data.result.data.payload.density).toBe('operator')
     expect(read.json.data.workspaceConfigurations[0].id).toBe('workspace-1')
-    expect(repository.getStore('workspaceConfigurations').upsert).toHaveBeenCalledWith('workspace-1', { density: 'operator' })
+    expect(repository.getStore('workspaceConfigurations').upsertScoped).toHaveBeenCalledWith('workspace-1', { density: 'operator', accountId: 'paper-portfolio' }, expect.objectContaining({ organizationId: 'org-atlas-local' }))
   })
 
   it('rejects unsafe workspace configuration ids with safe public errors', async () => {
     const handler = createWorkspaceConfigurationsHandler({
       repositoryFactory: () => createMockRepository(),
+      organizationMembershipRepository,
       env: { TRADING_MODE: 'paper' },
     })
     const response = parseResponse(await handler(jsonEvent({ id: '../secret', payload: {} })))
@@ -194,14 +204,14 @@ describe('Phase 26B Netlify Functions API foundation', () => {
 
   it('reads system events and operator actions without trading or broker endpoints', async () => {
     const repository = createMockRepository({
-      systemEvents: [{ id: 'evt-1', payload: { eventType: 'system.test' } }],
-      operatorActions: [{ id: 'act-1', payload: { status: 'open' } }],
+      systemEvents: [{ id: 'evt-1', payload: { eventType: 'system.test', accountId: 'paper-portfolio' } }],
+      operatorActions: [{ id: 'act-1', payload: { status: 'open', accountId: 'paper-portfolio' } }],
     })
-    const systemEvents = createSystemEventsHandler({ repositoryFactory: () => repository, env: { TRADING_MODE: 'paper' } })
-    const operatorActions = createOperatorActionsHandler({ repositoryFactory: () => repository, env: { TRADING_MODE: 'paper' } })
+    const systemEvents = createSystemEventsHandler({ repositoryFactory: () => repository, organizationMembershipRepository, env: { TRADING_MODE: 'paper' } })
+    const operatorActions = createOperatorActionsHandler({ repositoryFactory: () => repository, organizationMembershipRepository, env: { TRADING_MODE: 'paper' } })
 
-    const eventResponse = parseResponse(await systemEvents({ httpMethod: 'GET' }))
-    const actionResponse = parseResponse(await operatorActions({ httpMethod: 'GET' }))
+    const eventResponse = parseResponse(await systemEvents({ httpMethod: 'GET', headers: auth2Headers(), queryStringParameters: auth2Query() }))
+    const actionResponse = parseResponse(await operatorActions({ httpMethod: 'GET', headers: auth2Headers(), queryStringParameters: auth2Query() }))
 
     expect(eventResponse.json.data.systemEvents[0].id).toBe('evt-1')
     expect(actionResponse.json.data.operatorActions[0].id).toBe('act-1')

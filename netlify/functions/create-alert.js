@@ -1,5 +1,5 @@
-import { createApiHandler } from './_shared/api.js'
+import { createProtectedWorkspaceApiHandler } from './_shared/protectedWorkspaceApi.js'
 
-export const handler = createApiHandler(({ body, service }) => {
+export const handler = createProtectedWorkspaceApiHandler(({ body, service }) => {
   return service.createAlert(body)
-}, { allowedMethods: ['POST'] })
+}, { allowedMethods: ['POST'], mutation: true, routeId: 'create-alert' })

@@ -1,8 +1,8 @@
-import { createApiHandler } from './_shared/api.js'
+import { createAuthenticatedApiHandler } from './_shared/authApi.js'
 import { createRuntimeDiagnostics } from '../../lib/system/releaseObservabilityReadinessEngine.js'
 
 export function createReleaseRuntimeHealthHandler(options = {}) {
-  return createApiHandler(async ({ requestId, query }) => {
+  return createAuthenticatedApiHandler(async ({ requestId, query }) => {
     const mode = String(query.mode ?? 'summary').toLowerCase()
     const diagnostics = createRuntimeDiagnostics({
       env: options.env ?? process.env,
@@ -30,6 +30,7 @@ export function createReleaseRuntimeHealthHandler(options = {}) {
     }
   }, {
     allowedMethods: ['GET'],
+    requiredPermission: 'workspace.admin',
     routeId: 'release-runtime-health',
     maxRequestBytes: 8 * 1024,
     ...options,

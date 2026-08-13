@@ -194,7 +194,7 @@ Netlify Identity is safer than custom Atlas credential infrastructure because Ne
 
 The principal tradeoff is platform lock-in to Netlify's Identity/session format. The existing adapter boundary limits that lock-in: only the provider adapter and browser session layer should be provider-specific. Atlas users and memberships remain provider-neutral PostgreSQL records.
 
-Cookie-based authentication makes robust CSRF handling mandatory. AUTH.1 intentionally preserves the existing presence-only CSRF behavior; AUTH.2 must replace it with verified same-origin handling and an approved server-bound design for state-changing Atlas APIs. XSS remains able to act as the signed-in user, so the implementation retains safe rendering and avoids token exposure.
+Cookie-capable authentication makes robust CSRF handling mandatory even though the normal API path sends a bearer header. AUTH.2 replaces presence-only handling with a short-lived, random HMAC token bound to the verified bearer/user/session, environment-aware exact deployment origins, automatic mutation transport, one bounded refresh/retry, and logout/user-switch clearing. XSS remains able to act as the signed-in user, so the implementation retains safe rendering and avoids token exposure. See [Atlas API Authentication and CSRF Protection](CSRF_AND_API_PROTECTION.md).
 
 Netlify role claims must not become the sole tenant-authorization source. Role changes are not reflected until token refresh, while Atlas organization/team membership checks can evaluate current durable state on each request.
 

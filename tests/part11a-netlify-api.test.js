@@ -13,6 +13,7 @@ import { createJournalRepository } from '../lib/repositories/journalRepository.j
 import { createOrderRepository } from '../lib/repositories/orderRepository.js'
 import { createPortfolioRepository } from '../lib/repositories/portfolioRepository.js'
 import { resetStore } from '../lib/repositories/store.js'
+import { auth2Headers, auth2Query } from './helpers/auth2Fixtures.js'
 
 function parseResponse(response) {
   return {
@@ -21,8 +22,8 @@ function parseResponse(response) {
   }
 }
 
-function event(queryStringParameters = {}) {
-  return { queryStringParameters, headers: { authorization: 'Bearer dev-token' } }
+function event(queryStringParameters = {}, { organization = true } = {}) {
+  return { queryStringParameters: organization ? auth2Query(queryStringParameters) : queryStringParameters, headers: auth2Headers() }
 }
 
 beforeEach(() => {
@@ -45,7 +46,7 @@ describe('Part 11A Netlify workspace API', () => {
   })
 
   it('returns market overview, signals, and risk summary by symbol', async () => {
-    const overview = parseResponse(await marketOverviewHandler(event({ symbol: 'spy' })))
+    const overview = parseResponse(await marketOverviewHandler(event({ symbol: 'spy' }, { organization: false })))
     const signals = parseResponse(await signalsHandler(event({ symbol: 'SPY' })))
     const risk = parseResponse(await riskSummaryHandler(event({ symbol: 'SPY' })))
 
@@ -101,7 +102,7 @@ describe('Part 11A Netlify workspace API', () => {
   })
 
   it('returns JSON error shape for missing and invalid symbols', async () => {
-    const missing = parseResponse(await marketOverviewHandler(event()))
+    const missing = parseResponse(await marketOverviewHandler(event({}, { organization: false })))
     const invalid = parseResponse(await signalsHandler(event({ symbol: '../SPY' })))
 
     expect(missing.statusCode).toBe(400)
@@ -118,7 +119,7 @@ describe('Part 11A Netlify workspace API', () => {
   })
 
   it('validates regime timeframes and keeps market overview read-only', async () => {
-    const invalid = parseResponse(await marketOverviewHandler(event({ symbol: 'SPY', timeframe: '1H' })))
+    const invalid = parseResponse(await marketOverviewHandler(event({ symbol: 'SPY', timeframe: '1H' }, { organization: false })))
     const mutation = parseResponse(await marketOverviewHandler({ httpMethod: 'POST', queryStringParameters: { symbol: 'SPY' } }))
 
     expect(invalid.statusCode).toBe(400)
@@ -129,7 +130,7 @@ describe('Part 11A Netlify workspace API', () => {
 
   it('requires authenticated private access and rejects arbitrary historical parameters', async () => {
     const unauthenticated = parseResponse(await marketOverviewHandler({ queryStringParameters: { symbol: 'SPY' } }))
-    const arbitrarySize = parseResponse(await marketOverviewHandler(event({ symbol: 'SPY', outputsize: '5000' })))
+    const arbitrarySize = parseResponse(await marketOverviewHandler(event({ symbol: 'SPY', outputsize: '5000' }, { organization: false })))
     expect(unauthenticated.statusCode).toBe(401)
     expect(unauthenticated.json.error.message).toBe('authentication required')
     expect(arbitrarySize.statusCode).toBe(400)
@@ -175,7 +176,7 @@ describe('Part 11A Netlify workspace API', () => {
   it('keeps paper trading enabled by default across endpoints', async () => {
     const endpoints = [
       watchlistHandler(event()),
-      marketOverviewHandler(event({ symbol: 'SPY' })),
+      marketOverviewHandler(event({ symbol: 'SPY' }, { organization: false })),
       signalsHandler(event({ symbol: 'SPY' })),
       portfolioSummaryHandler(event()),
       ordersHandler(event()),

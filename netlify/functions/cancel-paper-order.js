@@ -1,5 +1,5 @@
-import { createApiHandler } from './_shared/api.js'
+import { createProtectedWorkspaceApiHandler } from './_shared/protectedWorkspaceApi.js'
 
-export const handler = createApiHandler(({ body, service, requestId }) => {
+export const handler = createProtectedWorkspaceApiHandler(({ body, service, requestId }) => {
   return service.cancelPaperOrder(body.orderId, { requestId })
-}, { allowedMethods: ['POST'] })
+}, { allowedMethods: ['POST'], mutation: true, routeId: 'cancel-paper-order' })

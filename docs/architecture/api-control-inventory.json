@@ -1,25 +1,25 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "generatedFrom": "netlify/functions/*.js",
   "summary": {
-    "total": 273,
+    "total": 274,
     "byWrapper": {
       "team-authenticated": 8,
-      "organization-authenticated": 219,
-      "authenticated": 18,
-      "plain-api": 28,
+      "organization-authenticated": 243,
+      "authenticated": 21,
+      "plain-api": 2,
       "unknown": 0
     },
     "byAccess": {
-      "read": 76,
+      "read": 77,
       "mutation": 56,
       "read-and-mutation": 141
     },
     "byPriority": {
-      "P0": 12,
-      "P1": 8,
-      "P2": 8,
-      "P3": 245
+      "P0": 0,
+      "P1": 0,
+      "P2": 0,
+      "P3": 274
     }
   },
   "functions": [
@@ -35,6 +35,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -51,6 +53,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -67,6 +71,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -83,6 +89,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -99,6 +107,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -115,6 +125,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -131,6 +143,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -147,6 +161,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -164,6 +180,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -181,6 +199,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -197,6 +217,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -213,6 +235,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -230,6 +254,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -246,6 +272,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -263,6 +291,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -280,6 +310,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -297,6 +329,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -314,6 +348,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -331,6 +367,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -348,6 +386,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -365,6 +405,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -382,6 +424,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -399,6 +443,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -406,18 +452,20 @@
     {
       "function": "alerts",
       "path": "netlify/functions/alerts.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Legacy alert state is compatibility-only and requires organization membership.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "atlas-ai-chat",
@@ -431,6 +479,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -447,6 +497,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -463,6 +515,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -479,6 +533,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -495,6 +551,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -511,6 +569,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -518,18 +578,20 @@
     {
       "function": "cancel-paper-order",
       "path": "netlify/functions/cancel-paper-order.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy paper-order mutation remains non-canonical and owner/admin protected.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "collaboration-health",
@@ -543,6 +605,8 @@
       "boundary": "organization-and-team",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -560,6 +624,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -577,6 +643,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -594,6 +662,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -611,6 +681,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -628,6 +700,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -645,6 +719,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -662,6 +738,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -679,6 +757,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -696,6 +776,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -713,6 +795,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -730,6 +814,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -747,6 +833,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -764,6 +852,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -781,6 +871,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -797,6 +889,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -814,6 +908,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -830,6 +926,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -847,6 +945,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -864,6 +964,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -881,6 +983,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -898,6 +1002,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -915,6 +1021,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -932,6 +1040,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -949,6 +1059,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -966,6 +1078,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -983,6 +1097,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1000,6 +1116,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1017,6 +1135,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1034,6 +1154,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1051,6 +1173,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1068,6 +1192,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1085,6 +1211,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1102,6 +1230,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1119,6 +1249,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1136,6 +1268,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1153,6 +1287,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1169,6 +1305,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1186,6 +1324,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1203,6 +1343,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1220,6 +1362,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1236,6 +1380,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1253,6 +1399,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1270,6 +1418,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1287,6 +1437,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1304,6 +1456,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1320,6 +1474,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1337,6 +1493,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1354,6 +1512,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1370,6 +1530,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1387,6 +1549,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1404,6 +1568,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1420,6 +1586,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1437,6 +1605,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1454,6 +1624,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1471,6 +1643,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1488,6 +1662,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1505,6 +1681,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1522,6 +1700,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1539,6 +1719,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1556,6 +1738,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1573,6 +1757,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1590,6 +1776,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1607,6 +1795,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1624,6 +1814,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1641,6 +1833,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1658,6 +1852,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1675,6 +1871,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1692,6 +1890,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1709,6 +1909,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1725,6 +1927,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1741,6 +1945,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1748,34 +1954,56 @@
     {
       "function": "create-alert",
       "path": "netlify/functions/create-alert.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "create-scanner",
       "path": "netlify/functions/create-scanner.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "csrf-token",
+      "path": "netlify/functions/csrf-token.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
       "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "current-account",
@@ -1789,6 +2017,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1805,6 +2035,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1821,6 +2053,8 @@
       "boundary": "organization-and-team",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1837,6 +2071,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1853,6 +2089,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1869,6 +2107,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -1876,114 +2116,128 @@
     {
       "function": "database-health",
       "path": "netlify/functions/database-health.js",
-      "wrapper": "plain-api",
+      "wrapper": "authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
-      "permission": null,
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "workspace.admin",
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Database and migration health is privileged operational information restricted to workspace administrators.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "decision",
       "path": "netlify/functions/decision.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Decision intelligence is tenant-sensitive workspace evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "delete-alert",
       "path": "netlify/functions/delete-alert.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "delete-scanner",
       "path": "netlify/functions/delete-scanner.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "equity-curve",
       "path": "netlify/functions/equity-curve.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper performance history is tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "evaluate-alerts",
       "path": "netlify/functions/evaluate-alerts.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert evaluation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "evaluate-scanners",
       "path": "netlify/functions/evaluate-scanners.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner evaluation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "evidence-governance-health",
@@ -1997,6 +2251,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2013,6 +2269,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2029,6 +2287,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2045,9 +2305,11 @@
       "boundary": "none",
       "permission": null,
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "PUBLIC_READ",
+      "classificationReason": "Minimal liveness/readiness response contains no tenant data, mutation capability, or privileged operational detail.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain explicit public-read policy and regression coverage."
     },
     {
       "function": "in-app-notifications",
@@ -2062,6 +2324,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2079,6 +2343,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2096,6 +2362,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2113,6 +2381,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2130,6 +2400,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2147,6 +2419,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2164,6 +2438,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2180,6 +2456,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2196,6 +2474,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2212,6 +2492,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2219,18 +2501,20 @@
     {
       "function": "journal-summary",
       "path": "netlify/functions/journal-summary.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper journal content is tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "market-data-cache",
@@ -2245,6 +2529,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2262,6 +2548,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2279,6 +2567,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2295,6 +2585,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2312,6 +2604,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2329,6 +2623,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2346,6 +2642,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2363,6 +2661,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2380,6 +2680,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2396,6 +2698,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2413,6 +2717,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2430,6 +2736,8 @@
       "boundary": "organization",
       "permission": "paperTrading.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2446,6 +2754,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2462,6 +2772,8 @@
       "boundary": "organization-and-team",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2478,6 +2790,8 @@
       "boundary": "organization-and-team",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2495,6 +2809,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2511,6 +2827,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2527,6 +2845,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2543,6 +2863,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2559,6 +2881,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2575,6 +2899,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2582,18 +2908,20 @@
     {
       "function": "operator-actions",
       "path": "netlify/functions/operator-actions.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
-      "permission": null,
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Operator actions are scoped operational evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "operator-attention-queue",
@@ -2607,6 +2935,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2623,6 +2953,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2640,6 +2972,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2647,18 +2981,20 @@
     {
       "function": "orders",
       "path": "netlify/functions/orders.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper orders are tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "organization-administration",
@@ -2672,6 +3008,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2688,6 +3026,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2705,6 +3045,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2722,6 +3064,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2739,6 +3083,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2755,6 +3101,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2771,6 +3119,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2787,6 +3137,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2804,6 +3156,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2820,6 +3174,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2837,6 +3193,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2854,6 +3212,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2870,6 +3230,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2886,6 +3248,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2903,6 +3267,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2920,6 +3286,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2936,6 +3304,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2952,6 +3322,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2969,6 +3341,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -2986,6 +3360,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3002,6 +3378,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3019,6 +3397,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3035,6 +3415,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3051,6 +3433,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3068,6 +3452,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3084,6 +3470,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3101,6 +3489,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3117,6 +3507,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3134,6 +3526,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3150,6 +3544,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3166,6 +3562,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3183,6 +3581,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3199,6 +3599,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3215,6 +3617,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3222,34 +3626,38 @@
     {
       "function": "portfolio-summary",
       "path": "netlify/functions/portfolio-summary.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Legacy portfolio state is compatibility-only tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "positions",
       "path": "netlify/functions/positions.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper positions are tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "production-configuration-validation",
@@ -3264,6 +3672,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3281,6 +3691,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3298,6 +3710,8 @@
       "boundary": "organization",
       "permission": null,
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3315,6 +3729,8 @@
       "boundary": "organization-and-team",
       "permission": null,
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3332,6 +3748,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": null,
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3348,6 +3766,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3365,6 +3785,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3382,6 +3804,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3398,6 +3822,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3415,6 +3841,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3432,6 +3860,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3448,6 +3878,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3465,6 +3897,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3481,6 +3915,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3498,6 +3934,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3515,6 +3953,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3531,6 +3971,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3548,6 +3990,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3565,6 +4009,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3582,6 +4028,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3589,18 +4037,20 @@
     {
       "function": "recalculate-portfolio",
       "path": "netlify/functions/recalculate-portfolio.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy process-memory portfolio recomputation is owner/admin protected and non-canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "release-acceptance",
@@ -3615,6 +4065,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3631,6 +4083,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3647,6 +4101,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3663,6 +4119,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3679,6 +4137,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3696,6 +4156,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3712,6 +4174,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3729,6 +4193,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3745,6 +4211,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3762,6 +4230,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3779,6 +4249,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3795,6 +4267,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3812,6 +4286,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3828,6 +4304,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3845,6 +4323,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3861,6 +4341,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3878,6 +4360,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3895,6 +4379,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3912,6 +4398,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3929,6 +4417,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3945,6 +4435,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3962,6 +4454,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -3969,18 +4463,20 @@
     {
       "function": "release-runtime-health",
       "path": "netlify/functions/release-runtime-health.js",
-      "wrapper": "plain-api",
+      "wrapper": "authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
-      "permission": null,
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "workspace.admin",
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Release diagnostics are privileged operational information restricted to workspace administrators.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "remediation-effectiveness-review",
@@ -3994,6 +4490,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4010,6 +4508,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4026,6 +4526,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4042,6 +4544,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4058,6 +4562,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4075,6 +4581,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4091,6 +4599,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4107,6 +4617,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4114,18 +4626,20 @@
     {
       "function": "risk-summary",
       "path": "netlify/functions/risk-summary.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Risk output is tenant-sensitive decision evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "scanner-configurations",
@@ -4140,6 +4654,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4157,6 +4673,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4164,18 +4682,20 @@
     {
       "function": "scanners",
       "path": "netlify/functions/scanners.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Legacy scanner state is compatibility-only and requires organization membership.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "session-revoke",
@@ -4189,6 +4709,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4205,6 +4727,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4221,6 +4745,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4228,18 +4754,20 @@
     {
       "function": "signals",
       "path": "netlify/functions/signals.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Signal output is tenant-sensitive decision evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "strategy-suitability",
@@ -4253,6 +4781,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4260,34 +4790,38 @@
     {
       "function": "submit-paper-order",
       "path": "netlify/functions/submit-paper-order.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy paper-order mutation remains non-canonical and owner/admin protected.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "system-events",
       "path": "netlify/functions/system-events.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET"
       ],
       "access": "read",
-      "authenticated": false,
-      "boundary": "none",
-      "permission": null,
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
       "csrfRequired": false,
-      "risk": "high",
-      "priority": "P1",
-      "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "System events are scoped operational evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "team-workspace-administration",
@@ -4301,6 +4835,8 @@
       "boundary": "organization-and-team",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4318,6 +4854,8 @@
       "boundary": "organization-and-team",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4335,6 +4873,8 @@
       "boundary": "organization-and-team",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4351,6 +4891,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4367,6 +4909,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4383,6 +4927,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4399,6 +4945,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4415,6 +4963,8 @@
       "boundary": "authenticated-user/workspace-role",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4422,34 +4972,38 @@
     {
       "function": "update-alert",
       "path": "netlify/functions/update-alert.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "update-scanner",
       "path": "netlify/functions/update-scanner.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "POST"
       ],
       "access": "mutation",
-      "authenticated": false,
-      "boundary": "none",
+      "authenticated": true,
+      "boundary": "organization",
       "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "user-activity-risk-review",
@@ -4463,6 +5017,8 @@
       "boundary": "organization",
       "permission": "dashboard.read",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4479,9 +5035,11 @@
       "boundary": "none",
       "permission": null,
       "csrfRequired": false,
-      "risk": "medium",
-      "priority": "P2",
-      "remediation": "Document intentional public access or migrate to an authenticated wrapper."
+      "endpointClassification": "PUBLIC_READ",
+      "classificationReason": "Static supported-symbol universe contains no tenant data, mutation capability, or privileged operational detail.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain explicit public-read policy and regression coverage."
     },
     {
       "function": "workflow-sla-review",
@@ -4495,6 +5053,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4511,6 +5071,8 @@
       "boundary": "organization",
       "permission": "workspace.admin",
       "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
@@ -4518,19 +5080,21 @@
     {
       "function": "workspace-configurations",
       "path": "netlify/functions/workspace-configurations.js",
-      "wrapper": "plain-api",
+      "wrapper": "organization-authenticated",
       "methods": [
         "GET",
         "POST"
       ],
       "access": "read-and-mutation",
-      "authenticated": false,
-      "boundary": "none",
-      "permission": null,
-      "csrfRequired": false,
-      "risk": "critical",
-      "priority": "P0",
-      "remediation": "Require authentication, authorization, tenant scope where applicable, and CSRF protection."
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "ORGANIZATION_MUTATION",
+      "classificationReason": "Reads require membership; writes require owner/admin authority and account scope.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     }
   ]
 }

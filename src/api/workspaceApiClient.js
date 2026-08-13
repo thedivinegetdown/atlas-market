@@ -64,6 +64,25 @@ async function readJsonResponse(response, fallbackMessage) {
 }
 
 export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = readIdentityAccessToken } = {}) {
+  let csrfState = null
+
+  function clearCsrfState() {
+    csrfState = null
+  }
+
+  async function establishCsrf(transport, accessToken) {
+    if (!accessToken) throw new Error('Authentication is required before a mutation')
+    if (csrfState?.accessToken === accessToken && csrfState.expiresAt > Date.now() + 5_000) return csrfState.token
+    const response = await transport(buildUrl('csrf-token'), {
+      method: 'GET',
+      headers: { accept: 'application/json', authorization: `Bearer ${accessToken}` },
+    })
+    const payload = await readJsonResponse(response, 'Unable to establish request protection')
+    if (!response.ok || !payload?.data?.token) throw new Error(getErrorMessage(payload, 'Unable to establish request protection'))
+    csrfState = { accessToken, token: payload.data.token, expiresAt: new Date(payload.data.expiresAt).getTime() }
+    return csrfState.token
+  }
+
   async function request(path, params, fallbackMessage, options = {}) {
     const transport = fetchImpl ?? globalThis.fetch
     if (typeof transport !== 'function') {
@@ -72,17 +91,30 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
 
     const tokenResult = accessTokenProvider?.()
     const accessToken = tokenResult && typeof tokenResult.then === 'function' ? await tokenResult : tokenResult
-    const response = await transport(buildUrl(path, params), {
-      method: options.method ?? 'GET',
-      headers: {
-        accept: 'application/json',
-        ...(options.body ? { 'content-type': 'application/json' } : {}),
-        ...(options.body ? { 'x-csrf-token': 'atlas-client-request' } : {}),
-        ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
-      },
-      ...(options.body ? { body: JSON.stringify(options.body) } : {}),
-    })
-    const payload = await readJsonResponse(response, fallbackMessage)
+    if (csrfState && csrfState.accessToken !== accessToken) clearCsrfState()
+    const method = options.method ?? 'GET'
+    const mutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method)
+
+    async function send(csrfToken) {
+      const response = await transport(buildUrl(path, params), {
+        method,
+        headers: {
+          accept: 'application/json',
+          ...(options.body ? { 'content-type': 'application/json' } : {}),
+          ...(csrfToken ? { 'x-csrf-token': csrfToken } : {}),
+          ...(accessToken ? { authorization: `Bearer ${accessToken}` } : {}),
+        },
+        ...(options.body ? { body: JSON.stringify(options.body) } : {}),
+      })
+      return { response, payload: await readJsonResponse(response, fallbackMessage) }
+    }
+
+    let result = await send(mutation ? await establishCsrf(transport, accessToken) : null)
+    if (mutation && result.response.status === 403 && ['csrf_invalid', 'csrf_expired'].includes(result.payload?.error?.code)) {
+      clearCsrfState()
+      result = await send(await establishCsrf(transport, accessToken))
+    }
+    const { response, payload } = result
 
     if (response.status === 401) notifySessionExpired()
 
@@ -110,6 +142,7 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
   }
 
   return {
+    clearCsrfState,
     getWatchlist() {
       return request('watchlist', {}, 'Unable to load watchlist')
     },
@@ -155,15 +188,15 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     getSignal(symbol) {
-      return request('signals', { symbol }, 'Unable to load signal')
+      return request('signals', { symbol, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load signal')
     },
 
     getRiskSummary(symbol) {
-      return request('risk-summary', { symbol }, 'Unable to load risk summary')
+      return request('risk-summary', { symbol, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load risk summary')
     },
 
     getDecision(symbol) {
-      return request('decision', { symbol }, 'Unable to load decision intelligence')
+      return request('decision', { symbol, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load decision intelligence')
     },
 
     getPortfolioSummary() {
@@ -183,7 +216,7 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     getEquityCurve() {
-      return request('equity-curve', {}, 'Unable to load equity curve')
+      return request('equity-curve', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load equity curve')
     },
 
     getJournalSummary(filters = {}) {
@@ -191,11 +224,11 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     getOrders() {
-      return request('orders', {}, 'Unable to load orders')
+      return request('orders', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load orders')
     },
 
     getPositions() {
-      return request('positions', {}, 'Unable to load positions')
+      return request('positions', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load positions')
     },
 
     getAlerts() {
@@ -266,6 +299,8 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
       return request('submit-paper-order', {}, 'Unable to submit paper order', {
         method: 'POST',
         body: {
+          organizationId: 'org-atlas-local',
+          accountId: 'paper-portfolio',
           paperTrading: true,
           ...payload,
         },
@@ -275,17 +310,21 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     cancelPaperOrder(orderId) {
       return request('cancel-paper-order', {}, 'Unable to cancel paper order', {
         method: 'POST',
-        body: { orderId },
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', orderId },
       })
     },
 
     recalculatePortfolio() {
       return request('recalculate-portfolio', {}, 'Unable to recalculate portfolio', {
         method: 'POST',
-        body: { paperTrading: true },
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', paperTrading: true },
       })
     },
   }
 }
 
 export const workspaceApiClient = createWorkspaceApiClient()
+
+export function clearWorkspaceCsrfState() {
+  workspaceApiClient.clearCsrfState()
+}
