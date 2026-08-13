@@ -1,6 +1,6 @@
 # Canonical paper account and execution ledger
 
-Status: PI.3 repository implementation complete; deployed PostgreSQL execution not verified
+Status: PI.3 repository implementation and local PostgreSQL DB-V1 verification complete; deployed PostgreSQL execution not verified
 Scope: paper trading only
 
 ## Source-of-truth model
@@ -55,4 +55,14 @@ The canonical workflow fails closed with stable public codes when PostgreSQL is 
 
 ## Deployment verification still required
 
-No approved local or non-production PostgreSQL target was available for PI.3. The owner must apply/rehearse migration `202608130069_pi3_transactional_paper_account_ledger` on an approved restored non-production database, verify migration tracking and rollback, run two-tenant entry/exit concurrency checks, confirm pool capacity, then capture deployed authenticated PA.2/PA.4 evidence. Production must not be contacted for this verification without explicit approval.
+No approved PostgreSQL target was available during the original PI.3 implementation. DB-V1 later supplied local execution evidence below. The owner must still rehearse the migration on an approved deployment-like non-production target, confirm connection capacity, and capture deployed authenticated PA.2/PA.4 evidence. Production must not be contacted for this verification without explicit approval.
+
+## DB-V1 local PostgreSQL verification
+
+On 2026-08-13, DB-V1 ran against the owner-approved local, disposable `atlas_market_test` database on PostgreSQL 17.10. Verification used a uniquely named isolated schema, synthetic tenants/accounts/symbols only, separate connection pools, and removed that schema after completion.
+
+The run applied all 70 migrations from zero through `202608130069_pi3_transactional_paper_account_ledger`, verified migration tracking on rerun, and inspected 10 PI.3 indexes and 14 constraints. Genuine PostgreSQL execution proved one-time account initialization, cross-connection persistence, atomic entry, forced rollback without partial state, immutable execution and position persistence, partial reduction, full close, realized profit/loss/cash/cumulative P&L, duplicate entry/exit suppression, concurrent no-double-debit/no-over-close behavior, blocking `SELECT ... FOR UPDATE`, stale-revision denial, organization/account/user/team isolation, tenant-scoped fingerprints, safe timeout normalization, no production memory fallback, and deterministic PA.3/PA.5 consumption.
+
+The first real concurrency run exposed a deterministic account-id primary-key race because initialization targeted only the scope uniqueness constraint. The correction uses untargeted `ON CONFLICT DO NOTHING`, making either equivalent primary-key or scope uniqueness race idempotent before the canonical scoped read. A focused regression test covers this behavior, and the full DB-V1 run passed after correction.
+
+This local evidence does not prove deployed connection capacity, migration rollout ownership, backup/restore, retention, authenticated deployed PA.2/PA.4 behavior, or production availability.

@@ -136,6 +136,13 @@ describe('PI.3 durable paper account and immutable ledger', () => {
     expect(database.state.accounts).toHaveLength(1)
   })
 
+  it('treats both deterministic primary-key and scope uniqueness races as idempotent', () => {
+    const source = readFileSync('lib/opportunities/persistence/canonicalPaperLedgerRepository.js', 'utf8')
+    const initialization = source.slice(source.indexOf('INSERT INTO atlas_paper_accounts'), source.indexOf('SELECT * FROM atlas_paper_accounts'))
+    expect(initialization).toContain('ON CONFLICT DO NOTHING')
+    expect(initialization).not.toContain('ON CONFLICT (organization_id')
+  })
+
   it('keeps organizations, accounts, users, and teams isolated', async () => {
     const database = new PaperPgHarness(), repository = createCanonicalPaperLedgerRepository({ database })
     const variants = [scope(), scope({ accountId: 'other-account' }), scope({ tenantContext: { organizationId: 'org-b', teamWorkspaceId: 'team-a', userId: 'user-a' } }), scope({ tenantContext: { organizationId: 'org-a', teamWorkspaceId: 'team-b', userId: 'user-a' } }), scope({ userId: 'user-b', tenantContext: { organizationId: 'org-a', teamWorkspaceId: 'team-a', userId: 'user-b' } })]
