@@ -1,10 +1,12 @@
 # Atlas Market paper workflow persistence gap analysis
 
-Status: PI.3 canonical account, execution ledger, and position projection implemented
+Status: PI.4 production paper workflow persistence integration implemented
 PI.2 baseline: `02862dfe29788fc4eff5e2625bdb16de5fc03e02`
 Review date: 2026-08-11
 
 ## Decision
+
+PI.4 closes the repository-level gaps identified here: canonical portfolio and journal reads derive from PI.3, PA.3/PA.5 remain deterministic ledger consumers, Daily Briefing receives durable paper state, and scanner/alert definitions use tenant-scoped PostgreSQL storage. Legacy plain-wrapper memory Functions remain compatibility-only and deployed production verification remains an owner action. See [PI.4 durable paper workflow integration](./DURABLE_PAPER_WORKFLOW_INTEGRATION.md).
 
 Atlas's current paper workflow is not persistence-complete enough to trust across Netlify Function cold starts, separate Function instances, process restarts, or deployments.
 

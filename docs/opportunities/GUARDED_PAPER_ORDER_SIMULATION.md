@@ -26,3 +26,5 @@ Completed closing/reducing lifecycles can be reviewed by the read-only [Paper Pe
 ## PI.3 canonical accounting handoff
 
 After existing gates pass and the PI.2 intent is durably claimed, PA.2 commits the simulated fill through the PI.3 PostgreSQL transaction. Sizing and guardrails use the current durable account and open-position projection, not the process-local default account. The transaction verifies PA.1/PA.2 linkage, locks current state, appends the immutable execution, and updates account cash, buying power, equity, and cost basis. A duplicate ledger fingerprint performs no second mutation. The daily throttle remains explicitly non-distributed. See [Canonical paper account and execution ledger](../persistence/CANONICAL_PAPER_ACCOUNT_LEDGER.md).
+
+PI.4 changes no PA.2 decision, sizing, guardrail, simulation, or accounting formula. It exposes the canonical account/position/execution state through durable read projections; the legacy `submit-paper-order` account remains compatibility-only.

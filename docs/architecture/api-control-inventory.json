@@ -2,24 +2,24 @@
   "schemaVersion": 1,
   "generatedFrom": "netlify/functions/*.js",
   "summary": {
-    "total": 270,
+    "total": 273,
     "byWrapper": {
       "team-authenticated": 8,
-      "organization-authenticated": 216,
+      "organization-authenticated": 219,
       "authenticated": 18,
       "plain-api": 28,
       "unknown": 0
     },
     "byAccess": {
-      "read": 75,
+      "read": 76,
       "mutation": 56,
-      "read-and-mutation": 139
+      "read-and-mutation": 141
     },
     "byPriority": {
       "P0": 12,
       "P1": 8,
       "P2": 8,
-      "P3": 242
+      "P3": 245
     }
   },
   "functions": [
@@ -381,6 +381,23 @@
       "authenticated": true,
       "boundary": "organization",
       "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "alert-configurations",
+      "path": "netlify/functions/alert-configurations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
       "csrfRequired": true,
       "risk": "controlled",
       "priority": "P3",
@@ -3089,6 +3106,22 @@
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
+      "function": "paper-workspace-projection",
+      "path": "netlify/functions/paper-workspace-projection.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
       "function": "policy-attestations",
       "path": "netlify/functions/policy-attestations.js",
       "wrapper": "organization-authenticated",
@@ -4093,6 +4126,23 @@
       "risk": "high",
       "priority": "P1",
       "remediation": "Require authentication and the narrowest applicable user, organization, or team boundary."
+    },
+    {
+      "function": "scanner-configurations",
+      "path": "netlify/functions/scanner-configurations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
     },
     {
       "function": "scanner-production-health",

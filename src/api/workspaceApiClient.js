@@ -167,7 +167,7 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     getPortfolioSummary() {
-      return request('portfolio-summary', {}, 'Unable to load portfolio summary')
+      return request('paper-workspace-projection', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load portfolio summary')
     },
     getPaperPerformanceReview() {
       return request('paper-performance-review', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load paper performance review')
@@ -187,7 +187,7 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     getJournalSummary(filters = {}) {
-      return request('journal-summary', filters, 'Unable to load journal')
+      return request('paper-workspace-projection', { ...filters, view: 'journal', organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load journal')
     },
 
     getOrders() {
@@ -199,66 +199,66 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     getAlerts() {
-      return request('alerts', {}, 'Unable to load alerts')
+      return request('alert-configurations', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load alerts')
     },
 
     createAlert(payload) {
-      return request('create-alert', {}, 'Unable to create alert', {
+      return request('alert-configurations', {}, 'Unable to create alert', {
         method: 'POST',
-        body: payload,
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'create', alert: payload },
       })
     },
 
     updateAlert(payload) {
-      return request('update-alert', {}, 'Unable to update alert', {
+      return request('alert-configurations', {}, 'Unable to update alert', {
         method: 'POST',
-        body: payload,
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'update', id: payload.id, alert: payload },
       })
     },
 
     deleteAlert(id) {
-      return request('delete-alert', {}, 'Unable to delete alert', {
+      return request('alert-configurations', {}, 'Unable to delete alert', {
         method: 'POST',
-        body: { id },
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'delete', id },
       })
     },
 
     evaluateAlerts(context = {}) {
-      return request('evaluate-alerts', {}, 'Unable to evaluate alerts', {
+      return request('alert-configurations', {}, 'Unable to evaluate alerts', {
         method: 'POST',
-        body: context,
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'evaluate', context },
       })
     },
 
     getScanners() {
-      return request('scanners', {}, 'Unable to load scanners')
+      return request('scanner-configurations', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load scanners')
     },
 
     createScanner(payload) {
-      return request('create-scanner', {}, 'Unable to create scanner', {
+      return request('scanner-configurations', {}, 'Unable to create scanner', {
         method: 'POST',
-        body: payload,
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'create', scanner: payload },
       })
     },
 
     updateScanner(payload) {
-      return request('update-scanner', {}, 'Unable to update scanner', {
+      return request('scanner-configurations', {}, 'Unable to update scanner', {
         method: 'POST',
-        body: payload,
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'update', id: payload.id, scanner: payload },
       })
     },
 
     deleteScanner(id) {
-      return request('delete-scanner', {}, 'Unable to delete scanner', {
+      return request('scanner-configurations', {}, 'Unable to delete scanner', {
         method: 'POST',
-        body: { id },
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'delete', id },
       })
     },
 
     evaluateScanners() {
-      return request('evaluate-scanners', {}, 'Unable to evaluate scanners', {
+      return request('scanner-configurations', {}, 'Unable to evaluate scanners', {
         method: 'POST',
-        body: {},
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', action: 'evaluate' },
       })
     },
 

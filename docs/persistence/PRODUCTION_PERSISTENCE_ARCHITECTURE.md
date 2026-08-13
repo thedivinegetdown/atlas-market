@@ -48,9 +48,9 @@ The database owner must compare the provider's connection limit with expected fu
 | Paper simulation intent and fill | PI.2 history intent followed by PI.3 transaction | Durable-capable | organization + team + account + user | Intent claim precedes one atomic execution/account/position transaction | PI.3 verifies durable evidence before accounting; duplicate execution cannot mutate account twice |
 | Orders | `lib/repositories/store.js` array | Process-local only | No repository-level tenant key | None | Unsafe for multi-instance persistence; resets on cold start/redeploy |
 | Portfolio/accounting | PI.3 canonical paper account for intelligence workflow; legacy arrays elsewhere | Canonical flow durable-capable; legacy path process-local | organization + team + account + user | Transactional in PA.2/PA.4 | Legacy `submit-paper-order` remains compatibility-only |
-| Journal | Process-local repository array | Process-local only | No repository-level tenant key | None | Resets on cold start/redeploy |
-| Alerts | Process-local repository array | Process-local only | No repository-level tenant key | None | Cannot provide durable alert history across instances |
-| Scanner configuration/state | Process-local repository array | Process-local only | No repository-level tenant key | None | Configuration is not consistent across function instances |
+| Journal | Deterministic PI.3 execution projection; legacy array compatibility path | Canonical trade rows are durable-derived | organization + team + account + user | Read-only projection | Human notes remain outside the canonical trade ledger; legacy array is non-production |
+| Alerts | Existing PostgreSQL alert table for definitions; evaluations derived | Definitions durable, evaluations ephemeral | organization + team + account + user | Single scoped statements | Trigger history is not claimed as durable evidence |
+| Scanner configuration/state | Existing PostgreSQL scanner table for definitions; matches derived | Definitions durable, matches ephemeral | organization + team + account + user | Single scoped statements | Current market evidence is re-evaluated; matches are not a second source of truth |
 | Strategy configuration | Runtime/static configuration and workspace inputs | Process-local/config only | Context dependent | None | No canonical durable strategy repository was verified |
 | Workspace configuration/session records | Generic PostgreSQL stores | Durable-capable | Generic unscoped and scoped APIs both exist | Single statements | Unscoped legacy Function paths must not be treated as tenant-safe records |
 | Operator actions and system events | Generic PostgreSQL stores | Durable-capable | scoped paths: organization + team + optional user | Single statements | Older unscoped list/write Functions still exist; scoped consumers must use scoped methods |
@@ -70,7 +70,7 @@ PI.3 closes the canonical paper-account multi-write boundary: each entry/reducti
 
 ## Migration findings
 
-- 69 migration ids are unique and deterministically ordered.
+- 71 migration ids are unique and deterministically ordered.
 - The ledger table records applied ids; reruns skip recorded migrations.
 - Each pending migration is transactional and a failure is visible to the caller.
 - The migration corpus contains no `DROP TABLE`, `TRUNCATE`, or `DELETE FROM` operation.
@@ -111,3 +111,7 @@ Migration `202608130069_pi3_transactional_paper_account_ledger` creates additive
 Repository tests exercise initialization, restart continuity, rollback, concurrency, idempotency, long/short exits, tenant isolation, and migration constraints with a deterministic PostgreSQL transaction harness. No approved PostgreSQL target was available, so real database execution remains **NOT VERIFIED / OWNER ACTION REQUIRED**.
 
 DB-V1 subsequently verified the complete 70-migration chain and PI.3 transactional behavior against owner-approved local PostgreSQL 17.10 in an isolated disposable schema. Cross-connection duplicates, concurrent entry/exit serialization, row locking, revision conflicts, rollback, and tenant isolation passed with synthetic data. One account-initialization primary-key race was corrected and reverified. Deployed database capacity, migration rollout, backup/restore, and production behavior remain **NOT VERIFIED / OWNER ACTION REQUIRED**.
+
+## PI.4 durable workflow completion
+
+Migration `202608130070_pi4_durable_workspace_definitions` adds only account/user scope columns and composite tenant indexes to the existing scanner and alert tables. Canonical portfolio and journal reads derive from PI.3; scanner/alert definitions are durable while matches/evaluations remain derived. The approved local PostgreSQL target verified migration tracking, both indexes, durable reloads, cleanup, and cross-organization denial with synthetic data. Production rollout remains **NOT VERIFIED / OWNER ACTION REQUIRED**.

@@ -67,7 +67,14 @@ globalThis.fetch = async (input, init) => {
   }
 
   const functionName = url.pathname.slice(prefix.length)
-  const handler = handlers[functionName]
+  const method = init?.method ?? 'GET'
+  const parsedBody = init?.body ? JSON.parse(init.body) : {}
+  const compatibilityHandlers = {
+    'paper-workspace-projection': url.searchParams.get('view') === 'journal' ? journalSummaryHandler : portfolioSummaryHandler,
+    'alert-configurations': method === 'GET' ? alertsHandler : ({ create: createAlertHandler, update: updateAlertHandler, delete: deleteAlertHandler, evaluate: evaluateAlertsHandler })[parsedBody.action],
+    'scanner-configurations': method === 'GET' ? scannersHandler : ({ create: createScannerHandler, update: updateScannerHandler, delete: deleteScannerHandler, evaluate: evaluateScannersHandler })[parsedBody.action],
+  }
+  const handler = handlers[functionName] ?? compatibilityHandlers[functionName]
 
   if (!handler) {
     throw new Error(`No test handler registered for ${functionName}`)
@@ -76,8 +83,12 @@ globalThis.fetch = async (input, init) => {
   const queryStringParameters = Object.fromEntries(url.searchParams.entries())
   const response = await handler({
     queryStringParameters,
-    httpMethod: init?.method ?? 'GET',
-    body: init?.body ?? null,
+    httpMethod: method,
+    body: functionName === 'alert-configurations'
+      ? JSON.stringify(parsedBody.alert ?? parsedBody.context ?? { id: parsedBody.id })
+      : functionName === 'scanner-configurations'
+        ? JSON.stringify(parsedBody.scanner ?? { id: parsedBody.id })
+        : init?.body ?? null,
     headers: ['market-overview', 'strategy-suitability'].includes(functionName)
       ? { authorization: 'Bearer test-session', ...(init?.headers ?? {}) }
       : (init?.headers ?? {}),

@@ -10,19 +10,19 @@ This inventory reports source-level controls. It does not prove production ident
 
 | Classification | Count |
 | --- | ---: |
-| Total functions | 270 |
+| Total functions | 273 |
 | Wrapper: team-authenticated | 8 |
-| Wrapper: organization-authenticated | 216 |
+| Wrapper: organization-authenticated | 219 |
 | Wrapper: authenticated | 18 |
 | Wrapper: plain-api | 28 |
 | Wrapper: unknown | 0 |
-| Access: read | 75 |
+| Access: read | 76 |
 | Access: mutation | 56 |
-| Access: read-and-mutation | 139 |
+| Access: read-and-mutation | 141 |
 | Priority: P0 | 12 |
 | Priority: P1 | 8 |
 | Priority: P2 | 8 |
-| Priority: P3 | 242 |
+| Priority: P3 | 245 |
 
 ## Control semantics
 
@@ -57,6 +57,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `ai-trading-copilot-responses` | `netlify/functions/ai-trading-copilot-responses.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `ai-trading-copilot-trade-signal-explanations` | `netlify/functions/ai-trading-copilot-trade-signal-explanations.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `ai-trading-copilot-workflow-assistance` | `netlify/functions/ai-trading-copilot-workflow-assistance.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
+| `alert-configurations` | `netlify/functions/alert-configurations.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `alerts` | `netlify/functions/alerts.js` | GET | read | plain-api | none | no | medium | P2 | Document intentional public access or migrate to an authenticated wrapper. |
 | `atlas-ai-chat` | `netlify/functions/atlas-ai-chat.js` | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `atlas-ai-health` | `netlify/functions/atlas-ai-health.js` | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
@@ -220,6 +221,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `paper-report-schedules` | `netlify/functions/paper-report-schedules.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `paper-report-worker` | `netlify/functions/paper-report-worker.js` | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `paper-reports` | `netlify/functions/paper-reports.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
+| `paper-workspace-projection` | `netlify/functions/paper-workspace-projection.js` | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `policy-attestations` | `netlify/functions/policy-attestations.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `policy-control-assurance-health` | `netlify/functions/policy-control-assurance-health.js` | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `policy-exception-status-update` | `netlify/functions/policy-exception-status-update.js` | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
@@ -281,6 +283,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `revoke-other-sessions` | `netlify/functions/revoke-other-sessions.js` | POST | mutation | authenticated | authenticated-user/workspace-role | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `revoke-selected-session` | `netlify/functions/revoke-selected-session.js` | POST | mutation | authenticated | authenticated-user/workspace-role | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `risk-summary` | `netlify/functions/risk-summary.js` | GET | read | plain-api | none | no | high | P1 | Require authentication and the narrowest applicable user, organization, or team boundary. |
+| `scanner-configurations` | `netlify/functions/scanner-configurations.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `scanner-production-health` | `netlify/functions/scanner-production-health.js` | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `scanners` | `netlify/functions/scanners.js` | GET | read | plain-api | none | no | medium | P2 | Document intentional public access or migrate to an authenticated wrapper. |
 | `session-revoke` | `netlify/functions/session-revoke.js` | POST | mutation | authenticated | authenticated-user/workspace-role | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |

@@ -31,3 +31,5 @@ PA.5 derives the read-only [Paper Learning and Evidence Dashboard](./PAPER_LEARN
 ## PI.3 durable realized source
 
 PA.3 reads tenant-scoped reduction and close executions from the immutable PI.3 ledger. It maps those compact realized records into the existing deterministic review engine; formulas, sample thresholds, grouping, and advisory boundaries are unchanged. PA.5 consumes the same realized source. Neither endpoint persists derived analytics.
+
+PI.4 confirms this durable read model is also the source used by portfolio and journal projections. PA.3/PA.5 remain read-only and deterministic; no analytics snapshot table or formula was added.

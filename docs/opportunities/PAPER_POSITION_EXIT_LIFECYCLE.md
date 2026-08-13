@@ -27,3 +27,5 @@ Completed reductions and closes are consumed automatically by PA.3. Opening fill
 ## PI.3 durable lifecycle
 
 The authoritative PA.4 source is the tenant/account/user/team-scoped PI.3 PostgreSQL account and position projection. Confirmation and fresh-price controls are unchanged. One transaction locks the account and position, validates quantity, claims a unique exit fingerprint, appends the immutable reduction/close, updates account cash and cumulative realized P&L, and revision-updates or closes the position. Failures roll back all changes; retries return the prior result without reapplying accounting. The former `operatorActions` aggregate remains compatibility-only and is not called by PA.4.
+
+PI.4 projects every completed reduction/close into portfolio, journal, PA.3, and PA.5 reads without writing another trade ledger. No PA.4 lifecycle or P&L calculation changed.

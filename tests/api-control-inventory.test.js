@@ -11,16 +11,16 @@ describe('API control inventory', () => {
 
   it('covers every Netlify Function with a known shared wrapper', () => {
     const inventory = buildApiControlInventory()
-    expect(inventory.summary.total).toBe(270)
+    expect(inventory.summary.total).toBe(273)
     expect(inventory.summary.byWrapper).toEqual({
       'team-authenticated': 8,
-      'organization-authenticated': 216,
+      'organization-authenticated': 219,
       authenticated: 18,
       'plain-api': 28,
       unknown: 0,
     })
-    expect(inventory.summary.byAccess).toEqual({ read: 75, mutation: 56, 'read-and-mutation': 139 })
-    expect(inventory.summary.byPriority).toEqual({ P0: 12, P1: 8, P2: 8, P3: 242 })
+    expect(inventory.summary.byAccess).toEqual({ read: 76, mutation: 56, 'read-and-mutation': 141 })
+    expect(inventory.summary.byPriority).toEqual({ P0: 12, P1: 8, P2: 8, P3: 245 })
     expect(inventory.functions.filter((entry) => entry.priority === 'P0').map((entry) => entry.function)).toEqual([
       'cancel-paper-order',
       'create-alert',
@@ -35,7 +35,7 @@ describe('API control inventory', () => {
       'update-scanner',
       'workspace-configurations',
     ])
-    expect(inventory.functions).toHaveLength(270)
+    expect(inventory.functions).toHaveLength(273)
     expect(inventory.functions.every((entry) => entry.path.startsWith('netlify/functions/'))).toBe(true)
   })
 })

@@ -39,13 +39,13 @@ The generated [Markdown inventory](../architecture/API_CONTROL_INVENTORY.md) and
 | Wrapper/control | Count | Boundary represented in source |
 | --- | ---: | --- |
 | Team-authenticated | 8 | Organization and team |
-| Organization-authenticated | 216 | Organization |
+| Organization-authenticated | 219 | Organization |
 | Authenticated | 18 | Authenticated user/workspace role |
 | Plain shared API | 28 | None |
 | Unknown | 0 | N/A |
-| **Total** | **270** | |
+| **Total** | **273** | |
 
-Method classification is 75 read-only, 56 mutation-only, and 139 mixed read/mutation Functions. Source classification produces 12 P0, eight P1, eight P2, and 242 P3 entries.
+Method classification is 76 read-only, 56 mutation-only, and 141 mixed read/mutation Functions. Source classification produces 12 P0, eight P1, eight P2, and 245 P3 entries.
 
 ### P0 plain-wrapper mutations
 
@@ -134,3 +134,9 @@ AUTH.1 changes identity/session runtime behavior and adds `@netlify/identity`; i
 ## PI.3 persistence update
 
 PI.3 introduces no live trading, broker, authentication, AI, provider, strategy/scoring/regime/risk formula, database vendor, or paid-service change. It adds only the existing-PostgreSQL transactional paper account, immutable executions, and position projection used by PA.2/PA.4, while PA.3/PA.5 recompute realized analytics from the ledger. Real deployed migration and authenticated lifecycle evidence remain owner actions.
+
+## PI.4 persistence update
+
+PI.4 routes canonical browser portfolio/journal reads to deterministic PI.3 projections, supplies Daily Briefing with durable paper state, and persists scanner/alert definitions in the existing PostgreSQL tables under organization/team/account/user scope. Matches, alert evaluations, briefings, PA.3, and PA.5 remain derived. The old plain-wrapper memory Functions remain compatibility-only pending separately authorized retirement/control work.
+
+The additive PI.4 migration and definition persistence were verified on the approved local non-production PostgreSQL database with synthetic records. Migration tracking, composite indexes, repository re-instantiation, cleanup, and cross-organization denial passed. Production migration rollout, backups/restores, capacity, retention, and authenticated deployed smoke/E2E remain **NOT VERIFIED / OWNER ACTION REQUIRED**.
