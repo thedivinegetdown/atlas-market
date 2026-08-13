@@ -273,6 +273,12 @@ describe('AUTH.2 API surface regression', () => {
     expect(inventory.summary.byPriority).toEqual({ P0: 0, P1: 0, P2: 0, P3: 274 })
   })
 
+  it('forces Netlify Identity for non-production deploy and branch previews', () => {
+    const configuration = readFileSync(join(process.cwd(), 'netlify.toml'), 'utf8')
+    expect(configuration).toMatch(/\[context\.deploy-preview\.environment\][\s\S]*ATLAS_AUTH_MODE\s*=\s*"netlify-identity"/)
+    expect(configuration).toMatch(/\[context\.branch-deploy\.environment\][\s\S]*ATLAS_AUTH_MODE\s*=\s*"netlify-identity"/)
+  })
+
   it('keeps legacy paper mutations compatibility-only and preserves paper-only boundaries', () => {
     const inventory = buildApiControlInventory()
     for (const name of ['submit-paper-order', 'cancel-paper-order', 'recalculate-portfolio']) {
