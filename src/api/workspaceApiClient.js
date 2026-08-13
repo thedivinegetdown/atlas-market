@@ -176,10 +176,10 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
       return request('paper-learning', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load paper learning evidence')
     },
     getPaperExitPositions() {
-      return request('paper-position-exit', { organizationId: 'org-atlas-local' }, 'Unable to load simulated paper positions')
+      return request('paper-position-exit', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load simulated paper positions')
     },
     exitPaperPosition(positionId, quantity) {
-      return request('paper-position-exit', {}, 'Unable to simulate paper position exit', { method: 'POST', body: { organizationId: 'org-atlas-local', positionId, quantity, confirmed: true, paperTrading: true } })
+      return request('paper-position-exit', {}, 'Unable to simulate paper position exit', { method: 'POST', body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', positionId, quantity, confirmed: true, paperTrading: true } })
     },
 
     getEquityCurve() {

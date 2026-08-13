@@ -1,7 +1,7 @@
 # Atlas Market paper workflow persistence gap analysis
 
-Status: PI.1 audit and architecture decision record; PI.2 canonical evidence handoff implemented
-PI.2 baseline: `9d6570d36596118311b1d0f6fef45c4944884d66`
+Status: PI.3 canonical account, execution ledger, and position projection implemented
+PI.2 baseline: `02862dfe29788fc4eff5e2625bdb16de5fc03e02`
 Review date: 2026-08-11
 
 ## Decision
@@ -23,13 +23,13 @@ PI.1 made no runtime, schema, provider, authentication, AI, risk, or trading cha
 
 The production intelligence workflow is now explicitly:
 
-**Reviewed Opportunity → PA.1 Controlled Paper Evaluation → PA.2 Guarded Paper Simulation → future PI.3 ledger**
+**Reviewed Opportunity → PA.1 Controlled Paper Evaluation → PA.2 Guarded Paper Simulation → PI.3 transactional account/execution/position ledger → PA.4 reduction/close → PA.3/PA.5 deterministic analytics**
 
 An eligible Trade Quality review is sent from the browser to the authenticated `opportunity-intelligence` mutation. That Function, `paper-evaluation`, and `paper-order-simulation` all resolve the same DB.1 PostgreSQL repository supplied by the authenticated persistence wrapper. A disconnected repository returns the stable 503 code `durable_paper_evidence_unavailable`; production never accepts these records into an implicit memory fallback. Test/development memory repositories must be explicitly injected and are rejected when marked as memory in production.
 
 The existing `atlas_ai_opportunity_analysis_history` table remains the durable evidence source. Records retain organization, nullable team, account, and user scope. Tenant-scoped SHA-256 record ids plus `ON CONFLICT` enforce idempotency across cold starts, instances, deployments, and retries without a schema change. Reviewed TQ snapshots carry a deterministic compact-evidence fingerprint; PA.1 includes it in its evaluation fingerprint; PA.2 stores the PA.1 evidence fingerprint with the proposed plan, guardrail outcome, status, and version metadata. Raw candles, provider payloads, credentials, and prompts are excluded.
 
-Legacy `submit-paper-order` and the process-memory order/portfolio/journal repositories are compatibility-only and are not called by this canonical intelligence workflow. PA.2 still reads the existing portfolio summary as a temporary sizing/guardrail input and writes the existing paper-position compatibility projection after a newly committed filled intent. Neither is accounting truth. PI.3 remains responsible for the canonical account, immutable execution ledger, positions/cost basis, exits, realized P&L, and atomic account/position continuity. The PA.2 intent and position projection remain separate writes until PI.3.
+Legacy `submit-paper-order` and the process-memory order/portfolio/journal repositories remain compatibility-only. PI.3 now supplies PA.2 with the canonical durable account and positions, transactionally commits the immutable entry plus account and position projection, and makes PA.4 transactionally commit reductions/closes and realized P&L. PA.3/PA.5 recompute from realized immutable executions. The legacy position aggregate is no longer called by the canonical path.
 
 No migration, dependency, database vendor, live broker, account mutation repository, authentication, scoring, strategy, risk-formula, AI, or provider change was added by PI.2.
 
@@ -304,3 +304,9 @@ PI.1 has no infrastructure cost. The recommended future path uses the existing P
 ## Explicit non-changes
 
 PI.1 changes documentation only. Application behavior, AUTH.1/AUTH.2, endpoint authorization, CSRF, trading and risk logic, AI behavior, market providers, database schema/vendor, billing, and paid-service behavior remain unchanged.
+
+## PI.3 closure update
+
+PI.3 adds migration `202608130069_pi3_transactional_paper_account_ledger` and closes the accounting-continuity P0 design gap at repository level. Account initialization is once per scope, entries and exits use one PostgreSQL transaction, locks and revisions protect current state, and database uniqueness provides restart-safe idempotency. Details are in [Canonical paper account and execution ledger](./CANONICAL_PAPER_ACCOUNT_LEDGER.md).
+
+Deployed migration, transaction, concurrency, pool-capacity, backup, and restore evidence remains **NOT VERIFIED / OWNER ACTION REQUIRED**. The legacy public paper-order path, transactional distributed daily quota, and deployed authenticated smoke exercise remain outside PI.3.

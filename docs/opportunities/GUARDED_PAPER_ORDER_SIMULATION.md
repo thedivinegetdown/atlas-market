@@ -17,8 +17,12 @@ PA.2 reuses `simulateRealtimePaperExecution`. That existing lifecycle calculates
 
 No raw candles, provider payloads, credentials, or AI payloads are stored. The endpoint makes no market-data request and fails closed with `durable_paper_evidence_unavailable` if the canonical database repository is disconnected. Scanner is labeled **PAPER ONLY**; Dashboard has no execution control.
 
-The durable PA.2 record is execution intent/audit evidence, not the cash/account/position ledger. The current portfolio summary input, daily-limit calculation, and paper-position aggregate are compatibility projections pending PI.3. PI.3 must add the canonical account, execution ledger, account-scoped positions, exits, realized P&L, and the transaction that applies them atomically.
+The durable PI.2 record remains execution intent/audit evidence. PI.3 now supplies the separate canonical cash/account/position source and atomically commits the immutable execution, account mutation, and position projection after the intent claim. The daily-limit calculation remains a history-derived, non-distributed throttle.
 
 Statuses are `SIMULATED_FILLED`, `SIMULATION_REJECTED`, `DUPLICATE_SUPPRESSED`, `STALE`, `INSUFFICIENT_ORDER_CONTEXT`, and `ERROR`. They describe simulated outcomes only, never real orders or unattended authorization.
 
 Completed closing/reducing lifecycles can be reviewed by the read-only [Paper Performance Review](./PAPER_PERFORMANCE_REVIEW.md). Opening fills are not treated as completed performance outcomes.
+
+## PI.3 canonical accounting handoff
+
+After existing gates pass and the PI.2 intent is durably claimed, PA.2 commits the simulated fill through the PI.3 PostgreSQL transaction. Sizing and guardrails use the current durable account and open-position projection, not the process-local default account. The transaction verifies PA.1/PA.2 linkage, locks current state, appends the immutable execution, and updates account cash, buying power, equity, and cost basis. A duplicate ledger fingerprint performs no second mutation. The daily throttle remains explicitly non-distributed. See [Canonical paper account and execution ledger](../persistence/CANONICAL_PAPER_ACCOUNT_LEDGER.md).
