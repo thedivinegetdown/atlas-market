@@ -77,3 +77,7 @@ The Dashboard route remains lazy-loaded. Other workspaces do not import or reque
 - Portfolio concentration is absent from the existing summary contract.
 - Broader runtime health exists across specialized endpoints; DB.1 conservatively uses the already-resolved quote health to avoid another provider request.
 - Optional Atlas Copilot narrative summarization remains future scope. The core briefing will remain deterministic and must never rely on AI availability or fabricate facts.
+
+## PI.4 durable paper context
+
+The authenticated briefing Function supplies the deterministic engine with the PI.3-derived paper portfolio projection and tenant-scoped durable alert definitions. It still performs one existing market-overview request and adds no quote, candle, AI, or provider request. The briefing remains ephemeral; Atlas does not persist it as accounting or trading evidence. If canonical PostgreSQL state is unavailable, the production request fails closed instead of substituting process memory.

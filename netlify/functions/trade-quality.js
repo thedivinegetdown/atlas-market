@@ -2,7 +2,7 @@ import { createWorkspaceDataService } from '../../lib/workspace/workspaceDataSer
 import { requireSymbol } from '../../lib/workspace/validators.js'
 import { createAuthenticatedApiHandler } from './_shared/authApi.js'
 
-const ALLOWED_QUERY_FIELDS = new Set(['symbol', 'timeframe', 'asOf', 'scannerSource'])
+const ALLOWED_QUERY_FIELDS = new Set(['symbol', 'timeframe', 'asOf', 'scannerSource', 'opportunityId', 'strategyId'])
 const ALLOWED_TIMEFRAMES = new Set(['1D', 'D', 'DAY', 'DAILY', '1DAY'])
 
 export function createTradeQualityHandler({ serviceFactory = createWorkspaceDataService, ...handlerOptions } = {}) {
@@ -20,6 +20,8 @@ export function createTradeQualityHandler({ serviceFactory = createWorkspaceData
       asOf: asOf || undefined,
       timeframe,
       scannerSource: String(query.scannerSource ?? 'deterministic-scanner').slice(0, 80),
+      opportunityId: String(query.opportunityId ?? '').trim().slice(0, 160) || undefined,
+      strategyId: String(query.strategyId ?? '').trim().slice(0, 140) || undefined,
     }, { timeframe })
   }, { requiredPermission: 'dashboard.read', routeId: 'trade-quality', ...handlerOptions })
 }

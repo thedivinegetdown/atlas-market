@@ -18,6 +18,7 @@ import {
   verifyGeneratedArtifacts,
 } from '../scripts/release-verify.mjs'
 import { createReleaseRuntimeHealthHandler } from '../netlify/functions/release-runtime-health.js'
+import { auth2Headers } from './helpers/auth2Fixtures.js'
 import { ReleaseDiagnosticsPanel } from '../src/components/ReleaseDiagnosticsPanel.jsx'
 
 const tenantContext = { organizationId: 'org-atlas-local', teamWorkspaceId: null, userId: 'local-development:user-1', role: 'owner' }
@@ -171,7 +172,7 @@ describe('Phase 90 metadata, endpoint, and diagnostics UI', () => {
   it('serves compact sanitized runtime health from the Netlify handler', async () => {
     const response = await createReleaseRuntimeHealthHandler({ env: { NODE_ENV: 'test', TRADING_MODE: 'paper' }, databaseAvailable: true, aiProviderAvailable: false })({
       httpMethod: 'GET',
-      headers: { 'x-request-id': 'req-phase90' },
+      headers: { ...auth2Headers(), 'x-request-id': 'req-phase90' },
       queryStringParameters: { mode: 'summary' },
     })
     const json = JSON.parse(response.body)

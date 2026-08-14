@@ -10,6 +10,7 @@ import { handler as submitPaperOrderHandler } from '../netlify/functions/submit-
 import { ASSET_TYPES, getAssetProfileForSymbol, getQuantityLabel } from '../lib/assets/index.js'
 import { getStore, resetStore } from '../lib/repositories/store.js'
 import { OrderEntryPanel } from '../src/components/OrderEntryPanel.jsx'
+import { auth2Body, auth2Headers, auth2Query } from './helpers/auth2Fixtures.js'
 
 const freshQuote = {
   symbol: 'AAPL',
@@ -42,13 +43,13 @@ function parseResponse(response) {
 async function invokePost(handler, body) {
   return parseResponse(await handler({
     httpMethod: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
+    headers: auth2Headers(),
+    body: JSON.stringify(auth2Body(body)),
   }))
 }
 
 async function invokeGet(handler, queryStringParameters = {}) {
-  return parseResponse(await handler({ queryStringParameters }))
+  return parseResponse(await handler({ queryStringParameters: auth2Query(queryStringParameters), headers: auth2Headers() }))
 }
 
 function validOrder(overrides = {}) {

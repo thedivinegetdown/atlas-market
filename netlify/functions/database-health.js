@@ -1,7 +1,8 @@
-import { createPersistenceApiHandler, apiFoundationEvent } from './_shared/persistenceApi.js'
+import { apiFoundationEvent } from './_shared/persistenceApi.js'
+import { createAuthenticatedApiHandler } from './_shared/authApi.js'
 
 export function createDatabaseHealthHandler(options = {}) {
-  return createPersistenceApiHandler(async ({ repository, requestId }) => {
+  return createAuthenticatedApiHandler(async ({ repository, requestId }) => {
   const initialization = await repository.initialize()
   const health = initialization.health ?? await repository.healthCheck()
   return {
@@ -10,7 +11,7 @@ export function createDatabaseHealthHandler(options = {}) {
     migration: initialization.migration,
     event: apiFoundationEvent({ requestId, endpoint: 'database-health', status: health.status }),
   }
-  }, options)
+  }, { requiredPermission: 'workspace.admin', routeId: 'database-health', ...options })
 }
 
 export const handler = createDatabaseHealthHandler()

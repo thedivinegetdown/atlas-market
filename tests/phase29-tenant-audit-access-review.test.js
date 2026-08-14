@@ -121,7 +121,9 @@ describe('Phase 29A tenant-scoped data isolation foundation', () => {
   })
 
   it('enforces parameterized tenant-aware scoped repository access', async () => {
-    const query = vi.fn(async () => ({ rows: [] }))
+    const query = vi.fn(async (sql, params = []) => ({
+      rows: sql.startsWith('INSERT INTO') ? [{ id: params[0], payload: params[1] }] : [],
+    }))
     const repository = createPostgresRepository({ database: { connected: true, query, healthCheck: vi.fn(), transaction: vi.fn() } })
 
     await upsertTenantWorkspaceConfiguration(repository, 'workspace-1', { layout: 'ops' }, tenantContext)

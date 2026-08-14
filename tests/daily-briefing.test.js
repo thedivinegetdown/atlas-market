@@ -63,7 +63,13 @@ describe('deterministic Daily Briefing', () => {
     const service = { getDailyBriefing: vi.fn().mockResolvedValue({ briefing: buildDailyBriefing(base()) }) }
     const opportunityRepository = { listTradeQualityReviews: vi.fn().mockResolvedValue([]), listPaperEvaluations: vi.fn().mockResolvedValue([]) }
     const organizationMembershipRepository = { getMembership: vi.fn().mockResolvedValue({ organizationId: 'org-atlas-local', userId: 'local-development:local-operator', role: 'owner', status: 'active' }) }
-    const handler = createDailyBriefingHandler({ serviceFactory: () => service, opportunityRepository, organizationMembershipRepository, repositoryFactory: () => ({ end: vi.fn() }), logger: { info: vi.fn(), error: vi.fn() }, env: {} })
+    const ledgerRepository = {
+      persistenceMode: 'postgresql',
+      getOrCreateAccount: vi.fn().mockResolvedValue({ account: { cash: 100000, buyingPower: 100000, equity: 100000 }, positions: [] }),
+      listExecutions: vi.fn().mockResolvedValue([]),
+    }
+    const durableRepository = { persistenceMode: 'postgresql', listAlerts: vi.fn().mockResolvedValue([]) }
+    const handler = createDailyBriefingHandler({ serviceFactory: () => service, opportunityRepository, ledgerRepository, durableRepository, organizationMembershipRepository, repositoryFactory: () => ({ end: vi.fn() }), logger: { info: vi.fn(), error: vi.fn() }, env: {} })
     expect((await handler({ httpMethod: 'GET', queryStringParameters: {}, headers: {} })).statusCode).toBe(401)
     const response = await handler({ httpMethod: 'GET', queryStringParameters: { symbol: 'SPY', organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, headers: { authorization: 'Bearer private-session' } })
     expect(response.statusCode).toBe(200)

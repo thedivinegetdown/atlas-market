@@ -1,6 +1,7 @@
 import { AlertsPanel, DiagnosticsPanel, MarketOverviewPanel, PortfolioSummaryPanel, WatchlistPanel } from '../../components/panels.jsx'
 import { MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useDailyBriefing } from '../../hooks/useDailyBriefing.js'
+import { MarketDataStatus } from '../../components/MarketDataStatus.jsx'
 
 function display(value) { return String(value ?? 'UNKNOWN').replaceAll('_', ' ') }
 
@@ -12,6 +13,7 @@ export function DailyBriefingPanel({ state } = {}) {
   if (resolved.error && !briefing) return <WorkspacePanel id="daily-briefing" title="Atlas Daily Briefing" subtitle="Command Center intelligence"><p role="alert">Daily briefing is unavailable.</p></WorkspacePanel>
   if (!briefing) return <WorkspacePanel id="daily-briefing" title="Atlas Daily Briefing" subtitle="Command Center intelligence"><p role="status">Briefing evidence is insufficient.</p></WorkspacePanel>
   return <WorkspacePanel id="daily-briefing" title="Atlas Daily Briefing" subtitle={`${display(briefing.status)} · ${briefing.asOf ? new Date(briefing.asOf).toLocaleString() : 'As-of time unavailable'}`}>
+    <MarketDataStatus provenance={briefing.market?.marketData} />
     <div className="metric-grid">
       <MetricCard label="Briefing Status" value={display(briefing.status)} />
       <MetricCard label="Trend Regime" value={display(briefing.market?.trendRegime)} />

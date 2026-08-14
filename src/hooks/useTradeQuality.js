@@ -11,8 +11,17 @@ export function useTradeQuality(candidate) {
     setError(null)
     try {
       const response = await workspaceApiClient.getTradeQuality(candidate)
-      setResult({ candidateKey: `${candidate.symbol}:${candidate.evaluatedAt ?? ''}`, quality: response.quality ?? null })
-      return response.quality ?? null
+      const quality = response.quality ?? null
+      const eligibleForDurableReview = quality?.score != null && quality?.opportunityId && quality?.strategyId && quality.strategyId !== 'strategy-unknown'
+      if (eligibleForDurableReview) {
+        await workspaceApiClient.saveReviewedOpportunity({
+          ...quality,
+          reviewState: 'reviewed',
+          orderContext: candidate.orderContext ?? null,
+        })
+      }
+      setResult({ candidateKey: `${candidate.symbol}:${candidate.evaluatedAt ?? ''}`, quality })
+      return quality
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to evaluate trade quality')
       return null

@@ -12,6 +12,7 @@ import { handler as evaluateScannersHandler } from '../netlify/functions/evaluat
 import { handler as scannersHandler } from '../netlify/functions/scanners.js'
 import { handler as updateScannerHandler } from '../netlify/functions/update-scanner.js'
 import { ScannerPanel } from '../src/components/panels.jsx'
+import { auth2Body, auth2Headers, auth2Query } from './helpers/auth2Fixtures.js'
 
 let root = null
 let container = null
@@ -35,8 +36,8 @@ function parseResponse(response) {
 function postEvent(body) {
   return {
     httpMethod: 'POST',
-    headers: { 'content-type': 'application/json', 'x-request-id': 'req-scanners' },
-    body: JSON.stringify(body),
+    headers: { ...auth2Headers(), 'x-request-id': 'req-scanners' },
+    body: JSON.stringify(auth2Body(body)),
   }
 }
 
@@ -166,7 +167,7 @@ describe('Part 13C scanner foundation', () => {
       criteria: [{ type: SCANNER_CRITERIA.PRICE_ABOVE, threshold: 100 }],
       enabled: true,
     })))
-    const listed = parseResponse(await scannersHandler({ httpMethod: 'GET', headers: { 'x-request-id': 'req-scanners' } }))
+    const listed = parseResponse(await scannersHandler({ httpMethod: 'GET', headers: { ...auth2Headers(), 'x-request-id': 'req-scanners' }, queryStringParameters: auth2Query() }))
     const updated = parseResponse(await updateScannerHandler(postEvent({
       id: created.json.data.scanner.id,
       name: 'Momentum Updated',

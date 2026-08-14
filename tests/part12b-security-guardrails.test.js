@@ -3,6 +3,7 @@ import { createApiHandler } from '../netlify/functions/_shared/api.js'
 import { createRateLimiter } from '../lib/security/rateLimiter.js'
 import { createLogger, redactSecrets } from '../lib/logging/logger.js'
 import { handler as submitPaperOrderHandler } from '../netlify/functions/submit-paper-order.js'
+import { auth2Body, auth2Headers } from './helpers/auth2Fixtures.js'
 
 function parseResponse(response) {
   return {
@@ -13,14 +14,15 @@ function parseResponse(response) {
 }
 
 function postEvent(body, headers = {}) {
+  const parsedBody = typeof body === 'string' ? body : JSON.stringify(auth2Body(body))
   return {
     httpMethod: 'POST',
     headers: {
-      'content-type': 'application/json',
+      ...auth2Headers(),
       'x-request-id': 'req-security-test',
       ...headers,
     },
-    body: typeof body === 'string' ? body : JSON.stringify(body),
+    body: parsedBody,
   }
 }
 

@@ -2,7 +2,7 @@
 
 Version: `paper-performance-review-v1`
 
-PA.3 is a deterministic, read-only review of completed simulated paper outcomes. It extends Atlas's existing paper-performance analytics and reads tenant/user-scoped compact simulation history. It creates no ledger, migration, provider request, order, or background process.
+PA.3 is a deterministic, read-only review of completed simulated paper outcomes. It extends Atlas's existing paper-performance analytics and reads tenant/account/user/team-scoped realized executions from the PI.3 immutable ledger. It creates no provider request, order, mutation, or background process.
 
 ## Eligible records and exclusions
 
@@ -27,3 +27,9 @@ The Reports workspace exposes a compact authenticated review with explicit paper
 PA.4 [paper position exits](./PAPER_POSITION_EXIT_LIFECYCLE.md) provide the genuine closing/reducing lifecycle records consumed by this review.
 
 PA.5 derives the read-only [Paper Learning and Evidence Dashboard](./PAPER_LEARNING_EVIDENCE.md) from this bounded read model without changing these formulas.
+
+## PI.3 durable realized source
+
+PA.3 reads tenant-scoped reduction and close executions from the immutable PI.3 ledger. It maps those compact realized records into the existing deterministic review engine; formulas, sample thresholds, grouping, and advisory boundaries are unchanged. PA.5 consumes the same realized source. Neither endpoint persists derived analytics.
+
+PI.4 confirms this durable read model is also the source used by portfolio and journal projections. PA.3/PA.5 remain read-only and deterministic; no analytics snapshot table or formula was added.

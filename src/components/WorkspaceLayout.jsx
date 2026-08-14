@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { FeaturePanelFallback } from './LazyFeatureBoundary.jsx'
 import { WorkspaceIcon } from './WorkspaceIcon.jsx'
 import { getWorkspaceRoute, workspaceRoutes } from '../workspaces/workspaceRoutes.js'
+import { useIdentityAuth } from '../auth/identityAuthContext.js'
 
 function WorkspaceBreadcrumb({ activeRoute }) {
   return (
@@ -87,6 +88,7 @@ function WorkspaceSidebar({ activeRoute, onNavigate, navRef }) {
 }
 
 export function WorkspaceLayout() {
+  const auth = useIdentityAuth()
   const location = useLocation()
   const activeRoute = getWorkspaceRoute(location.pathname)
   const [isSidebarOpen, setSidebarOpen] = useState(false)
@@ -155,6 +157,7 @@ export function WorkspaceLayout() {
             <span className="paper-pill">Paper Trading only</span>
             <span className="timestamp">{activeRoute.description}</span>
             <NavLink to="/settings" className="top-nav-settings">Settings</NavLink>
+            <button type="button" className="top-nav-logout" onClick={auth.logout}>Sign out</button>
           </div>
         </header>
         <div className="workspace-route-content" key={location.pathname}>

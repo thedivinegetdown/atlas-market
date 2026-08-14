@@ -193,8 +193,15 @@ describe('Part 10D paper execution', () => {
     expect(container.textContent).toContain('Risk %')
   })
 
-  it('exposes order entry, orders, and positions hook behavior', () => {
+  it('exposes order entry, orders, and positions hook behavior', async () => {
     renderWithRoot(<HookProbe />)
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+      await Promise.resolve()
+    })
 
     expect(container.textContent).toContain('AAPL')
     expect(orderRepository.list().length).toBe(1)

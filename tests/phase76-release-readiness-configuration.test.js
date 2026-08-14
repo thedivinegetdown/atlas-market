@@ -109,6 +109,8 @@ describe('Phase 76B production configuration validation', () => {
         API_BASE_URL: 'configured',
         ALLOWED_ORIGINS: 'configured',
         MARKET_DATA_PROVIDER: 'mock',
+        ATLAS_AUTH_MODE: 'netlify-identity',
+        NETLIFY_IDENTITY_URL: 'https://atlas.example/.netlify/identity',
       },
       tenantConfiguration: { configured: true },
       securityConfiguration: { originValidation: true },

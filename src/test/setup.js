@@ -23,12 +23,14 @@ import { handler as cancelPaperOrderHandler } from '../../netlify/functions/canc
 import { handler as watchlistHandler } from '../../netlify/functions/watchlist.js'
 import { handler as updateAlertHandler } from '../../netlify/functions/update-alert.js'
 import { handler as updateScannerHandler } from '../../netlify/functions/update-scanner.js'
+import { handler as csrfTokenHandler } from '../../netlify/functions/csrf-token.js'
 
 const handlers = {
   alerts: alertsHandler,
   'cancel-paper-order': cancelPaperOrderHandler,
   'create-alert': createAlertHandler,
   'create-scanner': createScannerHandler,
+  'csrf-token': csrfTokenHandler,
   'delete-alert': deleteAlertHandler,
   'delete-scanner': deleteScannerHandler,
   decision: decisionHandler,
@@ -53,6 +55,7 @@ const handlers = {
 }
 
 const originalFetch = globalThis.fetch
+if (globalThis.document) globalThis.document.cookie = 'nf_jwt=dev-token; path=/'
 
 globalThis.fetch = async (input, init) => {
   const requestUrl = typeof input === 'string' ? input : input?.url
@@ -67,7 +70,14 @@ globalThis.fetch = async (input, init) => {
   }
 
   const functionName = url.pathname.slice(prefix.length)
-  const handler = handlers[functionName]
+  const method = init?.method ?? 'GET'
+  const parsedBody = init?.body ? JSON.parse(init.body) : {}
+  const compatibilityHandlers = {
+    'paper-workspace-projection': url.searchParams.get('view') === 'journal' ? journalSummaryHandler : portfolioSummaryHandler,
+    'alert-configurations': method === 'GET' ? alertsHandler : ({ create: createAlertHandler, update: updateAlertHandler, delete: deleteAlertHandler, evaluate: evaluateAlertsHandler })[parsedBody.action],
+    'scanner-configurations': method === 'GET' ? scannersHandler : ({ create: createScannerHandler, update: updateScannerHandler, delete: deleteScannerHandler, evaluate: evaluateScannersHandler })[parsedBody.action],
+  }
+  const handler = handlers[functionName] ?? compatibilityHandlers[functionName]
 
   if (!handler) {
     throw new Error(`No test handler registered for ${functionName}`)
@@ -76,8 +86,12 @@ globalThis.fetch = async (input, init) => {
   const queryStringParameters = Object.fromEntries(url.searchParams.entries())
   const response = await handler({
     queryStringParameters,
-    httpMethod: init?.method ?? 'GET',
-    body: init?.body ?? null,
+    httpMethod: method,
+    body: functionName === 'alert-configurations'
+      ? JSON.stringify(parsedBody.alert ?? parsedBody.context ?? { id: parsedBody.id })
+      : functionName === 'scanner-configurations'
+        ? JSON.stringify(parsedBody.scanner ?? { id: parsedBody.id })
+        : init?.body ?? null,
     headers: ['market-overview', 'strategy-suitability'].includes(functionName)
       ? { authorization: 'Bearer test-session', ...(init?.headers ?? {}) }
       : (init?.headers ?? {}),

@@ -1,0 +1,5100 @@
+{
+  "schemaVersion": 2,
+  "generatedFrom": "netlify/functions/*.js",
+  "summary": {
+    "total": 274,
+    "byWrapper": {
+      "team-authenticated": 8,
+      "organization-authenticated": 243,
+      "authenticated": 21,
+      "plain-api": 2,
+      "unknown": 0
+    },
+    "byAccess": {
+      "read": 77,
+      "mutation": 56,
+      "read-and-mutation": 141
+    },
+    "byPriority": {
+      "P0": 0,
+      "P1": 0,
+      "P2": 0,
+      "P3": 274
+    }
+  },
+  "functions": [
+    {
+      "function": "access-certification",
+      "path": "netlify/functions/access-certification.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "account-health",
+      "path": "netlify/functions/account-health.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "account-profile-update",
+      "path": "netlify/functions/account-profile-update.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "active-sessions",
+      "path": "netlify/functions/active-sessions.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administration-workflow-health",
+      "path": "netlify/functions/administration-workflow-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-audit",
+      "path": "netlify/functions/administrative-audit.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-case-detail",
+      "path": "netlify/functions/administrative-case-detail.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-case-status-update",
+      "path": "netlify/functions/administrative-case-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-cases",
+      "path": "netlify/functions/administrative-cases.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-evidence",
+      "path": "netlify/functions/administrative-evidence.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-evidence-detail",
+      "path": "netlify/functions/administrative-evidence-detail.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-governance-health",
+      "path": "netlify/functions/administrative-governance-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-policies",
+      "path": "netlify/functions/administrative-policies.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "administrative-policy-detail",
+      "path": "netlify/functions/administrative-policy-detail.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-decision-explainability-records",
+      "path": "netlify/functions/ai-decision-explainability-records.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-decision-governance-readiness",
+      "path": "netlify/functions/ai-decision-governance-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-trading-copilot-contexts",
+      "path": "netlify/functions/ai-trading-copilot-contexts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-trading-copilot-conversations",
+      "path": "netlify/functions/ai-trading-copilot-conversations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-trading-copilot-portfolio-insights",
+      "path": "netlify/functions/ai-trading-copilot-portfolio-insights.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-trading-copilot-responses",
+      "path": "netlify/functions/ai-trading-copilot-responses.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-trading-copilot-trade-signal-explanations",
+      "path": "netlify/functions/ai-trading-copilot-trade-signal-explanations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "ai-trading-copilot-workflow-assistance",
+      "path": "netlify/functions/ai-trading-copilot-workflow-assistance.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "alert-configurations",
+      "path": "netlify/functions/alert-configurations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "alerts",
+      "path": "netlify/functions/alerts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Legacy alert state is compatibility-only and requires organization membership.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "atlas-ai-chat",
+      "path": "netlify/functions/atlas-ai-chat.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "atlas-ai-health",
+      "path": "netlify/functions/atlas-ai-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "atlas-ai-history",
+      "path": "netlify/functions/atlas-ai-history.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "atlas-ai-opportunities",
+      "path": "netlify/functions/atlas-ai-opportunities.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "atlas-portfolio-intelligence",
+      "path": "netlify/functions/atlas-portfolio-intelligence.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "authorization-health",
+      "path": "netlify/functions/authorization-health.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "cancel-paper-order",
+      "path": "netlify/functions/cancel-paper-order.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy paper-order mutation remains non-canonical and owner/admin protected.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "collaboration-health",
+      "path": "netlify/functions/collaboration-health.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-adoption-monitoring",
+      "path": "netlify/functions/compliance-adoption-monitoring.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-adoption-readiness",
+      "path": "netlify/functions/compliance-adoption-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-attestation-renewals",
+      "path": "netlify/functions/compliance-attestation-renewals.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-audit-readiness-packages",
+      "path": "netlify/functions/compliance-audit-readiness-packages.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-benchmark-comparisons",
+      "path": "netlify/functions/compliance-benchmark-comparisons.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-benefit-realizations",
+      "path": "netlify/functions/compliance-benefit-realizations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-board-packets",
+      "path": "netlify/functions/compliance-board-packets.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-change-closure-readiness",
+      "path": "netlify/functions/compliance-change-closure-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-change-governance-summaries",
+      "path": "netlify/functions/compliance-change-governance-summaries.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-change-impact-assessments",
+      "path": "netlify/functions/compliance-change-impact-assessments.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-change-verification",
+      "path": "netlify/functions/compliance-change-verification.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-continuity-readiness",
+      "path": "netlify/functions/compliance-continuity-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-continuous-improvement-programs",
+      "path": "netlify/functions/compliance-continuous-improvement-programs.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-escalation-plans",
+      "path": "netlify/functions/compliance-escalation-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-escalation-status-update",
+      "path": "netlify/functions/compliance-escalation-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-evidence-packages",
+      "path": "netlify/functions/compliance-evidence-packages.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-evidence-request-status-update",
+      "path": "netlify/functions/compliance-evidence-request-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-evidence-requests",
+      "path": "netlify/functions/compliance-evidence-requests.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-exam-readiness",
+      "path": "netlify/functions/compliance-exam-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-executive-dashboard",
+      "path": "netlify/functions/compliance-executive-dashboard.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-executive-strategy-plans",
+      "path": "netlify/functions/compliance-executive-strategy-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-executive-summaries",
+      "path": "netlify/functions/compliance-executive-summaries.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-external-review-requests",
+      "path": "netlify/functions/compliance-external-review-requests.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-governance-action-items",
+      "path": "netlify/functions/compliance-governance-action-items.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-governance-decisions",
+      "path": "netlify/functions/compliance-governance-decisions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-governance-readouts",
+      "path": "netlify/functions/compliance-governance-readouts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-implementation-plans",
+      "path": "netlify/functions/compliance-implementation-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-implementation-progress",
+      "path": "netlify/functions/compliance-implementation-progress.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-improvement-backlog",
+      "path": "netlify/functions/compliance-improvement-backlog.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-improvement-opportunities",
+      "path": "netlify/functions/compliance-improvement-opportunities.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-improvement-outcome-reviews",
+      "path": "netlify/functions/compliance-improvement-outcome-reviews.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-lessons-learned",
+      "path": "netlify/functions/compliance-lessons-learned.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-maturity-assessments",
+      "path": "netlify/functions/compliance-maturity-assessments.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-meeting-minutes",
+      "path": "netlify/functions/compliance-meeting-minutes.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-metrics-snapshots",
+      "path": "netlify/functions/compliance-metrics-snapshots.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-obligations",
+      "path": "netlify/functions/compliance-obligations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-operations-health",
+      "path": "netlify/functions/compliance-operations-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-optimization-roadmaps",
+      "path": "netlify/functions/compliance-optimization-roadmaps.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-post-implementation-reviews",
+      "path": "netlify/functions/compliance-post-implementation-reviews.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-program-health",
+      "path": "netlify/functions/compliance-program-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-readiness-health",
+      "path": "netlify/functions/compliance-readiness-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-record-retention-reviews",
+      "path": "netlify/functions/compliance-record-retention-reviews.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-regulatory-change-intake",
+      "path": "netlify/functions/compliance-regulatory-change-intake.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-resource-plans",
+      "path": "netlify/functions/compliance-resource-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-review-calendar",
+      "path": "netlify/functions/compliance-review-calendar.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-review-finding-status-update",
+      "path": "netlify/functions/compliance-review-finding-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-review-findings",
+      "path": "netlify/functions/compliance-review-findings.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-review-sla",
+      "path": "netlify/functions/compliance-review-sla.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-review-status-update",
+      "path": "netlify/functions/compliance-review-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-review-workflows",
+      "path": "netlify/functions/compliance-review-workflows.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-risk-forecasts",
+      "path": "netlify/functions/compliance-risk-forecasts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-risk-health",
+      "path": "netlify/functions/compliance-risk-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-scenario-plans",
+      "path": "netlify/functions/compliance-scenario-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-adaptation-readiness",
+      "path": "netlify/functions/compliance-strategic-adaptation-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-communication-effectiveness",
+      "path": "netlify/functions/compliance-strategic-communication-effectiveness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-communication-plans",
+      "path": "netlify/functions/compliance-strategic-communication-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-decision-archives",
+      "path": "netlify/functions/compliance-strategic-decision-archives.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-feedback-intake",
+      "path": "netlify/functions/compliance-strategic-feedback-intake.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-initiative-portfolios",
+      "path": "netlify/functions/compliance-strategic-initiative-portfolios.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-knowledge-base",
+      "path": "netlify/functions/compliance-strategic-knowledge-base.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-kpi-evaluations",
+      "path": "netlify/functions/compliance-strategic-kpi-evaluations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-learning-summaries",
+      "path": "netlify/functions/compliance-strategic-learning-summaries.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-milestone-plans",
+      "path": "netlify/functions/compliance-strategic-milestone-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-outcome-reviews",
+      "path": "netlify/functions/compliance-strategic-outcome-reviews.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-refinement-backlog",
+      "path": "netlify/functions/compliance-strategic-refinement-backlog.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-strategic-stakeholder-alignments",
+      "path": "netlify/functions/compliance-strategic-stakeholder-alignments.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-third-party-oversight",
+      "path": "netlify/functions/compliance-third-party-oversight.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-training-readiness",
+      "path": "netlify/functions/compliance-training-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "compliance-trend-analytics",
+      "path": "netlify/functions/compliance-trend-analytics.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "control-assurance-review",
+      "path": "netlify/functions/control-assurance-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "control-testing-review",
+      "path": "netlify/functions/control-testing-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "create-alert",
+      "path": "netlify/functions/create-alert.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "create-scanner",
+      "path": "netlify/functions/create-scanner.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "csrf-token",
+      "path": "netlify/functions/csrf-token.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "current-account",
+      "path": "netlify/functions/current-account.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "current-organization",
+      "path": "netlify/functions/current-organization.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "current-team-workspace",
+      "path": "netlify/functions/current-team-workspace.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "current-user",
+      "path": "netlify/functions/current-user.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "current-user-activity",
+      "path": "netlify/functions/current-user-activity.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "daily-briefing",
+      "path": "netlify/functions/daily-briefing.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "database-health",
+      "path": "netlify/functions/database-health.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Database and migration health is privileged operational information restricted to workspace administrators.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "decision",
+      "path": "netlify/functions/decision.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Decision intelligence is tenant-sensitive workspace evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "delete-alert",
+      "path": "netlify/functions/delete-alert.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "delete-scanner",
+      "path": "netlify/functions/delete-scanner.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "equity-curve",
+      "path": "netlify/functions/equity-curve.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper performance history is tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "evaluate-alerts",
+      "path": "netlify/functions/evaluate-alerts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert evaluation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "evaluate-scanners",
+      "path": "netlify/functions/evaluate-scanners.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner evaluation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "evidence-governance-health",
+      "path": "netlify/functions/evidence-governance-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "evidence-governance-review",
+      "path": "netlify/functions/evidence-governance-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "evidence-review-status-update",
+      "path": "netlify/functions/evidence-review-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "health",
+      "path": "netlify/functions/health.js",
+      "wrapper": "plain-api",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": false,
+      "boundary": "none",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "PUBLIC_READ",
+      "classificationReason": "Minimal liveness/readiness response contains no tenant data, mutation capability, or privileged operational detail.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain explicit public-read policy and regression coverage."
+    },
+    {
+      "function": "in-app-notifications",
+      "path": "netlify/functions/in-app-notifications.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "institutional-chart-advanced-drawing-sync",
+      "path": "netlify/functions/institutional-chart-advanced-drawing-sync.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "institutional-chart-drawing-interactions",
+      "path": "netlify/functions/institutional-chart-drawing-interactions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "institutional-chart-indicator-templates",
+      "path": "netlify/functions/institutional-chart-indicator-templates.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "institutional-chart-indicator-watchlists",
+      "path": "netlify/functions/institutional-chart-indicator-watchlists.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "institutional-chart-layouts",
+      "path": "netlify/functions/institutional-chart-layouts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "institutional-chart-workspaces",
+      "path": "netlify/functions/institutional-chart-workspaces.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "investigation-remediation-health",
+      "path": "netlify/functions/investigation-remediation-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "invitation-acceptance",
+      "path": "netlify/functions/invitation-acceptance.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "invitation-revocation",
+      "path": "netlify/functions/invitation-revocation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "journal-summary",
+      "path": "netlify/functions/journal-summary.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper journal content is tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-cache",
+      "path": "netlify/functions/market-data-cache.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-contracts",
+      "path": "netlify/functions/market-data-contracts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-freshness",
+      "path": "netlify/functions/market-data-freshness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-provider-adapter-health",
+      "path": "netlify/functions/market-data-provider-adapter-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-provider-capabilities",
+      "path": "netlify/functions/market-data-provider-capabilities.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-provider-failover",
+      "path": "netlify/functions/market-data-provider-failover.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-resilience",
+      "path": "netlify/functions/market-data-resilience.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-scanner-health",
+      "path": "netlify/functions/market-data-scanner-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-streaming",
+      "path": "netlify/functions/market-data-streaming.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-streaming-operations",
+      "path": "netlify/functions/market-data-streaming-operations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-streaming-routing-health",
+      "path": "netlify/functions/market-data-streaming-routing-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-data-streaming-sessions",
+      "path": "netlify/functions/market-data-streaming-sessions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "paperTrading.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "market-overview",
+      "path": "netlify/functions/market-overview.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "membership-role-management",
+      "path": "netlify/functions/membership-role-management.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "membership-status-management",
+      "path": "netlify/functions/membership-status-management.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "merge-readiness",
+      "path": "netlify/functions/merge-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "notification-center-health",
+      "path": "netlify/functions/notification-center-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "notification-digest",
+      "path": "netlify/functions/notification-digest.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "notification-preferences",
+      "path": "netlify/functions/notification-preferences.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "notification-preferences-update",
+      "path": "netlify/functions/notification-preferences-update.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "notification-status-update",
+      "path": "netlify/functions/notification-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "operator-actions",
+      "path": "netlify/functions/operator-actions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Operator actions are scoped operational evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "operator-attention-queue",
+      "path": "netlify/functions/operator-attention-queue.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "operator-intelligence-health",
+      "path": "netlify/functions/operator-intelligence-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "opportunity-intelligence",
+      "path": "netlify/functions/opportunity-intelligence.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "orders",
+      "path": "netlify/functions/orders.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper orders are tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "organization-administration",
+      "path": "netlify/functions/organization-administration.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "organization-authorization-health",
+      "path": "netlify/functions/organization-authorization-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "organization-invitations",
+      "path": "netlify/functions/organization-invitations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "organization-memberships",
+      "path": "netlify/functions/organization-memberships.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-audit",
+      "path": "netlify/functions/paper-audit.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-evaluation",
+      "path": "netlify/functions/paper-evaluation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-learning",
+      "path": "netlify/functions/paper-learning.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-operations-alert-action",
+      "path": "netlify/functions/paper-operations-alert-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-operations-alerts",
+      "path": "netlify/functions/paper-operations-alerts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-operations-incident-action",
+      "path": "netlify/functions/paper-operations-incident-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-operations-incidents",
+      "path": "netlify/functions/paper-operations-incidents.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-operations-observability",
+      "path": "netlify/functions/paper-operations-observability.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-order-simulation",
+      "path": "netlify/functions/paper-order-simulation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-performance-review",
+      "path": "netlify/functions/paper-performance-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-position-exit",
+      "path": "netlify/functions/paper-position-exit.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-artifact-download",
+      "path": "netlify/functions/paper-report-artifact-download.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-artifact-expiration",
+      "path": "netlify/functions/paper-report-artifact-expiration.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-artifacts",
+      "path": "netlify/functions/paper-report-artifacts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-deliveries",
+      "path": "netlify/functions/paper-report-deliveries.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-export",
+      "path": "netlify/functions/paper-report-export.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-job-action",
+      "path": "netlify/functions/paper-report-job-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-jobs",
+      "path": "netlify/functions/paper-report-jobs.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-schedule-action",
+      "path": "netlify/functions/paper-report-schedule-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-schedule-run",
+      "path": "netlify/functions/paper-report-schedule-run.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-schedules",
+      "path": "netlify/functions/paper-report-schedules.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-report-worker",
+      "path": "netlify/functions/paper-report-worker.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-reports",
+      "path": "netlify/functions/paper-reports.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-workspace-projection",
+      "path": "netlify/functions/paper-workspace-projection.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "policy-attestations",
+      "path": "netlify/functions/policy-attestations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "policy-control-assurance-health",
+      "path": "netlify/functions/policy-control-assurance-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "policy-exception-status-update",
+      "path": "netlify/functions/policy-exception-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "policy-exceptions",
+      "path": "netlify/functions/policy-exceptions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "policy-status-update",
+      "path": "netlify/functions/policy-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "portfolio-reconciliation-health",
+      "path": "netlify/functions/portfolio-reconciliation-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "portfolio-summary",
+      "path": "netlify/functions/portfolio-summary.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Legacy portfolio state is compatibility-only tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "positions",
+      "path": "netlify/functions/positions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Paper positions are tenant-sensitive account evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "production-configuration-validation",
+      "path": "netlify/functions/production-configuration-validation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "production-run-validation",
+      "path": "netlify/functions/production-run-validation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "protected-organization-workspace-configurations",
+      "path": "netlify/functions/protected-organization-workspace-configurations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "protected-team-workspace-configurations",
+      "path": "netlify/functions/protected-team-workspace-configurations.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "protected-workspace-configurations",
+      "path": "netlify/functions/protected-workspace-configurations.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-alert-status-update",
+      "path": "netlify/functions/realtime-alert-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-alerts",
+      "path": "netlify/functions/realtime-alerts.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-paper-decisions",
+      "path": "netlify/functions/realtime-paper-decisions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-paper-execution-operations-health",
+      "path": "netlify/functions/realtime-paper-execution-operations-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-paper-operations",
+      "path": "netlify/functions/realtime-paper-operations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-paper-performance",
+      "path": "netlify/functions/realtime-paper-performance.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-paper-portfolio",
+      "path": "netlify/functions/realtime-paper-portfolio.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-paper-risk",
+      "path": "netlify/functions/realtime-paper-risk.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-pnl",
+      "path": "netlify/functions/realtime-pnl.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-portfolio-reconciliation",
+      "path": "netlify/functions/realtime-portfolio-reconciliation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-prepared-trades",
+      "path": "netlify/functions/realtime-prepared-trades.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-scanner-alert-operations-health",
+      "path": "netlify/functions/realtime-scanner-alert-operations-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-scanner-status",
+      "path": "netlify/functions/realtime-scanner-status.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-signal-evaluations",
+      "path": "netlify/functions/realtime-signal-evaluations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "realtime-simulated-executions",
+      "path": "netlify/functions/realtime-simulated-executions.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "recalculate-portfolio",
+      "path": "netlify/functions/recalculate-portfolio.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy process-memory portfolio recomputation is owner/admin protected and non-canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-acceptance",
+      "path": "netlify/functions/release-acceptance.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-acceptance-action",
+      "path": "netlify/functions/release-acceptance-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-approval-action",
+      "path": "netlify/functions/release-approval-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-approvals",
+      "path": "netlify/functions/release-approvals.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-attestation-action",
+      "path": "netlify/functions/release-attestation-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-attestations",
+      "path": "netlify/functions/release-attestations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-candidate-action",
+      "path": "netlify/functions/release-candidate-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-candidates",
+      "path": "netlify/functions/release-candidates.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-certification-action",
+      "path": "netlify/functions/release-certification-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-certifications",
+      "path": "netlify/functions/release-certifications.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-closure",
+      "path": "netlify/functions/release-closure.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-closure-action",
+      "path": "netlify/functions/release-closure-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-documentation",
+      "path": "netlify/functions/release-documentation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-documentation-action",
+      "path": "netlify/functions/release-documentation-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-evidence",
+      "path": "netlify/functions/release-evidence.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-evidence-action",
+      "path": "netlify/functions/release-evidence-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-gate",
+      "path": "netlify/functions/release-gate.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-handoff",
+      "path": "netlify/functions/release-handoff.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-readiness",
+      "path": "netlify/functions/release-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-recovery-readiness",
+      "path": "netlify/functions/release-recovery-readiness.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-runbook-action",
+      "path": "netlify/functions/release-runbook-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-runbooks",
+      "path": "netlify/functions/release-runbooks.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "release-runtime-health",
+      "path": "netlify/functions/release-runtime-health.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Release diagnostics are privileged operational information restricted to workspace administrators.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "remediation-effectiveness-review",
+      "path": "netlify/functions/remediation-effectiveness-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "remediation-follow-up-review",
+      "path": "netlify/functions/remediation-follow-up-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "remediation-plan-approval-update",
+      "path": "netlify/functions/remediation-plan-approval-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "remediation-plan-detail",
+      "path": "netlify/functions/remediation-plan-detail.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "remediation-plan-status-update",
+      "path": "netlify/functions/remediation-plan-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "remediation-plans",
+      "path": "netlify/functions/remediation-plans.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "revoke-other-sessions",
+      "path": "netlify/functions/revoke-other-sessions.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "revoke-selected-session",
+      "path": "netlify/functions/revoke-selected-session.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "risk-summary",
+      "path": "netlify/functions/risk-summary.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Risk output is tenant-sensitive decision evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "scanner-configurations",
+      "path": "netlify/functions/scanner-configurations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "scanner-production-health",
+      "path": "netlify/functions/scanner-production-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "scanners",
+      "path": "netlify/functions/scanners.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Legacy scanner state is compatibility-only and requires organization membership.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "session-revoke",
+      "path": "netlify/functions/session-revoke.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "session-security-health",
+      "path": "netlify/functions/session-security-health.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "session-status",
+      "path": "netlify/functions/session-status.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "signals",
+      "path": "netlify/functions/signals.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Signal output is tenant-sensitive decision evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "strategy-suitability",
+      "path": "netlify/functions/strategy-suitability.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "submit-paper-order",
+      "path": "netlify/functions/submit-paper-order.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy paper-order mutation remains non-canonical and owner/admin protected.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "system-events",
+      "path": "netlify/functions/system-events.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "System events are scoped operational evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "team-workspace-administration",
+      "path": "netlify/functions/team-workspace-administration.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "team-workspace-invitations",
+      "path": "netlify/functions/team-workspace-invitations.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "team-workspace-memberships",
+      "path": "netlify/functions/team-workspace-memberships.js",
+      "wrapper": "team-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization-and-team",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "tenant-administration-workflows",
+      "path": "netlify/functions/tenant-administration-workflows.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "tenant-administrative-activity",
+      "path": "netlify/functions/tenant-administrative-activity.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "tenant-backup-recovery-plan",
+      "path": "netlify/functions/tenant-backup-recovery-plan.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "tenant-operations-health",
+      "path": "netlify/functions/tenant-operations-health.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "trade-quality",
+      "path": "netlify/functions/trade-quality.js",
+      "wrapper": "authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "authenticated-user/workspace-role",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "update-alert",
+      "path": "netlify/functions/update-alert.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory alert mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "update-scanner",
+      "path": "netlify/functions/update-scanner.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": null,
+      "csrfRequired": true,
+      "endpointClassification": "COMPATIBILITY_ONLY",
+      "classificationReason": "Legacy memory scanner mutation remains owner/admin protected; PI.4 durable configuration is canonical.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "user-activity-risk-review",
+      "path": "netlify/functions/user-activity-risk-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "watchlist",
+      "path": "netlify/functions/watchlist.js",
+      "wrapper": "plain-api",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": false,
+      "boundary": "none",
+      "permission": null,
+      "csrfRequired": false,
+      "endpointClassification": "PUBLIC_READ",
+      "classificationReason": "Static supported-symbol universe contains no tenant data, mutation capability, or privileged operational detail.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain explicit public-read policy and regression coverage."
+    },
+    {
+      "function": "workflow-sla-review",
+      "path": "netlify/functions/workflow-sla-review.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "workflow-status-update",
+      "path": "netlify/functions/workflow-status-update.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "workspace-configurations",
+      "path": "netlify/functions/workspace-configurations.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "ORGANIZATION_MUTATION",
+      "classificationReason": "Reads require membership; writes require owner/admin authority and account scope.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    }
+  ]
+}

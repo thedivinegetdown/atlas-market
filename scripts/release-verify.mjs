@@ -116,6 +116,7 @@ export function runReleaseVerification({
   gitStatus = '',
   gitTrackedFiles = [],
   env = process.env,
+  ci = false,
 } = {}) {
   const stages = []
   const config = validateProductionConfiguration({
@@ -126,6 +127,8 @@ export function runReleaseVerification({
       PAPER_TRADING_ONLY: 'true',
       LIVE_TRADING_ENABLED: 'false',
       DATABASE_URL: env.DATABASE_URL ?? 'configured-for-verification',
+      ATLAS_AUTH_MODE: env.ATLAS_AUTH_MODE ?? 'netlify-identity',
+      NETLIFY_IDENTITY_URL: env.NETLIFY_IDENTITY_URL ?? 'https://atlas-market.netlify.app/.netlify/identity',
     },
     databaseConfigured: true,
     tenantConfiguration: { configured: true },
@@ -152,7 +155,13 @@ export function runReleaseVerification({
     })
   }
 
-  for (const stage of releaseCriticalCommands) {
+  const commands = ci
+    ? [
+        { id: 'api-control-inventory', command: 'npm', args: ['run', 'audit:api-controls:check'] },
+        ...releaseCriticalCommands.filter((stage) => stage.id !== 'focused-security-release-tests'),
+      ]
+    : releaseCriticalCommands
+  for (const stage of commands) {
     const result = runCommand(stage, runner)
     stages.push(result)
     if (result.status === 'failed') {
@@ -187,7 +196,7 @@ export function runReleaseVerification({
 if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const gitStatus = spawnSync('git', ['status', '--short'], { encoding: 'utf8', shell: process.platform === 'win32' }).stdout ?? ''
   const gitTrackedFiles = (spawnSync('git', ['ls-files'], { encoding: 'utf8', shell: process.platform === 'win32' }).stdout ?? '').split(/\r?\n/).filter(Boolean)
-  const summary = runReleaseVerification({ gitStatus, gitTrackedFiles })
+  const summary = runReleaseVerification({ gitStatus, gitTrackedFiles, ci: process.argv.includes('--ci') })
   for (const stage of summary.stages) console.log(`${stage.status === 'passed' ? 'PASS' : 'FAIL'} ${stage.stage}`)
   console.log(JSON.stringify(summary, null, 2))
   if (!summary.ok) process.exitCode = 1

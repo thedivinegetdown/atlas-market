@@ -131,6 +131,8 @@ describe('Part 12A production hardening foundation', () => {
       NODE_ENV: 'production',
       TRADING_MODE: 'paper',
       DATABASE_URL: 'postgres://local/test',
+      ATLAS_AUTH_MODE: 'netlify-identity',
+      URL: 'https://atlas.example',
     }).isProduction).toBe(true)
   })
 
