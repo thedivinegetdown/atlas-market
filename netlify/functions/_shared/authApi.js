@@ -35,10 +35,20 @@ function configuredOrigins(env = process.env) {
   return [...new Set(origins)]
 }
 
+function requestOrigin(event = {}) {
+  if (!event.rawUrl) return null
+  try {
+    return new URL(event.rawUrl).origin
+  } catch {
+    return null
+  }
+}
+
 export function assertOriginAllowed(event = {}, allowedOrigins, env = process.env) {
   const origin = getHeader(event.headers ?? {}, 'origin')
   if (!origin) return true
-  if (!(allowedOrigins ?? configuredOrigins(env)).includes(origin)) {
+  const origins = allowedOrigins ?? [...configuredOrigins(env), requestOrigin(event)].filter(Boolean)
+  if (!origins.includes(origin)) {
     throw new AppError(ERROR_CODES.VALIDATION_ERROR, 'Origin is not allowed', {
       statusCode: 403,
       publicMessage: 'origin is not allowed',

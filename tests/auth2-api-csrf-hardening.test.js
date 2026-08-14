@@ -208,6 +208,16 @@ describe('AUTH.2 authentication, authorization, and tenant controls', () => {
     expect(() => assertOriginAllowed({ headers: { origin: 'https://attacker.example' } }, undefined, { URL: 'https://atlas.example' }))
       .toThrow(expect.objectContaining({ statusCode: 403 }))
   })
+
+  it('allows the exact Netlify request origin when deploy URL variables are unavailable', () => {
+    const event = {
+      rawUrl: 'https://deploy-preview-1--atlas-market.netlify.app/.netlify/functions/scanner-configurations',
+      headers: { origin: 'https://deploy-preview-1--atlas-market.netlify.app' },
+    }
+    expect(assertOriginAllowed(event, undefined, {})).toBe(true)
+    expect(() => assertOriginAllowed({ ...event, headers: { origin: 'https://attacker.example' } }, undefined, {}))
+      .toThrow(expect.objectContaining({ statusCode: 403 }))
+  })
 })
 
 describe('AUTH.2 browser CSRF transport', () => {
