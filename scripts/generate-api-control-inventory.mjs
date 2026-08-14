@@ -150,11 +150,13 @@ export function renderMarkdown(inventory) {
 
 export const renderJson = (inventory) => `${JSON.stringify(inventory, null, 2)}\n`
 
+export const normalizeLineEndings = (content) => String(content).replace(/\r\n/g, '\n')
+
 function main() {
   const inventory = buildApiControlInventory()
   const artifacts = [[DEFAULT_JSON_OUTPUT, renderJson(inventory)], [DEFAULT_MARKDOWN_OUTPUT, renderMarkdown(inventory)]]
   if (process.argv.includes('--check')) {
-    const stale = artifacts.filter(([path, content]) => !existsSync(path) || readFileSync(path, 'utf8') !== content)
+    const stale = artifacts.filter(([path, content]) => !existsSync(path) || normalizeLineEndings(readFileSync(path, 'utf8')) !== normalizeLineEndings(content))
     if (stale.length > 0) {
       console.error(`API control inventory is stale: ${stale.map(([path]) => relative(DEFAULT_ROOT, path)).join(', ')}`)
       process.exitCode = 1

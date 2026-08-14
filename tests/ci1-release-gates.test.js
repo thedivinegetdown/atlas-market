@@ -32,7 +32,7 @@ describe('CI.1 release gate hardening', () => {
   })
 
   it('keeps workflow permissions minimal and fails gates normally', () => {
-    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8')
+    const workflow = readFileSync('.github/workflows/ci.yml', 'utf8').replace(/\r\n/g, '\n')
     expect(workflow).toContain('permissions:\n  contents: read')
     expect(workflow).toContain('run: npm run ci:verify')
     expect(workflow).toContain('run: npm ci')

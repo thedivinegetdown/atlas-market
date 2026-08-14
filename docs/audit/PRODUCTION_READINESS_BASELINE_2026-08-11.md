@@ -1,16 +1,16 @@
 # Atlas Market Production-Readiness Baseline
 
-Status: authoritative repository baseline for follow-up remediation
+Status: v1 production-hardening baseline with deployed release-closure evidence
 
-Verified: 2026-08-11
+Verified: 2026-08-14
 
 Scope: authentication, API controls, persistence, market-data degradation, CI/release gates, and release blockers
 
-This document records source and read-only runtime findings. It does not authorize an identity-provider selection, deployment, provider-plan change, database migration, or trading-behavior change. Atlas remains analysis and paper/simulated execution only.
+This document records source, database, and deployed production verification. Atlas remains analysis and paper/simulated execution only; no live broker or real-money path is enabled.
 
 ## Executive conclusion
 
-Atlas has a reachable Netlify deployment, a passing production build, extensive deterministic test coverage, shared API controls, and explicit paper-only trading boundaries. It is not ready to be represented as a complete authenticated production application.
+Atlas v1 has a reachable authenticated Netlify production deployment, a passing production build and release gate, durable PostgreSQL paper-account persistence, shared API controls, and explicit paper-only trading boundaries. The release-blocking authentication, authorization, CSRF, migration, durable-accounting, secret-scan, and live/mock ambiguity checks are green.
 
 AUTH.1 supplies an invite-only Netlify Identity browser/session foundation and a fail-closed production verifier. AUTH.2 protects the former 12 P0 mutations and eight P1 sensitive reads, leaving only two explicitly public reads, and replaces presence-only CSRF with a short-lived server-issued session-bound token. The production PostgreSQL contract is code-hardened but production rollout/backup execution remains unverified, compatibility stores remain process-local, market-data degradation remains operationally dependent on provider credentials, and CI enforces deterministic repository gates.
 
@@ -138,4 +138,18 @@ PI.3 introduces no live trading, broker, authentication, AI, provider, strategy/
 
 PI.4 routes canonical browser portfolio/journal reads to deterministic PI.3 projections, supplies Daily Briefing with durable paper state, and persists scanner/alert definitions in the existing PostgreSQL tables under organization/team/account/user scope. Matches, alert evaluations, briefings, PA.3, and PA.5 remain derived. The old plain-wrapper memory Functions remain compatibility-only pending separately authorized retirement/control work.
 
-The additive PI.4 migration and definition persistence were verified on the approved local non-production PostgreSQL database with synthetic records. Migration tracking, composite indexes, repository re-instantiation, cleanup, and cross-organization denial passed. Production migration rollout, backups/restores, capacity, retention, and authenticated deployed smoke/E2E remain **NOT VERIFIED / OWNER ACTION REQUIRED**.
+The additive PI.4 migration and definition persistence were first verified on the approved local non-production PostgreSQL database with synthetic records. Migration tracking, composite indexes, repository re-instantiation, cleanup, and cross-organization denial passed. The subsequent production rollout and authenticated evidence are recorded below; backups/restores, capacity, and retention execution remain owner-operated verification items.
+
+## RELEASE.1 production closure evidence — 2026-08-14
+
+- GitHub PR #1 was merged to `main`; hosted GitHub Actions passed at merge commit `70f4c768e64c783d4257f849a11a70f98f22a5fe`.
+- Netlify production deployed the merged `main` application successfully after production environment validation. `NODE_ENV=production`, `ATLAS_AUTH_MODE=netlify-identity`, `TRADING_MODE=paper`, and the secret Neon pooled `DATABASE_URL` are configured without repository or browser exposure.
+- The production Neon database accepted all 71 ordered migrations from zero. `atlas_schema_migrations` contains 71 unique records; PI.3 migration 069 and PI.4 migration 070 are tracked, and an idempotent rerun applied zero migrations.
+- The verified Netlify Identity owner is mapped to one active Atlas user, `org-atlas-local`, and one active owner membership. Signed-in tenant-scoped dashboard, Scanner, Orders, Portfolio, Reports, alert, and durable paper-account reads succeed.
+- A reversible production-safe alert create/delete verified authenticated CSRF establishment and mutation handling. The synthetic alert was removed. Unauthenticated protected reads, invalid bearer requests, and unauthenticated mutations fail closed with HTTP 401; `health` and `watchlist` remain the two intentional public HTTP 200 reads.
+- The canonical durable paper account survives navigation and reports the approved $100,000 initial paper balance. Scanner/opportunity, order/position, portfolio/journal, PA.3 performance, and PA.5 learning surfaces load without tenant denial or unexpected 5xx responses. No live order or broker call was made.
+- Deployed market evidence is visibly `MOCK DATA` where mock fallback is active; unavailable portfolio price provenance is labeled `UNKNOWN` and explicitly does not assume live status.
+- Production browser review found no console warning/error, authentication loop, authorization loop, redirect loop, bearer/CSRF leakage, unhandled exception, or unexpected 5xx during the verified navigation.
+- Local release verification passed all 1,434 tests, lint at 23 warnings against the approved baseline of 26, production build, performance budget, migration-safety scan, sensitive-material scan, generated-artifact check, and API-control inventory freshness check. Cross-platform CRLF normalization protects the CI workflow and inventory freshness assertions on Windows without changing the controlled artifacts.
+
+The remaining operational items do not block v1: production backup/restore execution and retention evidence remain owner-operated and unverified; live-provider credentials/entitlements are not required while the UI explicitly labels mock/unknown evidence; serverless caches and provider budgets remain process-local. The v1.0.0 tag and GitHub release are created only after hosted CI passes at the release-closure commit.

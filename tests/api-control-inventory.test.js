@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { buildApiControlInventory, classifyFunctionSource } from '../scripts/generate-api-control-inventory.mjs'
+import { buildApiControlInventory, classifyFunctionSource, normalizeLineEndings } from '../scripts/generate-api-control-inventory.mjs'
 
 describe('API control inventory', () => {
+  it('compares generated artifacts consistently across Windows and Linux checkouts', () => {
+    expect(normalizeLineEndings('alpha\r\nbeta\r\n')).toBe('alpha\nbeta\n')
+  })
+
   it('classifies boundary, access, CSRF, risk, and remediation priority', () => {
     expect(classifyFunctionSource('submit-paper-order', "createApiHandler(() => {}, { allowedMethods: ['POST'] })"))
       .toMatchObject({ wrapper: 'plain-api', access: 'mutation', boundary: 'none', csrfRequired: false, risk: 'critical', priority: 'P0' })
