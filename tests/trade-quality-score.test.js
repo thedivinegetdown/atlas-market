@@ -97,6 +97,12 @@ describe('deterministic Trade Quality Score', () => {
     expect(service.getMarketOverview).toHaveBeenCalledOnce()
     expect(marketDataService.getCandles).not.toHaveBeenCalled()
     expect(result.quality.engineVersion).toBe('trade-quality-v1')
+    expect(result.forwardTestEvidence).toMatchObject({
+      version: 'forward-test-evidence-v1',
+      symbol: 'AAPL',
+      forwardTestEligible: false,
+      boundaries: { paperOnly: true, automaticExecution: false, liveTrading: false },
+    })
   })
 
   it('exposes an authenticated minimal read-only endpoint', async () => {

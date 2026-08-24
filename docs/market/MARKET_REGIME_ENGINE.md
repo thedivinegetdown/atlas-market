@@ -158,6 +158,8 @@ Successful responses are cached for five minutes in the existing warm provider-s
 
 Provider credentials are read only server-side from `TWELVEDATA_API_KEY` and `FINNHUB_API_KEY`. Provider keys are not accepted through `VITE_*` names, returned by APIs, logged, or required by browser code.
 
+The paper-only forward-test evidence contract built on this pipeline is documented in [Forward-Test Evidence Baseline](./FORWARD_TEST_EVIDENCE_BASELINE.md). It consumes the existing regime, suitability, Trade Quality, and risk-gate results without changing their formulas or thresholds.
+
 ### MI.5 operational guardrails
 
 The only production historical request path is the authenticated, read-only `market-overview` Netlify Function:
