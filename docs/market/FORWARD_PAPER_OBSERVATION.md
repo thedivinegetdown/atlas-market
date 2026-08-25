@@ -1,6 +1,6 @@
 # Atlas Market Fixed Forward Paper Observation
 
-Status: EDGE.2 infrastructure ready; production cohort `NOT_STARTED`.
+Status: deterministic exit and lifecycle prerequisites approved; production cohort start remains gated by authenticated fresh market-hours evidence.
 
 ## Purpose
 
@@ -13,14 +13,22 @@ The first review is prohibited until both minimums are satisfied:
 
 Interim results are descriptive. Atlas does not label the strategy profitable or unprofitable while collection is incomplete.
 
-## Production start blockers
+## Deterministic exit policy
 
-The cohort has not started for two evidence-quality reasons:
+`index-pullback-v1` version `1.2.0` is approved only for `PAPER FORWARD OBSERVATION`. Its immutable exit policy is `index-pullback-exit-v1.0.0`:
 
-1. `index-pullback-v1` remains a validated, human-review lifecycle record rather than an active strategy, so SI.1 correctly returns `CONDITIONAL` instead of `ENABLED`.
-2. PA.4 provides safe, manually confirmed reduction and close accounting, but the current strategy definition does not declare a deterministic exit policy suitable for comparable fixed-cohort outcomes.
+- The initial stop and 2R profit target are the existing risk-engine values captured at entry. They never move for that trade.
+- Reaching the initial stop invalidates the trade; reaching the target completes it.
+- If a bar contains both stop and target, Atlas records the stop first. It never selects the more profitable ordering.
+- An adverse stop gap fills at the opening price. A favorable target gap is capped at the target.
+- An otherwise-open trade exits at the close of its twentieth observed trading session.
+- Missing or stale evidence produces no policy exit and fails closed.
+- Partial exits, trailing stops, scaling, and discretionary stop/target movement are prohibited for observation trades.
+- A manually confirmed emergency close remains available for safety, but is labeled non-policy-compliant and does not count toward the 30-outcome minimum.
 
-EDGE.2 does not invent an exit rule or activate the strategy. A separately approved strategy-lifecycle decision must supply deterministic entry/exit criteria before a production manifest may be created.
+The policy definition fingerprint is frozen in the manifest. Each trade also receives an entry-specific immutable fingerprint. Any policy/version change invalidates the cohort.
+
+`LIVE TRADING NOT APPROVED.`
 
 ## Frozen experiment manifest
 
@@ -33,7 +41,7 @@ EDGE.2 does not invent an exit rule or activate the strategy. A separately appro
 - the fixed `SPY`, `QQQ`, `IWM`, `AAPL`, `MSFT` universe;
 - eligibility rules;
 - starting PI.3 paper-account state;
-- deterministic exit-policy version;
+- deterministic exit-policy version, definition fingerprint, and conservative ambiguity rules;
 - 20-session and 30-outcome minimums;
 - PAPER ONLY, no automatic execution, and no-optimization boundaries.
 

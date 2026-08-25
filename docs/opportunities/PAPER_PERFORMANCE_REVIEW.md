@@ -2,6 +2,8 @@
 
 Version: `paper-performance-review-v1`
 
+EDGE.2 realized records preserve the exact exit-policy and exit-attribution evidence. Policy-compliant full exits can count toward the fixed cohort; manual emergency closes remain visible in durable realized accounting but do not count toward the 30-outcome observation minimum.
+
 PA.3 is a deterministic, read-only review of completed simulated paper outcomes. It extends Atlas's existing paper-performance analytics and reads tenant/account/user/team-scoped realized executions from the PI.3 immutable ledger. It creates no provider request, order, mutation, or background process.
 
 ## Eligible records and exclusions

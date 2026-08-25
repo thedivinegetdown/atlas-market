@@ -6,6 +6,7 @@ import {
   createForwardObservationManifest,
   evaluateForwardObservationConfiguration,
 } from '../lib/opportunities/forwardTest/forwardObservationEngine.js'
+import { createIndexPullbackExitPolicy, INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT, INDEX_PULLBACK_EXIT_POLICY_VERSION } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 
 const NOW = '2026-08-25T14:00:00.000Z'
 const scope = (overrides = {}) => ({
@@ -24,7 +25,7 @@ function manifestInput(overrides = {}) {
     tradeQualityVersion: 'trade-quality-v1',
     riskPolicyVersion: 'trade-guardrail-v1',
     startingPaperAccount: { accountId: 'paper-portfolio', cash: 100000, buyingPower: 100000, equity: 100000, revision: 0 },
-    exitPolicy: { version: 'fixed-exit-v1', deterministic: true, manualConfirmationRequired: true },
+    exitPolicy: { version: INDEX_PULLBACK_EXIT_POLICY_VERSION, policyFingerprint: INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT, deterministic: true, manualConfirmationRequired: true, maximumHoldingSessions: 20, sameBarAmbiguity: 'stop_first', gapRule: 'adverse_stop_gap_fills_at_open;favorable_target_gap_capped_at_target' },
     ...overrides,
   }
 }
@@ -50,11 +51,12 @@ function eligibleEvidence(overrides = {}) {
 }
 
 function snapshot(observation = manifest(), overrides = {}) {
+  const exitPolicy = createIndexPullbackExitPolicy({ strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', side: 'long', entryPrice: 650, stopPrice: 637, targetPrice: 676, enteredAt: NOW })
   return createForwardEvidenceSnapshot({
     manifest: observation,
     evidence: eligibleEvidence(overrides.evidence),
     tradeQuality: { dimensions: { regimeFit: 15, strategySuitability: 20, liquidity: 5, riskReward: 10 } },
-    entryContext: { riskReward: 2, liquidityStatus: 'HEALTHY', referencePrice: 650, stopPrice: 637, targetPrice: 676 },
+    entryContext: { riskReward: 2, liquidityStatus: 'HEALTHY', referencePrice: 650, stopPrice: 637, targetPrice: 676, exitPolicy },
   })
 }
 
@@ -152,8 +154,8 @@ describe('EDGE.2 fixed forward paper observation', () => {
     expect(first).toMatchObject({ status: 'READY_FOR_REVIEW', reviewClassification: 'PROMISING', metrics: performanceReview.performance, tradeQualityCalibration: { status: 'CONSISTENT' } })
   })
 
-  it('keeps the production cohort not started while current exit and strategy blockers remain', () => {
-    expect(buildForwardObservationStatus({})).toMatchObject({ status: 'NOT_STARTED', reviewClassification: null, blockers: ['deterministic_exit_policy_required', 'strategy_lifecycle_not_active'] })
+  it('keeps the production cohort not started until an approved manifest is persisted', () => {
+    expect(buildForwardObservationStatus({})).toMatchObject({ status: 'NOT_STARTED', reviewClassification: null, blockers: ['observation_manifest_not_started'] })
   })
 
   it('persists manifests and snapshots across repository re-instantiation and suppresses duplicates', async () => {

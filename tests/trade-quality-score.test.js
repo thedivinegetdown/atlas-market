@@ -113,7 +113,7 @@ describe('deterministic Trade Quality Score', () => {
     expect(result.quality).toMatchObject({ opportunityId: expect.stringMatching(/^scanner-/), strategyId: 'index-pullback-v1', score: expect.any(Number), orderContext: { side: expect.any(String), price: 100, stopPrice: 98, targetPrice: 104 } })
     expect(result.quality.missingInputs).not.toContain('liquidity')
     expect(result.quality.missingInputs).not.toContain('riskReward')
-    expect(result.forwardTestEvidence.blockers).toContain('strategy_not_enabled')
+    expect(result.forwardTestEvidence.blockers).not.toContain('strategy_not_enabled')
     expect(result.forwardTestEvidence.blockers).not.toContain('risk_gates_not_evaluated')
   })
 

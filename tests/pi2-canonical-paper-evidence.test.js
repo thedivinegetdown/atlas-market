@@ -23,7 +23,7 @@ function snapshot(overrides = {}) {
     opportunityId: 'opp-aapl-1', symbol: 'AAPL', strategyId: 'index-pullback-v1', score: 86,
     band: 'STRONG', confidence: 84, status: 'COMPLETE', reasons: ['Deterministic evidence aligned'],
     blockingReasons: [], missingInputs: [], freshness: 'FRESH', asOf: NOW, reviewState: 'reviewed',
-    engineVersion: 'trade-quality-v1', orderContext: { assetType: 'equity', side: 'buy', orderType: 'market', price: 100, stopPrice: 98 },
+    engineVersion: 'trade-quality-v1', orderContext: { assetType: 'equity', side: 'buy', orderType: 'market', price: 100, stopPrice: 98, targetPrice: 104 },
     ...overrides,
   }
 }
@@ -33,7 +33,7 @@ function evaluation(overrides = {}) {
     evaluationId: 'paper-evaluation-evidence-a', candidateId: 'opp-aapl-1', symbol: 'AAPL',
     strategyId: 'index-pullback-v1', status: 'APPROVED_FOR_PAPER_REVIEW', freshness: 'FRESH',
     evaluatedAt: NOW, evidenceFingerprint: 'a'.repeat(64), engineVersions: { tradeQuality: 'trade-quality-v1' },
-    orderContext: { assetType: 'equity', side: 'buy', orderType: 'market', price: 100, stopPrice: 98 },
+    orderContext: { assetType: 'equity', side: 'buy', orderType: 'market', price: 100, stopPrice: 98, targetPrice: 104 },
     paperTradingOnly: true, advisoryOnly: true, automaticExecution: false,
     ...overrides,
   }

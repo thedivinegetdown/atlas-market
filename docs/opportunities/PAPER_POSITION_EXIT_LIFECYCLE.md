@@ -2,6 +2,8 @@
 
 Version: `paper-exit-v1`
 
+For EDGE.2 `index-pullback-v1` positions, PA.4 carries the immutable `index-pullback-exit-v1.0.0` entry policy from the PI.3 execution ledger. A normal observation exit must close the full position at a deterministic stop, target, or twentieth-session trigger. Same-bar ambiguity is stop-first; adverse stop gaps fill at the open; favorable target gaps are capped at target. Manual emergency close remains confirmed and paper-only, is attributed separately, and is excluded from the cohort minimum. Partial or discretionary observation exits fail closed. Other compatibility positions retain the existing PA.4 behavior.
+
 PA.4 completes an existing simulated paper position through an explicit authenticated, CSRF-protected operator action. It has no timer, scheduler, AI trigger, live broker, or route-mount mutation.
 
 ## Authoritative position and trigger

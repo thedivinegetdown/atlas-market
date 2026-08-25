@@ -18,7 +18,7 @@ The engine consumes the existing regime read model and normalized strategy metad
 
 | Strategy identifier | Evidence in repository | Integration classification | SI.1 support |
 | --- | --- | --- | --- |
-| `index-pullback-v1` | Builder, rule, signal, lifecycle, registry, backtest, report, replay, and tests under `src/core/strategy/` | Modeled and comprehensively tested; the production Strategies workspace has no persisted runtime registry | Supported conservatively as a validated, human-review lifecycle record |
+| `index-pullback-v1` | Builder, rule, signal, lifecycle, registry, backtest, report, replay, and tests under `src/core/strategy/` | Version `1.2.0`; approved only for fixed paper forward observation | `paper_forward_observation`; live trading not approved |
 | `crypto-breakout-v1` | Registry test fixture only | Test-only | Not supported |
 | `index-pullback`, `vol-breakout` | Multi-strategy portfolio-manager test fixtures | Test-only | Not supported |
 | Scanner definitions | `lib/scanners/` | Production scanner contracts, not strategy registry records | Excluded |
@@ -41,11 +41,11 @@ These rules describe suitability, not expected returns or guaranteed profitabili
 ## Decision meanings and safety gates
 
 - `ENABLED`: complete, fresh regime evidence is compatible, confidence meets the preferred threshold, required evidence exists, and the existing lifecycle is active and eligible.
-- `CONDITIONAL`: suitability is plausible but the regime is partial, confidence is below the preferred threshold, a non-blocking input is missing, compatibility is conditional, or the strategy is validated but not active.
+- `CONDITIONAL`: suitability is plausible but the regime is partial, confidence is below the preferred threshold, a non-blocking input is missing, compatibility is conditional, or the strategy has not reached a paper-eligible lifecycle.
 - `DISABLED`: a known regime is incompatible, a blocking prerequisite is missing, lifecycle activation is blocked, validation is invalid, or the strategy is archived, paused, or disabled.
 - `UNKNOWN`: the regime is insufficient, invalid, materially stale, contains an unknown classification, or no approved rules exist.
 
-Archived, paused, disabled, or lifecycle-blocked strategies cannot be re-enabled. A stale, invalid, or insufficient regime can never produce `ENABLED`. Existing deterministic risk guardrails retain final authority. AI context is ignored and cannot override a disabled result.
+Archived, paused, disabled, or lifecycle-blocked strategies cannot be re-enabled. `paper_forward_observation` permits only paper cohort eligibility and never authorizes live trading. A stale, invalid, or insufficient regime can never produce `ENABLED`. Existing deterministic risk guardrails retain final authority. AI context is ignored and cannot override a disabled result.
 
 ## Confidence
 
@@ -53,7 +53,7 @@ Suitability confidence starts from regime confidence, is clamped to 0–100, and
 
 - 10 points per missing required input;
 - 15 points for a partial regime;
-- 10 points while a strategy remains in the validated lifecycle rather than active.
+- 10 points while a strategy remains in the validated lifecycle rather than paper-eligible.
 
 The preferred threshold is 70 and the minimum threshold is 50. Thresholds are deterministic review heuristics, not performance claims.
 
@@ -76,6 +76,6 @@ Diagnostics record engine version, regime status, decision counts, missing-evide
 ## Limitations and future consumers
 
 - The production environment still requires a server-side Twelve Data key for live historical evidence; deterministic fixture validation remains complete without it.
-- Atlas has no production-persisted strategy registry exposed to this workspace today. The single supported record remains modeled and human-review-only.
+- Atlas has no production-persisted strategy registry exposed to this workspace today. The single supported record is approved only for fixed paper forward observation under `index-pullback-exit-v1.0.0`.
 - Intraday strategies are excluded because SI.1 uses the daily regime and no explicit cross-timeframe compatibility rule exists.
 - Trade Quality Score TQ.1 consumes this versioned read model as resolved evidence. It does not change SI.1 decisions or activate strategies; future scanner ranking remains separately governed.

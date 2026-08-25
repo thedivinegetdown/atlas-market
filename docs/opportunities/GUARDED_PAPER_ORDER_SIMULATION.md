@@ -1,5 +1,7 @@
 # Guarded Paper Order Simulation
 
+PA.2 attaches an immutable `index-pullback-exit-v1.0.0` policy to every qualifying `index-pullback-v1` observation entry. It uses the existing entry-time stop and target evidence and persists the policy in the PI.3 immutable execution payload; no second risk calculation or live-order behavior is introduced.
+
 PA.2 is an authenticated, CSRF-protected, manual paper-simulation boundary. It accepts only PA.1 `APPROVED_FOR_PAPER_REVIEW` records and never runs on route mount, a timer, or a background worker.
 
 ## Controls and lifecycle
