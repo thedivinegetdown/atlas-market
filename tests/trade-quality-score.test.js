@@ -124,6 +124,7 @@ describe('deterministic Trade Quality Score', () => {
     const authorized = await handler({ httpMethod: 'GET', queryStringParameters: { symbol: 'AAPL', timeframe: '1D', asOf: NOW }, headers: { authorization: 'Bearer private-session' } })
     expect(unauthorized.statusCode).toBe(401)
     expect(authorized.statusCode).toBe(200)
+    expect(service.getTradeQuality).toHaveBeenCalledWith(expect.objectContaining({ symbol: 'AAPL', timeframe: 'swing' }), { timeframe: '1D' })
     expect(JSON.stringify(JSON.parse(authorized.body))).not.toMatch(/candles|apikey|private-session|rawProvider/i)
   })
 

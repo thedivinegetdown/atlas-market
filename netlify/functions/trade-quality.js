@@ -18,7 +18,7 @@ export function createTradeQualityHandler({ serviceFactory = createWorkspaceData
     return serviceFactory().getTradeQuality({
       symbol: validation.symbol,
       asOf: asOf || undefined,
-      timeframe,
+      timeframe: 'swing',
       scannerSource: String(query.scannerSource ?? 'deterministic-scanner').slice(0, 80),
       opportunityId: String(query.opportunityId ?? '').trim().slice(0, 160) || undefined,
       strategyId: String(query.strategyId ?? '').trim().slice(0, 140) || undefined,
