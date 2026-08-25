@@ -36,7 +36,24 @@ describe('Twelve Data production quote compatibility', () => {
     const result = await createDefaultMarketDataProvider({
       finnhubApiKey: '', twelveDataApiKey: 'key', fetchImpl, logger: { info: vi.fn(), warn: vi.fn() },
     }).getQuote('SPY')
-    expect(result).toMatchObject({ ok: true, provider: 'twelvedata', fallbackUsed: true, data: { price: 633.25 } })
+    expect(result).toMatchObject({ ok: true, provider: 'twelvedata', fallbackUsed: false, data: { price: 633.25 } })
     expect(result.mock).not.toBe(true)
+  })
+
+  it('treats configured Twelve Data as the primary source when Finnhub is not configured', async () => {
+    const timestamp = Math.floor(Date.now() / 1000)
+    const fetchImpl = vi.fn().mockResolvedValue(response({ symbol: 'SPY', last_quote_at: timestamp, close: '633.25' }))
+    const provider = createDefaultMarketDataProvider({
+      finnhubApiKey: '', twelveDataApiKey: 'key', fetchImpl, logger: { info: vi.fn(), warn: vi.fn() },
+    })
+
+    const result = await provider.getQuotes(['SPY'])
+
+    expect(result.data[0]).toMatchObject({
+      provider: 'twelvedata',
+      health: { status: 'healthy' },
+      provenance: { provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false, mock: false },
+    })
+    expect(result.data[0].provenance.warningCodes).not.toContain('FALLBACK_PROVIDER_USED')
   })
 })
