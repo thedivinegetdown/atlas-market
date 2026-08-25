@@ -17,7 +17,7 @@ export function useTradeQuality(candidate) {
         await workspaceApiClient.saveReviewedOpportunity({
           ...quality,
           reviewState: 'reviewed',
-          orderContext: candidate.orderContext ?? null,
+          orderContext: candidate.orderContext ?? quality.orderContext ?? null,
         })
       }
       setResult({ candidateKey: `${candidate.symbol}:${candidate.evaluatedAt ?? ''}`, quality })

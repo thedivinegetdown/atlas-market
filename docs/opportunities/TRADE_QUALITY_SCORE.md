@@ -20,7 +20,7 @@ TQ.1 reuses `normalizeOpportunityContract()` from `lib/ai/opportunityAnalysisEng
 | --- | --- | --- |
 | Scanner matches from `lib/scanners/scannerEvaluator.js` | Production-integrated | Symbol, scanner identity, matched criteria, asset type, and evaluation time; insufficient alone for a quality score |
 | Canonical opportunity contract | Production-compatible read-only contract used by opportunity analysis APIs | Strategy identity, direction, deterministic metrics, regime/liquidity/volatility/risk summaries, freshness, missing data, and hard rejections when supplied by an approved caller |
-| Strategy `index-pullback-v1` | Modeled, comprehensively tested, human-review lifecycle | Versioned SI.1 suitability result; it is not automatically assigned to scanner matches |
+| Strategy `index-pullback-v1` | Modeled, comprehensively tested, human-review lifecycle | Versioned SI.1 suitability result; scanner review may evaluate it as the sole approved strategy, but cannot activate it or turn `CONDITIONAL` into `ENABLED` |
 | Other opportunity and strategy fixtures | Test-only | Used only for deterministic test coverage |
 
 The engine accepts numeric strings only where they represent finite numbers. Invalid values are omitted. It does not infer a strategy, risk/reward ratio, liquidity state, or missing indicator value for a lean scanner match.

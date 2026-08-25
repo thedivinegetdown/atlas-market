@@ -60,3 +60,9 @@ Eligibility fails closed unless all of the following are true:
 Twelve Data Basic currently permits 8 API credits per minute and 800 per day. Atlas retains conservative process-local historical limits of 6 per minute and 720 per day. The five-symbol verification uses at most five historical and five quote credits when executed in bounded, rate-aware batches. Process-local limits do not constitute a global multi-instance provider quota.
 
 EDGE.1 does not add a provider, subscription, paid tier, broker, live-trading path, automatic paper execution, strategy, scoring-weight change, or risk-formula change.
+
+## EDGE.2 continuation
+
+The fixed observation manifest, immutable evidence snapshot, sample gates, and PA.3/PA.5 read-model integration are documented in [Fixed Forward Paper Observation](./FORWARD_PAPER_OBSERVATION.md).
+
+The observation infrastructure is ready, but the production cohort remains `NOT_STARTED`: the approved strategy is still a validated human-review record and does not yet declare deterministic exit criteria. EDGE.2 does not activate it or invent an exit rule.
