@@ -100,6 +100,17 @@ describe('PI.2 canonical durable paper evidence', () => {
     expect(repeated.history.payload.tradeQualitySnapshot.evidenceFingerprint).toBe(reviews[0].evidenceFingerprint)
   })
 
+  it('serializes candidate fingerprints as JSON for the PostgreSQL JSONB contract', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: 'saved' }], rowCount: 1 })
+    await createAtlasAiRepository({ database: { connected: true, query } }).saveTradeQualityReview({
+      ...scope(), qualitySnapshot: snapshot(), reviewedAt: NOW,
+    })
+
+    const [, params] = query.mock.calls[0]
+    expect(params[10]).toBe(JSON.stringify(['opp-aapl-1']))
+    expect(JSON.parse(params[10])).toEqual(['opp-aapl-1'])
+  })
+
   it('suppresses PA.1 duplicates after restart and accepts changed evidence', async () => {
     const database = createHistoryDatabase()
     const first = await createAtlasAiRepository({ database }).savePaperEvaluation({ ...scope(), evaluation: evaluation() })
