@@ -20,11 +20,13 @@ afterEach(() => {
 })
 
 describe('governed strategy registry UI', () => {
-  it('shows the implemented strategy and explicitly inactive placeholders without execution controls', () => {
+  it('shows the final four implemented strategy families without execution controls', () => {
     const view = render(<StrategyRegistryPanel />)
     expect(view.textContent).toContain('Index Pullback')
     expect(view.textContent).toContain('Breakout Momentum')
-    expect(view.textContent).toContain('NOT IMPLEMENTED')
+    expect(view.textContent).toContain('Range Mean Reversion')
+    expect(view.textContent).toContain('Volatility Expansion')
+    expect(view.textContent).not.toContain('NOT IMPLEMENTED')
     expect(view.textContent).toContain('Registration does not implement')
     expect(view.querySelectorAll('button')).toHaveLength(0)
   })
