@@ -24,6 +24,7 @@ export function AtlasCopilotPanel({
   incidents,
   marketDataHealth,
   operationsHealth,
+  atlasDecisionContext,
   MetricCard,
 }) {
   const [question, setQuestion] = useState('Summarize my current paper portfolio.')
@@ -45,7 +46,8 @@ export function AtlasCopilotPanel({
     incidents,
     marketDataHealth,
     operationsHealth,
-  }), [alerts, incidents, journalEntries, marketDataHealth, operationsHealth, pnlSummary, portfolioSummary, riskMetrics, scannerSummaries, signalSummaries, strategyMetrics])
+    atlasDecisionContext,
+  }), [alerts, atlasDecisionContext, incidents, journalEntries, marketDataHealth, operationsHealth, pnlSummary, portfolioSummary, riskMetrics, scannerSummaries, signalSummaries, strategyMetrics])
   const preview = useMemo(() => buildAtlasAiContext({ requestCategory, contextSources }), [contextSources, requestCategory])
   async function submit(event) {
     event.preventDefault()
@@ -189,6 +191,10 @@ export function AtlasCopilotPanel({
         <section>
           <h3>Context Used</h3>
           <p className="empty-state">{preview.contextCategories.join(' / ') || 'No context selected'} / fingerprint {preview.contextFingerprint}</p>
+        </section>
+        <section>
+          <h3>Deterministic Atlas Fact</h3>
+          <p className="empty-state">Decision status: {atlasDecisionContext?.selectedPlan?.decisionStatus ?? 'UNAVAILABLE'} / Portfolio admission: {atlasDecisionContext?.portfolioAdmission?.admissionStatus ?? atlasDecisionContext?.portfolioAdmission?.status ?? 'UNAVAILABLE'} / Decision quality: {atlasDecisionContext?.decisionQuality?.status ?? 'UNAVAILABLE'}</p>
         </section>
         <section>
           <h3>Recent Copilot History</h3>
