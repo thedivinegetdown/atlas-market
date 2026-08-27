@@ -183,7 +183,7 @@ describe('Part 10C signal and risk panels', () => {
     renderWithRoot(<RiskHookProbe />)
 
     expect(container.textContent).toContain('NVDA')
-    expect(container.textContent).toContain('order notional exceeds limit')
+    expect(container.textContent).not.toContain('order notional exceeds limit')
     expect(container.textContent).toContain('137.2')
     expect(container.textContent).toContain('145.6')
   })

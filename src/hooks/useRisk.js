@@ -23,12 +23,12 @@ function buildRiskSnapshot({ quote, portfolio, accountSummary }) {
   const stopDistance = Number((price * 0.02).toFixed(2))
   const stopPrice = Number((price - stopDistance).toFixed(2))
   const targetPrice = Number((price + (stopDistance * 2)).toFixed(2))
-  const requestedPositionSize = Math.max(1, Math.floor(positionSizingEngine.sizeOrder({
+  const requestedPositionSize = positionSizingEngine.sizeOrder({
     accountBalance: accountValue,
     riskPerTrade: maxRiskPerTrade / 100,
     price,
     stopDistance,
-  })))
+  })
   const order = {
     symbol: quote.symbol,
     type: 'LIMIT',

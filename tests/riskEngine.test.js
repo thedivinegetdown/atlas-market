@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { createRiskEngine } from '../lib/risk/riskEngine.js'
 import { createPositionSizingEngine } from '../lib/risk/positionSizingEngine.js'
 import { createKillSwitchEngine } from '../lib/risk/killSwitchEngine.js'
+import { createWorkspaceDataService } from '../lib/workspace/workspaceDataService.js'
 
 describe('risk engine', () => {
   it('approves a safe order', () => {
@@ -54,11 +55,41 @@ describe('risk engine', () => {
     expect(decision.checks.some((check) => check.name === 'marketDataFreshness' && !check.passed)).toBe(true)
   })
 
-  it('sizes positions using risk limits', () => {
+  it('caps position size by order notional', () => {
     const sizing = createPositionSizingEngine()
     const result = sizing.sizeOrder({ accountBalance: 10000, riskPerTrade: 0.01, price: 100, stopDistance: 5 })
 
-    expect(result).toBe(20)
+    expect(result).toBe(5)
+  })
+
+  it('returns zero when one SPY share exceeds the notional cap', () => {
+    const sizing = createPositionSizingEngine()
+    expect(sizing.sizeOrder({ accountBalance: 100000, riskPerTrade: 0.01, price: 771.28, stopDistance: 15.43 })).toBe(0)
+  })
+
+  it('uses risk quantity when it is smaller than notional quantity', () => {
+    const sizing = createPositionSizingEngine()
+    expect(sizing.sizeOrder({ accountBalance: 1000, riskPerTrade: 0.01, price: 100, stopDistance: 5 })).toBe(2)
+  })
+
+  it('uses notional quantity when it is smaller than risk quantity', () => {
+    const sizing = createPositionSizingEngine()
+    expect(sizing.sizeOrder({ accountBalance: 100000, riskPerTrade: 0.01, price: 200, stopDistance: 4 })).toBe(2)
+  })
+
+  it('preserves zero through the server sizing caller and fails closed', async () => {
+    const quote = { symbol: 'SPY', price: 771.28, updatedAt: new Date().toISOString(), assetType: 'equity' }
+    const service = createWorkspaceDataService({
+      marketDataService: { getQuote: async () => quote },
+      portfolioRepository: { list: () => [{ cash: 100000, exposure: 0.1 }] },
+    })
+    const result = await service.getRiskSummary('SPY')
+    expect(result.risk.requestedPositionSize).toBe(0)
+    expect(result.risk.positionSize).toBe(0)
+    expect(result.risk.approved).toBe(false)
+    expect(result.risk.checks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: 'quantity', passed: false }),
+    ]))
   })
 
   it('manages the kill switch state', () => {
