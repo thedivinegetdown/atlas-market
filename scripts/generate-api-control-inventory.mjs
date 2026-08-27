@@ -21,6 +21,7 @@ const EXPLICIT_CLASSIFICATIONS = Object.freeze({
   'release-runtime-health': ['AUTHENTICATED_READ', 'Release diagnostics are privileged operational information restricted to workspace administrators.'],
   alerts: ['ORGANIZATION_READ', 'Legacy alert state is compatibility-only and requires organization membership.'],
   decision: ['ORGANIZATION_READ', 'Decision intelligence is tenant-sensitive workspace evidence.'],
+  'decision-intelligence': ['ORGANIZATION_READ', 'Composed decision intelligence is tenant-sensitive account evidence.'],
   'equity-curve': ['ORGANIZATION_READ', 'Paper performance history is tenant-sensitive account evidence.'],
   'journal-summary': ['ORGANIZATION_READ', 'Paper journal content is tenant-sensitive account evidence.'],
   'operator-actions': ['ORGANIZATION_READ', 'Operator actions are scoped operational evidence.'],

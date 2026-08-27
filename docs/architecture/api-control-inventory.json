@@ -2,16 +2,16 @@
   "schemaVersion": 2,
   "generatedFrom": "netlify/functions/*.js",
   "summary": {
-    "total": 274,
+    "total": 275,
     "byWrapper": {
       "team-authenticated": 8,
-      "organization-authenticated": 243,
+      "organization-authenticated": 244,
       "authenticated": 21,
       "plain-api": 2,
       "unknown": 0
     },
     "byAccess": {
-      "read": 77,
+      "read": 78,
       "mutation": 56,
       "read-and-mutation": 141
     },
@@ -19,7 +19,7 @@
       "P0": 0,
       "P1": 0,
       "P2": 0,
-      "P3": 274
+      "P3": 275
     }
   },
   "functions": [
@@ -2145,6 +2145,24 @@
       "csrfRequired": false,
       "endpointClassification": "ORGANIZATION_READ",
       "classificationReason": "Decision intelligence is tenant-sensitive workspace evidence.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "decision-intelligence",
+      "path": "netlify/functions/decision-intelligence.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "ORGANIZATION_READ",
+      "classificationReason": "Composed decision intelligence is tenant-sensitive account evidence.",
       "risk": "controlled",
       "priority": "P3",
       "remediation": "Retain wrapper coverage and verify production identity/provider configuration."

@@ -10,19 +10,19 @@ This inventory reports source-level controls. It does not prove production ident
 
 | Classification | Count |
 | --- | ---: |
-| Total functions | 274 |
+| Total functions | 275 |
 | Wrapper: team-authenticated | 8 |
-| Wrapper: organization-authenticated | 243 |
+| Wrapper: organization-authenticated | 244 |
 | Wrapper: authenticated | 21 |
 | Wrapper: plain-api | 2 |
 | Wrapper: unknown | 0 |
-| Access: read | 77 |
+| Access: read | 78 |
 | Access: mutation | 56 |
 | Access: read-and-mutation | 141 |
 | Priority: P0 | 0 |
 | Priority: P1 | 0 |
 | Priority: P2 | 0 |
-| Priority: P3 | 274 |
+| Priority: P3 | 275 |
 
 ## Control semantics
 
@@ -149,6 +149,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `daily-briefing` | `netlify/functions/daily-briefing.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `database-health` | `netlify/functions/database-health.js` | AUTHENTICATED_READ | Database and migration health is privileged operational information restricted to workspace administrators. | GET | read | authenticated | authenticated-user/workspace-role | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `decision` | `netlify/functions/decision.js` | ORGANIZATION_READ | Decision intelligence is tenant-sensitive workspace evidence. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
+| `decision-intelligence` | `netlify/functions/decision-intelligence.js` | ORGANIZATION_READ | Composed decision intelligence is tenant-sensitive account evidence. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `delete-alert` | `netlify/functions/delete-alert.js` | COMPATIBILITY_ONLY | Legacy memory alert mutation remains owner/admin protected; PI.4 durable configuration is canonical. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `delete-scanner` | `netlify/functions/delete-scanner.js` | COMPATIBILITY_ONLY | Legacy memory scanner mutation remains owner/admin protected; PI.4 durable configuration is canonical. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `equity-curve` | `netlify/functions/equity-curve.js` | ORGANIZATION_READ | Paper performance history is tenant-sensitive account evidence. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
