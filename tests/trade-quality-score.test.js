@@ -107,12 +107,18 @@ describe('deterministic Trade Quality Score', () => {
 
   it('builds genuine scanner-derived quality context from server-side quote and existing risk evidence', async () => {
     const service = createWorkspaceDataService({ marketDataService: { getQuote: vi.fn(), getCandles: vi.fn(), getWatchlistQuotes: vi.fn() } })
-    service.getMarketOverview = vi.fn().mockResolvedValue({ quote: { symbol: 'AAPL', price: 100, previousClose: 99, high: 101, low: 98, volume: 2_000_000, updatedAt: NOW, provenance: { provider: 'twelvedata', dataStatus: 'LIVE', mock: false } }, regime: regime({ marketData: { provider: 'twelvedata', dataStatus: 'LIVE', mock: false } }) })
+    service.getMarketOverview = vi.fn().mockResolvedValue({
+      quote: { symbol: 'AAPL', price: 100, previousClose: 99, high: 101, low: 98, volume: 2_000_000, updatedAt: NOW, provenance: { provider: 'twelvedata', dataStatus: 'LIVE', mock: false } },
+      indicatorBundle: { indicators: { relativeStrengthPct: 3.5, relativeVolume: 1.4, atrPercentile: 55 } },
+      regime: regime({ marketData: { provider: 'twelvedata', dataStatus: 'LIVE', mock: false } }),
+    })
     service.getRiskSummary = vi.fn().mockResolvedValue({ risk: { approved: true, rewardRatio: 2, stopPrice: 98, targetPrice: 104 } })
     const result = await service.getTradeQuality({ symbol: 'AAPL', asOf: NOW, scannerSource: 'Momentum Scan', assetType: 'equity' })
     expect(result.quality).toMatchObject({ opportunityId: expect.stringMatching(/^scanner-/), strategyId: 'index-pullback-v1', score: expect.any(Number), orderContext: { side: expect.any(String), price: 100, stopPrice: 98, targetPrice: 104 } })
     expect(result.quality.missingInputs).not.toContain('liquidity')
     expect(result.quality.missingInputs).not.toContain('riskReward')
+    expect(result.quality.missingInputs).not.toEqual(expect.arrayContaining(['relativeStrength', 'volume', 'volatility']))
+    expect(result.quality.evidenceCoverage).toBe(100)
     expect(result.forwardTestEvidence.blockers).not.toContain('strategy_not_enabled')
     expect(result.forwardTestEvidence.blockers).not.toContain('risk_gates_not_evaluated')
   })

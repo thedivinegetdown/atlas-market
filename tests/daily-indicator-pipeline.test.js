@@ -128,6 +128,16 @@ describe('daily indicator bundle and MI.2 integration', () => {
     expect(first.pipelineVersion).toBe('daily-indicators-v1')
   })
 
+  it('treats a completed date-only daily bar as evidence for its full trading date', () => {
+    const calculatedAt = '2026-07-31T15:30:00.000Z'
+    const input = { symbol: 'SPY', source: 'twelvedata', candles: candles(260), benchmarkCandles: candles(260) }
+    const bundle = buildDailyIndicatorBundle(input, { calculatedAt, now: calculatedAt })
+    expect(bundle.provenance.price.observedAt).toBe('2026-07-30T23:59:59.999Z')
+    const result = createMarketRegimeOrchestrator().classify({ symbol: 'SPY', timeframe: '1D', indicatorBundle: bundle }, { now: calculatedAt })
+    expect(result.freshness).toBe('FRESH')
+    expect(result.inputCoverage.stale).toEqual([])
+  })
+
   it('isolates missing indicators when history is insufficient or malformed', () => {
     const malformed = [...candles(20), { ...candles(1)[0], timestamp: 'bad' }]
     const bundle = buildDailyIndicatorBundle({ symbol: 'AAPL', candles: malformed, benchmarkCandles: [] }, { calculatedAt: NOW, now: NOW })
