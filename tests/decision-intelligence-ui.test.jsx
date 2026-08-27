@@ -1,7 +1,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
-import { DecisionIntelligenceSummary, ForwardObservationStatus } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
+import { DecisionIntelligenceSummary, ForwardObservationStatus, RangeMeanReversionDecisionPanel } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
 
 let root; let container
 function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
@@ -23,5 +23,9 @@ describe('Decision Intelligence workspace summary', () => {
   it('renders RANGE.1 as a third independent read-only observation row', () => {
     const view = render(<ForwardObservationStatus observations={[{ experimentId: 'RANGE.1', strategyId: 'range-mean-reversion-v1', status: 'NOT_STARTED', sessionsElapsed: 0, completedOutcomes: 0, minimumSessions: 20, minimumOutcomes: 30 }]} />)
     expect(view.textContent).toContain('Range Mean Reversion'); expect(view.textContent).toContain('RANGE.1'); expect(view.textContent).toContain('NOT STARTED'); expect(view.textContent).not.toMatch(/start cohort|force start/i)
+  })
+  it('renders bounded range candidate evidence without execution controls', () => {
+    const view = render(<RangeMeanReversionDecisionPanel plan={{ strategy: { suitability: 'ENABLED' }, decision: { status: 'QUALIFIED' }, structure: { entry: 100, stop: 92.5, target: 110, rMultiple: 1.33 }, risk: { allowedQuantity: 2 }, rangeMeanReversion: { currentPrice: 100, sma20: 110, stretchAtr: 1, prior20Low: 90, adx14: 19, rsi14: 35, relativeVolume: 1, relativeStrength: -1, marketParticipation: 'MIXED', sectorAlignment: 'UNAVAILABLE' } }} />)
+    expect(view.textContent).toContain('Prior 20-session Low'); expect(view.textContent).toContain('ATR Stretch'); expect(view.textContent).toContain('Entry:'); expect(view.textContent).toContain('Target:'); expect(view.textContent).not.toMatch(/execute|start|force/i)
   })
 })

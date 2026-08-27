@@ -18,6 +18,16 @@ export function ForwardObservationStatus({ observations = [] } = {}) {
     </section>)}
   </WorkspacePanel>
 }
+export function RangeMeanReversionDecisionPanel({ plan } = {}) {
+  const range = plan?.rangeMeanReversion
+  if (!range) return null
+  return <WorkspacePanel id="range-mean-reversion-decision" title="Range Mean Reversion" subtitle="Deterministic candidate evidence">
+    <div className="metric-grid">
+      <MetricCard label="Current Price" value={range.currentPrice ?? 'UNAVAILABLE'} /><MetricCard label="SMA20" value={range.sma20 ?? 'UNAVAILABLE'} /><MetricCard label="ATR Stretch" value={range.stretchAtr ?? 'UNAVAILABLE'} /><MetricCard label="Prior 20-session Low" value={range.prior20Low ?? 'UNAVAILABLE'} /><MetricCard label="ADX" value={range.adx14 ?? 'UNAVAILABLE'} /><MetricCard label="RSI" value={range.rsi14 ?? 'UNAVAILABLE'} /><MetricCard label="Relative Volume" value={range.relativeVolume ?? 'UNAVAILABLE'} /><MetricCard label="Relative Strength" value={range.relativeStrength ?? 'UNAVAILABLE'} /><MetricCard label="Market Participation" value={display(range.marketParticipation)} /><MetricCard label="Sector Alignment" value={display(range.sectorAlignment)} /><MetricCard label="Suitability" value={display(plan.strategy?.suitability)} /><MetricCard label="Decision" value={display(plan.decision?.status)} />
+    </div>
+    <p><strong>Entry:</strong> {plan.structure?.entry ?? 'UNAVAILABLE'} · <strong>Stop:</strong> {plan.structure?.stop ?? 'UNAVAILABLE'} · <strong>Target:</strong> {plan.structure?.target ?? 'UNAVAILABLE'} · <strong>R:R:</strong> {plan.structure?.rMultiple ?? 'UNAVAILABLE'} · <strong>Quantity:</strong> {plan.risk?.allowedQuantity ?? 0}</p>
+  </WorkspacePanel>
+}
 export function DecisionIntelligenceSummary({ state } = {}) {
   const resolved = state ?? { intelligence: null, isLoading: false, error: null }; const intelligence = resolved.intelligence
   return <WorkspacePanel id="decision-intelligence" title="Atlas Decision Intelligence" subtitle="Canonical deterministic paper-trading snapshot">
@@ -35,6 +45,7 @@ export function CopilotSections() {
         <AtlasCopilotPanel atlasDecisionContext={decisionIntelligence.intelligence?.copilotContext} />
       </LazyFeature>
       <DecisionIntelligenceSummary state={decisionIntelligence} />
+      <RangeMeanReversionDecisionPanel plan={decisionIntelligence.intelligence?.selectedDecision?.plan} />
       <ForwardObservationStatus observations={decisionIntelligence.intelligence?.observations} />
       <WorkspacePanel id="copilot-context" title="Context" subtitle="Safe advisory context">
         <div className="metric-grid">
