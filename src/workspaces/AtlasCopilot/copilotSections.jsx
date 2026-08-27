@@ -1,17 +1,30 @@
 import { lazy } from 'react'
 import { LazyFeature } from '../../components/LazyFeatureBoundary.jsx'
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
+import { useDecisionIntelligence } from '../../hooks/useDecisionIntelligence.js'
 
 const AtlasCopilotPanel = lazy(() => import('../../components/AtlasCopilotPanel.jsx').then((module) => ({
   default: module.AtlasCopilotPanel,
 })))
 
+const display = (value) => String(value ?? 'UNAVAILABLE').replaceAll('_', ' ')
+export function DecisionIntelligenceSummary({ state } = {}) {
+  const resolved = state ?? { intelligence: null, isLoading: false, error: null }; const intelligence = resolved.intelligence
+  return <WorkspacePanel id="decision-intelligence" title="Atlas Decision Intelligence" subtitle="Canonical deterministic paper-trading snapshot">
+    {resolved.isLoading ? <p role="status">Loading decision intelligence…</p> : null}{resolved.error ? <p role="alert">Decision intelligence is unavailable.</p> : null}
+    {!resolved.isLoading && !resolved.error && !intelligence ? <EmptyWorkspaceState>No decision intelligence evidence is available.</EmptyWorkspaceState> : null}
+    {intelligence ? <><p><strong>Market:</strong> {display(intelligence.market?.freshness)} · {display(intelligence.market?.status)} · <strong>Live execution disabled</strong></p><div className="metric-grid"><MetricCard label="Qualified" value={intelligence.opportunities?.qualifiedCount ?? 0}/><MetricCard label="WATCH" value={intelligence.opportunities?.watchCount ?? 0}/><MetricCard label="Decision Quality" value={display(intelligence.decisionQuality?.status)}/><MetricCard label="Recent Trend" value={display(intelligence.decisionQuality?.recentTrend)}/></div>{intelligence.opportunities?.emptyQualifiedState ? <EmptyWorkspaceState>NO QUALIFIED OPPORTUNITIES</EmptyWorkspaceState> : <ol>{(intelligence.opportunities?.topQualifiedPlans ?? []).map((plan) => <li key={plan.planReference?.planId}><strong>{plan.symbol}</strong> · {display(plan.side)} · {plan.strategyId} · score {plan.rankingScore} · {plan.portfolioEvidence?.status ?? 'portfolio evidence unavailable'}</li>)}</ol>}<p>WATCH: {(intelligence.opportunities?.watchPlans ?? []).map((plan) => plan.symbol).join(', ') || 'None'}.</p><p>Decision Quality: expectancy {intelligence.decisionQuality?.overall?.expectancy ?? 'unavailable'} · R {intelligence.decisionQuality?.rNormalized?.metrics?.averageR ?? 'UNAVAILABLE'} · empirical confidence {intelligence.evidence?.empiricalConfidence ?? 'UNAVAILABLE'}.</p><p>Portfolio evidence: {display(intelligence.portfolio?.exposure?.status)}. Provenance and freshness are preserved from deterministic upstream evidence.</p></> : null}
+  </WorkspacePanel>
+}
+
 export function CopilotSections() {
+  const decisionIntelligence = useDecisionIntelligence()
   return (
     <>
       <LazyFeature label="Atlas Copilot">
-        <AtlasCopilotPanel />
+        <AtlasCopilotPanel atlasDecisionContext={decisionIntelligence.intelligence?.copilotContext} />
       </LazyFeature>
+      <DecisionIntelligenceSummary state={decisionIntelligence} />
       <WorkspacePanel id="copilot-context" title="Context" subtitle="Safe advisory context">
         <div className="metric-grid">
           <MetricCard label="Portfolio Analysis" value="advisory" />

@@ -198,6 +198,9 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     getDecision(symbol) {
       return request('decision', { symbol, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load decision intelligence')
     },
+    getDecisionIntelligence(planId) {
+      return request('decision-intelligence', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', planId }, 'Unable to load decision intelligence')
+    },
 
     getPortfolioSummary() {
       return request('paper-workspace-projection', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load portfolio summary')
