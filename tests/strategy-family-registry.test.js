@@ -15,12 +15,12 @@ describe('governed strategy-family registry', () => {
     const entry = buildStrategyFamilyRegistry({ strategies }).strategies.find((strategy) => strategy.strategyId === 'index-pullback-v1')
     expect(entry.strategyFingerprint).toBe('existing-fingerprint')
   })
-  it.each(['breakout-momentum-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1'])('keeps placeholder %s inactive and unselectable', (strategyId) => {
+  it.each(['volatility-expansion-v1'])('keeps placeholder %s inactive and unselectable', (strategyId) => {
     const registry = buildStrategyFamilyRegistry(); const entry = registry.strategies.find((strategy) => strategy.strategyId === strategyId)
     expect(entry).toMatchObject({ implementationStatus: 'NOT_IMPLEMENTED', lifecycleStatus: 'INACTIVE', paperEligibility: 'INACTIVE', liveEligibility: 'LIVE_DISABLED' }); expect(registry.selectableStrategyIds).not.toContain(strategyId)
   })
   it('does not enable a strategy merely because it is registered', () => {
-    const registry = buildStrategyFamilyRegistry(); const placeholder = registry.strategies.find((strategy) => strategy.strategyId === 'breakout-momentum-v1')
+    const registry = buildStrategyFamilyRegistry(); const placeholder = registry.strategies.find((strategy) => strategy.strategyId === 'volatility-expansion-v1')
     const selection = selectStrategiesForRegime({ regime, strategies: [placeholder] })
     expect(selection.strategies[0].decision).toBe('UNKNOWN')
   })

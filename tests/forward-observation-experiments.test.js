@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { BREAKOUT_OBSERVATION_UNIVERSE, buildForwardObservationStatus, createBreakoutObservationExperimentDefinition, createForwardEvidenceSnapshot, createForwardObservationManifest } from '../lib/opportunities/forwardTest/forwardObservationEngine.js'
+import { BREAKOUT_OBSERVATION_UNIVERSE, buildForwardObservationStatus, createBreakoutObservationExperimentDefinition, createForwardEvidenceSnapshot, createForwardObservationManifest, createRangeObservationExperimentDefinition } from '../lib/opportunities/forwardTest/forwardObservationEngine.js'
 import { BREAKOUT_MOMENTUM_EXIT_POLICY_DEFINITION_FINGERPRINT, BREAKOUT_MOMENTUM_EXIT_POLICY_VERSION, createBreakoutMomentumExitPolicy } from '../lib/opportunities/forwardTest/breakoutMomentumExitPolicy.js'
 
 const startedAt = '2026-08-27T00:00:00.000Z'
@@ -12,5 +12,10 @@ describe('independent forward observation experiments', () => {
     const snapshot = createForwardEvidenceSnapshot({ manifest: observation, evidence: { forwardTestEligible: true, symbol: 'SPY', strategyId: 'breakout-momentum-v1', timestamp: startedAt, providerProvenance: { provider: 'twelvedata', dataStatus: 'LIVE' }, tradeQuality: { score: 80 } }, entryContext: { exitPolicy, referencePrice: 120 } })
     expect(snapshot).toMatchObject({ experimentId: 'BREAKOUT.1', strategyId: 'breakout-momentum-v1' })
     expect(() => createForwardEvidenceSnapshot({ manifest: observation, evidence: { forwardTestEligible: true, strategyId: 'index-pullback-v1' } })).toThrow('evidence strategy')
+  })
+  it('freezes RANGE.1 independently without creating a cohort', () => {
+    const range = createRangeObservationExperimentDefinition({ strategyFingerprint: 'range-fingerprint', createdAt: startedAt })
+    expect(range).toMatchObject({ experimentId: 'RANGE.1', strategyId: 'range-mean-reversion-v1', observationUniverse: [...BREAKOUT_OBSERVATION_UNIVERSE].sort(), minimumTradingSessions: 20, minimumCompletedOutcomes: 30 })
+    expect(buildForwardObservationStatus({}).status).toBe('NOT_STARTED')
   })
 })

@@ -11,7 +11,7 @@ const display = (value) => String(value ?? 'UNAVAILABLE').replaceAll('_', ' ')
 export function ForwardObservationStatus({ observations = [] } = {}) {
   return <WorkspacePanel id="forward-observation" title="Forward Observation" subtitle="Read-only experiment status">
     {(observations ?? []).map((observation) => <section key={observation.experimentId} aria-label={`${observation.experimentId} observation status`}>
-      <h3>{observation.strategyId === 'breakout-momentum-v1' ? 'Breakout Momentum' : 'Pullback'}</h3>
+      <h3>{observation.strategyId === 'breakout-momentum-v1' ? 'Breakout Momentum' : observation.strategyId === 'range-mean-reversion-v1' ? 'Range Mean Reversion' : 'Pullback'}</h3>
       <p><strong>Experiment:</strong> {observation.experimentId} · <strong>Status:</strong> {display(observation.status)}</p>
       <p><strong>Sessions:</strong> {observation.sessionsElapsed ?? 0} / {observation.minimumSessions ?? 20} · <strong>Outcomes:</strong> {observation.completedOutcomes ?? 0} / {observation.minimumOutcomes ?? 30}</p>
       <p><strong>Strategy:</strong> {observation.strategyId ?? 'UNAVAILABLE'}{observation.reason ? ` · ${display(observation.reason)}` : ''}</p>

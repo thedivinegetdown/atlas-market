@@ -30,7 +30,7 @@ describe('persisted forward observation statuses', () => {
 
   it('does not create cohorts and degrades a missing repository without exposing another account scope', async () => {
     const status = await resolvePersistedForwardObservationStatuses({ ...scope, evidenceRepository: {}, ledgerRepository: { listExecutions: vi.fn(async () => []) } })
-    expect(status).toHaveLength(2)
+    expect(status).toHaveLength(3)
     expect(status.every((entry) => entry.status === 'UNAVAILABLE')).toBe(true)
   })
 })

@@ -35,4 +35,10 @@ describe('canonical Qualified Trade Plan', () => {
     const plan = composeQualifiedTradePlan(input)
     expect(plan).toMatchObject({ strategyId: 'breakout-momentum-v1', strategyFamily: 'breakout-momentum', decision: { status: 'QUALIFIED' }, breakout: { level: 100, percent: 2, adx14: 24 }, integrity: { strategyFingerprint: 'breakout-fingerprint', experimentId: 'BREAKOUT.1' } })
   })
+  it('composes range evidence through the same canonical plan contract', () => {
+    const rangeMeanReversionSignal = { strategyId: 'range-mean-reversion-v1', suitabilityStatus: 'ENABLED', prior20Low: 90, currentPrice: 100, SMA20: 110, ATR14: 5, stretchAtr: 2, ADX14: 19, RSI14: 35, relativeVolume: 1, relativeStrength: -1, marketParticipation: 'MIXED', sectorAlignment: 'UNAVAILABLE', evidenceFreshness: 'FRESH', strategyFingerprint: 'range-fingerprint' }
+    const input = base({ candidate: { ...base().candidate, strategyId: 'range-mean-reversion-v1' }, strategyVersion: '1.0.0', strategyFingerprint: null, evaluation: { ...base().evaluation, strategyId: 'range-mean-reversion-v1', experimentId: 'RANGE.1', rangeMeanReversionSignal } })
+    const plan = composeQualifiedTradePlan(input)
+    expect(plan).toMatchObject({ strategyId: 'range-mean-reversion-v1', strategyFamily: 'range-mean-reversion', rangeMeanReversion: { prior20Low: 90, stretchAtr: 2, adx14: 19 }, integrity: { strategyFingerprint: 'range-fingerprint', experimentId: 'RANGE.1' } })
+  })
 })

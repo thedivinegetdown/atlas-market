@@ -20,4 +20,8 @@ describe('Decision Intelligence workspace summary', () => {
     expect(view.textContent).toContain('EDGE.2'); expect(view.textContent).toContain('BREAKOUT.1'); expect(view.textContent).toContain('Sessions: 3 / 20'); expect(view.textContent).toContain('Outcomes: 0 / 30'); expect(view.textContent).toContain('INVALIDATED')
     expect(view.textContent).not.toMatch(/start|reset|force eligibility/i)
   })
+  it('renders RANGE.1 as a third independent read-only observation row', () => {
+    const view = render(<ForwardObservationStatus observations={[{ experimentId: 'RANGE.1', strategyId: 'range-mean-reversion-v1', status: 'NOT_STARTED', sessionsElapsed: 0, completedOutcomes: 0, minimumSessions: 20, minimumOutcomes: 30 }]} />)
+    expect(view.textContent).toContain('Range Mean Reversion'); expect(view.textContent).toContain('RANGE.1'); expect(view.textContent).toContain('NOT STARTED'); expect(view.textContent).not.toMatch(/start cohort|force start/i)
+  })
 })
