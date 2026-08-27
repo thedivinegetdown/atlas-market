@@ -1,5 +1,6 @@
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useStrategySuitability } from '../../hooks/useStrategySuitability.js'
+import { buildStrategyFamilyRegistry } from '../../../lib/strategies/registry/index.js'
 
 function formatStatus(value) {
   return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
@@ -59,6 +60,25 @@ export function StrategySuitabilityPanel({ symbol = 'SPY', state } = {}) {
   )
 }
 
+export function StrategyRegistryPanel({ registry = buildStrategyFamilyRegistry() } = {}) {
+  return <WorkspacePanel id="strategy-registry" title="Registry" subtitle="Governed strategy library">
+    <div className="strategy-manager-list">
+      {registry.strategies.map((strategy) => <article className="strategy-manager-card" key={strategy.strategyId}>
+        <div className="panel-heading"><h3>{strategy.displayName}</h3><span role="status">{formatStatus(strategy.implementationStatus)}</span></div>
+        <div className="metric-grid">
+          <MetricCard label="Family" value={formatStatus(strategy.familyId)} />
+          <MetricCard label="Version" value={strategy.version ?? 'Not implemented'} />
+          <MetricCard label="Lifecycle" value={formatStatus(strategy.lifecycleStatus)} />
+          <MetricCard label="Paper status" value={formatStatus(strategy.paperEligibility)} />
+          <MetricCard label="Live status" value={formatStatus(strategy.liveEligibility)} />
+        </div>
+        <p>{strategy.reasons[0]}</p>
+      </article>)}
+    </div>
+    <p>Registry discovery only. Registration does not implement, activate, approve, or execute a strategy.</p>
+  </WorkspacePanel>
+}
+
 export function StrategySections() {
   return (
     <>
@@ -73,9 +93,7 @@ export function StrategySections() {
       <WorkspacePanel id="strategy-lifecycle" title="Lifecycle" subtitle="Human-reviewed lifecycle">
         <EmptyWorkspaceState>Strategy lifecycle changes remain presentation-only in this workspace.</EmptyWorkspaceState>
       </WorkspacePanel>
-      <WorkspacePanel id="strategy-registry" title="Registry" subtitle="Strategy library">
-        <EmptyWorkspaceState>Registry surfaces strategy metadata without executing trades.</EmptyWorkspaceState>
-      </WorkspacePanel>
+      <StrategyRegistryPanel />
     </>
   )
 }
