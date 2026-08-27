@@ -23,6 +23,15 @@ describe('decision intelligence orchestration', () => {
     const result = await buildDecisionIntelligence(input({ observationStatuses: [{ experimentId: 'EDGE.2', strategyId: 'index-pullback-v1', status: 'COLLECTING', sessionsElapsed: 3, completedOutcomes: 1 }, { experimentId: 'BREAKOUT.1', strategyId: 'breakout-momentum-v1', status: 'NOT_STARTED', blockers: ['no_qualifying_candidate'] }] }))
     expect(result.observations).toHaveLength(2); expect(result.copilotContext.observations[1]).toMatchObject({ experimentId: 'BREAKOUT.1', status: 'NOT_STARTED', blockers: ['no_qualifying_candidate'] })
   })
+  it('projects bounded attributable strategy assessments to intelligence and Copilot', async () => {
+    const result = await buildDecisionIntelligence(input({ evaluations: [{ ...evaluation, strategyId: 'volatility-expansion-v1', volatilityExpansionSignal: { suitabilityStatus: 'ENABLED', strategyFingerprint: 'volatility-fingerprint' } }] }))
+    expect(result.strategyAssessments).toEqual([expect.objectContaining({ strategyId: 'volatility-expansion-v1', status: 'QUALIFIED', evidenceType: 'volatility-expansion' })])
+    expect(result.copilotContext.strategyAssessments).toEqual([expect.objectContaining({ strategyId: 'volatility-expansion-v1', status: 'QUALIFIED' })])
+  })
+  it('keeps zero-quantity no-trade explanations deterministic and bounded', async () => {
+    const result = await buildDecisionIntelligence(input({ evaluations: [{ ...evaluation, orderContext: { ...evaluation.orderContext, quantity: 0 } }] }))
+    expect(result.opportunities.noTradeReasons).toEqual([{ strategyId: 'index-pullback-v1', reason: 'Risk sizing allowed zero quantity.' }])
+  })
   it('keeps completed outcomes grouped by their persisted experiment identity', async () => {
     const result = await buildDecisionIntelligence(input({ executions: [{ executionId: 'edge-exit', executionType: 'close', experimentId: 'EDGE.2', symbol: 'SPY', strategyId: 'index-pullback-v1', realizedPnlDelta: 10 }, { executionId: 'breakout-exit', executionType: 'close', experimentId: 'BREAKOUT.1', symbol: 'AAPL', strategyId: 'breakout-momentum-v1', realizedPnlDelta: 5 }] }))
     expect(result.decisionQuality.groupings.byExperimentId).toEqual(expect.arrayContaining([{ experimentId: 'EDGE.2', compatibilityStatus: 'SEPARATE_COHORT' }, { experimentId: 'BREAKOUT.1', compatibilityStatus: 'SEPARATE_COHORT' }]))

@@ -23,7 +23,7 @@ describe('canonical Qualified Trade Plan', () => {
   it('maps hard risk rejection to REJECTED', () => expect(composeQualifiedTradePlan(base({ riskGate: { approved: false, reason: 'Risk blocked', blockers: ['Risk blocked'] } })).decision.status).toBe('REJECTED'))
   it('maps valid non-actionable setup to NO_TRADE', () => expect(composeQualifiedTradePlan(base({ evaluation: { ...base().evaluation, noActionableSetup: true } })).decision.status).toBe('NO_TRADE'))
   it('calculates maximum planned loss and potential target gain', () => { const plan = composeQualifiedTradePlan(base()); expect(plan.risk.maximumPlannedLoss).toBe(20); expect(plan.risk.potentialTargetGain).toBe(40); expect(plan.structure.rMultiple).toBe(2) })
-  it('keeps zero quantity non-executable', () => { const plan = composeQualifiedTradePlan(base({ sizing: { allowedQuantity: 0 } })); expect(plan.decision.status).toBe('NO_TRADE'); expect(plan.executable).toBe(false); expect(plan.risk.maximumPlannedLoss).toBe(0) })
+  it('keeps zero quantity non-executable', () => { const plan = composeQualifiedTradePlan(base({ sizing: { allowedQuantity: 0 } })); expect(plan.decision.status).toBe('NO_TRADE'); expect(plan.decision.noTradeReason).toBe('Risk sizing allowed zero quantity.'); expect(plan.executable).toBe(false); expect(plan.risk.maximumPlannedLoss).toBe(0) })
   it('preserves provenance and fingerprints', () => { const plan = composeQualifiedTradePlan(base()); expect(plan.integrity).toMatchObject({ strategyFingerprint: 'strategy-fingerprint', policyFingerprint: 'policy-fingerprint', evidenceFingerprint: 'b'.repeat(64) }); expect(plan.market.freshness).toBe('FRESH') })
   it('uses embedded paper-evaluation evidence without requiring duplicate inputs', () => {
     const input = base(); const plan = composeQualifiedTradePlan({ evaluation: input.evaluation, strategySuitability: input.strategySuitability, sizing: input.sizing })
@@ -40,5 +40,6 @@ describe('canonical Qualified Trade Plan', () => {
     const input = base({ candidate: { ...base().candidate, strategyId: 'range-mean-reversion-v1' }, strategyVersion: '1.0.0', strategyFingerprint: null, evaluation: { ...base().evaluation, strategyId: 'range-mean-reversion-v1', experimentId: 'RANGE.1', rangeMeanReversionSignal } })
     const plan = composeQualifiedTradePlan(input)
     expect(plan).toMatchObject({ strategyId: 'range-mean-reversion-v1', strategyFamily: 'range-mean-reversion', rangeMeanReversion: { prior20Low: 90, stretchAtr: 2, adx14: 19 }, integrity: { strategyFingerprint: 'range-fingerprint', experimentId: 'RANGE.1' } })
+    expect(plan.strategyEvidence).toMatchObject({ type: 'range-mean-reversion', data: { strategyFingerprint: 'range-fingerprint' } })
   })
 })

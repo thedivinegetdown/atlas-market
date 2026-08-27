@@ -1,7 +1,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
-import { DecisionIntelligenceSummary, ForwardObservationStatus, RangeMeanReversionDecisionPanel } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
+import { DecisionIntelligenceSummary, ForwardObservationStatus, RangeMeanReversionDecisionPanel, StrategyAssessments } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
 
 let root; let container
 function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
@@ -23,6 +23,14 @@ describe('Decision Intelligence workspace summary', () => {
   it('renders RANGE.1 as a third independent read-only observation row', () => {
     const view = render(<ForwardObservationStatus observations={[{ experimentId: 'RANGE.1', strategyId: 'range-mean-reversion-v1', status: 'NOT_STARTED', sessionsElapsed: 0, completedOutcomes: 0, minimumSessions: 20, minimumOutcomes: 30 }]} />)
     expect(view.textContent).toContain('Range Mean Reversion'); expect(view.textContent).toContain('RANGE.1'); expect(view.textContent).toContain('NOT STARTED'); expect(view.textContent).not.toMatch(/start cohort|force start/i)
+  })
+  it('renders VOL.1 as a volatility expansion observation row', () => {
+    const view = render(<ForwardObservationStatus observations={[{ experimentId: 'VOL.1', strategyId: 'volatility-expansion-v1', status: 'COLLECTING' }]} />)
+    expect(view.textContent).toContain('Volatility Expansion'); expect(view.textContent).toContain('VOL.1')
+  })
+  it('renders deterministic strategy assessments without controls', () => {
+    const view = render(<StrategyAssessments assessments={[{ strategyId: 'volatility-expansion-v1', status: 'NO_TRADE', noTradeReason: 'Risk sizing allowed zero quantity.' }]} />)
+    expect(view.textContent).toContain('volatility-expansion-v1'); expect(view.textContent).toContain('NO TRADE'); expect(view.textContent).toContain('Risk sizing allowed zero quantity.'); expect(view.textContent).not.toMatch(/execute|start|force/i)
   })
   it('renders bounded range candidate evidence without execution controls', () => {
     const view = render(<RangeMeanReversionDecisionPanel plan={{ strategy: { suitability: 'ENABLED' }, decision: { status: 'QUALIFIED' }, structure: { entry: 100, stop: 92.5, target: 110, rMultiple: 1.33 }, risk: { allowedQuantity: 2 }, rangeMeanReversion: { currentPrice: 100, sma20: 110, stretchAtr: 1, prior20Low: 90, adx14: 19, rsi14: 35, relativeVolume: 1, relativeStrength: -1, marketParticipation: 'MIXED', sectorAlignment: 'UNAVAILABLE' } }} />)

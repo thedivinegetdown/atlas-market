@@ -11,7 +11,7 @@ const display = (value) => String(value ?? 'UNAVAILABLE').replaceAll('_', ' ')
 export function ForwardObservationStatus({ observations = [] } = {}) {
   return <WorkspacePanel id="forward-observation" title="Forward Observation" subtitle="Read-only experiment status">
     {(observations ?? []).map((observation) => <section key={observation.experimentId} aria-label={`${observation.experimentId} observation status`}>
-      <h3>{observation.strategyId === 'breakout-momentum-v1' ? 'Breakout Momentum' : observation.strategyId === 'range-mean-reversion-v1' ? 'Range Mean Reversion' : 'Pullback'}</h3>
+      <h3>{observation.strategyId === 'breakout-momentum-v1' ? 'Breakout Momentum' : observation.strategyId === 'range-mean-reversion-v1' ? 'Range Mean Reversion' : observation.strategyId === 'volatility-expansion-v1' ? 'Volatility Expansion' : 'Pullback'}</h3>
       <p><strong>Experiment:</strong> {observation.experimentId} · <strong>Status:</strong> {display(observation.status)}</p>
       <p><strong>Sessions:</strong> {observation.sessionsElapsed ?? 0} / {observation.minimumSessions ?? 20} · <strong>Outcomes:</strong> {observation.completedOutcomes ?? 0} / {observation.minimumOutcomes ?? 30}</p>
       <p><strong>Strategy:</strong> {observation.strategyId ?? 'UNAVAILABLE'}{observation.reason ? ` · ${display(observation.reason)}` : ''}</p>
@@ -38,6 +38,13 @@ export function DecisionIntelligenceSummary({ state } = {}) {
   </WorkspacePanel>
 }
 
+export function StrategyAssessments({ assessments = [] } = {}) {
+  if (!assessments.length) return null
+  return <WorkspacePanel id="strategy-assessments" title="Strategy Assessments" subtitle="Deterministic candidate statuses">
+    {assessments.map((assessment) => <p key={`${assessment.strategyId}-${assessment.strategyVersion ?? ''}`}><strong>{assessment.strategyId}:</strong> {display(assessment.status)} · {assessment.noTradeReason ?? assessment.reasons?.[0] ?? assessment.cautions?.[0] ?? assessment.blockers?.[0] ?? 'No deterministic reason available'}</p>)}
+  </WorkspacePanel>
+}
+
 export function CopilotSections() {
   const decisionIntelligence = useDecisionIntelligence()
   return (
@@ -46,6 +53,7 @@ export function CopilotSections() {
         <AtlasCopilotPanel atlasDecisionContext={decisionIntelligence.intelligence?.copilotContext} />
       </LazyFeature>
       <DecisionIntelligenceSummary state={decisionIntelligence} />
+      <StrategyAssessments assessments={decisionIntelligence.intelligence?.strategyAssessments} />
       <RangeMeanReversionDecisionPanel plan={decisionIntelligence.intelligence?.selectedDecision?.plan} />
       <VolatilityExpansionDecisionPanel plan={decisionIntelligence.intelligence?.selectedDecision?.plan} />
       <ForwardObservationStatus observations={decisionIntelligence.intelligence?.observations} />
