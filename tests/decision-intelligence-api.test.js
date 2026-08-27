@@ -20,4 +20,10 @@ describe('decision intelligence endpoint', () => {
     const response = await createDecisionIntelligenceHandler(options({ organizationMembershipRepository: { getMembership: async () => null } }))({ httpMethod: 'GET', headers: { authorization: 'Bearer token' }, queryStringParameters: { organizationId: 'org-b', accountId: 'paper-a' } })
     expect(response.statusCode).toBe(403)
   })
+  it('returns bounded, read-only experiment statuses from the authorized account scope', async () => {
+    const observationStatusResolver = vi.fn(async () => [{ experimentId: 'EDGE.2', strategyId: 'index-pullback-v1', status: 'COLLECTING', sessionsElapsed: 2, completedOutcomes: 1, minimumSessions: 20, minimumOutcomes: 30 }, { experimentId: 'BREAKOUT.1', strategyId: 'breakout-momentum-v1', status: 'NOT_STARTED', sessionsElapsed: 0, completedOutcomes: 0, minimumSessions: 20, minimumOutcomes: 30 }])
+    const response = await createDecisionIntelligenceHandler(options({ observationStatusResolver }))({ httpMethod: 'GET', headers: { authorization: 'Bearer token' }, queryStringParameters: { organizationId: 'org-a', accountId: 'paper-a' } })
+    expect(response.statusCode).toBe(200); expect(response.body).toContain('"experimentId":"EDGE.2"'); expect(response.body).toContain('"experimentId":"BREAKOUT.1"'); expect(response.body).not.toContain('forwardObservationManifest')
+    expect(observationStatusResolver).toHaveBeenCalledWith(expect.objectContaining({ accountId: 'paper-a', tenantContext: expect.objectContaining({ organizationId: 'org-a', userId: 'user-a' }) }))
+  })
 })

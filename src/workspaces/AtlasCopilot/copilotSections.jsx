@@ -8,6 +8,16 @@ const AtlasCopilotPanel = lazy(() => import('../../components/AtlasCopilotPanel.
 })))
 
 const display = (value) => String(value ?? 'UNAVAILABLE').replaceAll('_', ' ')
+export function ForwardObservationStatus({ observations = [] } = {}) {
+  return <WorkspacePanel id="forward-observation" title="Forward Observation" subtitle="Read-only experiment status">
+    {(observations ?? []).map((observation) => <section key={observation.experimentId} aria-label={`${observation.experimentId} observation status`}>
+      <h3>{observation.strategyId === 'breakout-momentum-v1' ? 'Breakout Momentum' : 'Pullback'}</h3>
+      <p><strong>Experiment:</strong> {observation.experimentId} · <strong>Status:</strong> {display(observation.status)}</p>
+      <p><strong>Sessions:</strong> {observation.sessionsElapsed ?? 0} / {observation.minimumSessions ?? 20} · <strong>Outcomes:</strong> {observation.completedOutcomes ?? 0} / {observation.minimumOutcomes ?? 30}</p>
+      <p><strong>Strategy:</strong> {observation.strategyId ?? 'UNAVAILABLE'}{observation.reason ? ` · ${display(observation.reason)}` : ''}</p>
+    </section>)}
+  </WorkspacePanel>
+}
 export function DecisionIntelligenceSummary({ state } = {}) {
   const resolved = state ?? { intelligence: null, isLoading: false, error: null }; const intelligence = resolved.intelligence
   return <WorkspacePanel id="decision-intelligence" title="Atlas Decision Intelligence" subtitle="Canonical deterministic paper-trading snapshot">
@@ -25,6 +35,7 @@ export function CopilotSections() {
         <AtlasCopilotPanel atlasDecisionContext={decisionIntelligence.intelligence?.copilotContext} />
       </LazyFeature>
       <DecisionIntelligenceSummary state={decisionIntelligence} />
+      <ForwardObservationStatus observations={decisionIntelligence.intelligence?.observations} />
       <WorkspacePanel id="copilot-context" title="Context" subtitle="Safe advisory context">
         <div className="metric-grid">
           <MetricCard label="Portfolio Analysis" value="advisory" />

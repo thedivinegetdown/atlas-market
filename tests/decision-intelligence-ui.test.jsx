@@ -1,7 +1,7 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it } from 'vitest'
-import { DecisionIntelligenceSummary } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
+import { DecisionIntelligenceSummary, ForwardObservationStatus } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
 
 let root; let container
 function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
@@ -14,5 +14,10 @@ describe('Decision Intelligence workspace summary', () => {
   it('renders the explicit no-qualified state without filling it from watch plans', () => {
     const view = render(<DecisionIntelligenceSummary state={{ isLoading: false, intelligence: { market: {}, opportunities: { qualifiedCount: 0, watchCount: 1, emptyQualifiedState: 'NO_QUALIFIED_OPPORTUNITIES', watchPlans: [{ symbol: 'IWM' }] }, decisionQuality: {}, evidence: {}, portfolio: { exposure: {} } } }} />)
     expect(view.textContent).toContain('NO QUALIFIED OPPORTUNITIES'); expect(view.textContent).toContain('WATCH: IWM')
+  })
+  it('renders both bounded forward-observation states without cohort controls', () => {
+    const view = render(<ForwardObservationStatus observations={[{ experimentId: 'EDGE.2', strategyId: 'index-pullback-v1', status: 'COLLECTING', sessionsElapsed: 3, completedOutcomes: 1, minimumSessions: 20, minimumOutcomes: 30 }, { experimentId: 'BREAKOUT.1', strategyId: 'breakout-momentum-v1', status: 'INVALIDATED', sessionsElapsed: 2, completedOutcomes: 0, minimumSessions: 20, minimumOutcomes: 30, reason: 'persisted_manifest_definition_mismatch' }]} />)
+    expect(view.textContent).toContain('EDGE.2'); expect(view.textContent).toContain('BREAKOUT.1'); expect(view.textContent).toContain('Sessions: 3 / 20'); expect(view.textContent).toContain('Outcomes: 0 / 30'); expect(view.textContent).toContain('INVALIDATED')
+    expect(view.textContent).not.toMatch(/start|reset|force eligibility/i)
   })
 })

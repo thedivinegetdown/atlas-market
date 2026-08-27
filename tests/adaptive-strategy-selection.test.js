@@ -146,8 +146,9 @@ describe('deterministic adaptive strategy selection', () => {
       includeHistoricalIntelligence: true,
     })
     expect(marketDataService.getCandles).not.toHaveBeenCalled()
-    expect(result.suitability.strategies).toHaveLength(1)
+    expect(result.suitability.strategies).toHaveLength(2)
     expect(result.suitability.strategies[0].strategyId).toBe('index-pullback-v1')
+    expect(result.suitability.strategies[1].strategyId).toBe('breakout-momentum-v1')
   })
 
   it('exposes an authenticated read-only endpoint with no raw provider evidence', async () => {
@@ -187,5 +188,13 @@ describe('deterministic adaptive strategy selection', () => {
     const dashboard = readFileSync(join(process.cwd(), 'src/workspaces/Dashboard/dashboardSections.jsx'), 'utf8')
     expect(routes).toMatch(/lazy\(\(\) => import\('\.\/workspaces\/Strategies\/index\.jsx'\)\)/)
     expect(dashboard).not.toMatch(/useStrategySuitability|strategy-suitability/)
+  })
+
+  it('evaluates breakout momentum independently from index pullback', () => {
+    const result = selectStrategiesForRegime({ regime: regime(), strategies: [{ ...strategy(), lifecycleState: 'paper_forward_observation' }, { ...strategy(), strategyId: 'breakout-momentum-v1', strategyName: 'Breakout Momentum', lifecycleState: 'paper_forward_observation' }] })
+    expect(result.strategies.map(({ strategyId, decision }) => ({ strategyId, decision }))).toEqual([
+      { strategyId: 'index-pullback-v1', decision: 'ENABLED' },
+      { strategyId: 'breakout-momentum-v1', decision: 'ENABLED' },
+    ])
   })
 })

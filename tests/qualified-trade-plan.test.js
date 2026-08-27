@@ -29,4 +29,10 @@ describe('canonical Qualified Trade Plan', () => {
     const input = base(); const plan = composeQualifiedTradePlan({ evaluation: input.evaluation, strategySuitability: input.strategySuitability, sizing: input.sizing })
     expect(plan.decision.status).toBe('QUALIFIED'); expect(plan.quality.score).toBe(86)
   })
+  it('composes breakout evidence through the canonical plan contract', () => {
+    const breakoutSignal = { strategyId: 'breakout-momentum-v1', suitabilityStatus: 'ENABLED', prior20High: 100, breakoutPercent: 2, currentPrice: 102, SMA20: 101, SMA50: 99, SMA200: 90, ADX14: 24, RSI14: 60, relativeVolume: 1.4, relativeStrength: 1, marketParticipation: 'BROAD_STRENGTH', sectorAlignment: 'ALIGNED', evidenceFreshness: 'FRESH', strategyFingerprint: 'breakout-fingerprint' }
+    const input = base({ candidate: { ...base().candidate, strategyId: 'breakout-momentum-v1' }, strategyVersion: '1.0.0', strategyFingerprint: null, evaluation: { ...base().evaluation, strategyId: 'breakout-momentum-v1', experimentId: 'BREAKOUT.1', breakoutSignal } })
+    const plan = composeQualifiedTradePlan(input)
+    expect(plan).toMatchObject({ strategyId: 'breakout-momentum-v1', strategyFamily: 'breakout-momentum', decision: { status: 'QUALIFIED' }, breakout: { level: 100, percent: 2, adx14: 24 }, integrity: { strategyFingerprint: 'breakout-fingerprint', experimentId: 'BREAKOUT.1' } })
+  })
 })

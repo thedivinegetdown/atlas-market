@@ -21,4 +21,8 @@ describe('decision quality monitor', () => {
     const monitor = buildDecisionQualityMonitor({ outcomes, generatedAt: '2026-08-27T00:00:00.000Z' })
     expect(monitor.compatibility.status).toBe('INCOMPATIBLE_HISTORY'); expect(monitor.boundaries.automaticOptimization).toBe(false); expect(JSON.stringify(outcomes)).toBe(before)
   })
+  it('keeps frozen experiment attribution separate', () => {
+    const monitor = buildDecisionQualityMonitor({ outcomes: [outcome(50, 0, { experimentId: 'EDGE.2' }), outcome(-20, 1, { experimentId: 'BREAKOUT.1' })], generatedAt: '2026-08-27T00:00:00.000Z' })
+    expect(monitor.groupings.byExperimentId).toEqual([{ experimentId: 'EDGE.2', compatibilityStatus: 'SEPARATE_COHORT' }, { experimentId: 'BREAKOUT.1', compatibilityStatus: 'SEPARATE_COHORT' }])
+  })
 })

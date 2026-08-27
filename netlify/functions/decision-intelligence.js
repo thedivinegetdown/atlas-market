@@ -7,7 +7,7 @@ import { requireAccountContext } from '../../lib/security/securityPolicyEngine.j
 import { apiFoundationEvent } from './_shared/persistenceApi.js'
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 
-export function createDecisionIntelligenceHandler({ evidenceRepository: providedEvidenceRepository, ledgerRepository: providedLedgerRepository, marketContextService: providedMarketContextService, env = process.env, ...options } = {}) {
+export function createDecisionIntelligenceHandler({ evidenceRepository: providedEvidenceRepository, ledgerRepository: providedLedgerRepository, marketContextService: providedMarketContextService, observationStatusResolver, env = process.env, ...options } = {}) {
   const marketContextService = providedMarketContextService ?? createMarketContextService({ marketDataService: createMarketDataService({ finnhubApiKey: env.FINNHUB_API_KEY, twelveDataApiKey: env.TWELVEDATA_API_KEY }) })
   return createOrganizationAuthenticatedApiHandler(async ({ query, tenantContext, user, repository, requestId }) => {
     const accountId = requireAccountContext(query.accountId ?? 'paper-portfolio')
@@ -15,7 +15,7 @@ export function createDecisionIntelligenceHandler({ evidenceRepository: provided
     const evidenceRepository = providedEvidenceRepository ?? resolveCanonicalPaperEvidenceRepository({ persistenceRepository: repository, env })
     const ledgerRepository = resolveCanonicalPaperLedgerRepository({ persistenceRepository: repository, ledgerRepository: providedLedgerRepository, env })
     const marketContext = await marketContextService.refresh()
-    const intelligence = await buildDecisionIntelligence({ ...scope, selectedPlanId: query.planId ?? null, evidenceRepository, ledgerRepository, marketContext })
+    const intelligence = await buildDecisionIntelligence({ ...scope, selectedPlanId: query.planId ?? null, evidenceRepository, ledgerRepository, marketContext, observationStatusResolver })
     return {
       event: apiFoundationEvent({ requestId, endpoint: 'decision-intelligence', status: intelligence.market.status }),
       decisionIntelligence: intelligence,
