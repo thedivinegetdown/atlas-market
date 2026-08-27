@@ -12,4 +12,8 @@ describe('Atlas decision context', () => {
     const context = buildAtlasDecisionContext({ plans: [{ planId: 'plan-a', symbol: 'AAPL', decision: { status: 'WATCH' } }] })
     expect(applyDeterministicDecisionAuthority({ summary: 'The setup qualifies.' }, context)).toMatchObject({ deterministicDecisionStatus: 'WATCH', deterministicStatusAuthoritative: true, empiricalConfidence: 'UNAVAILABLE' })
   })
+  it('projects bounded range evidence for deterministic Copilot explanation', () => {
+    const context = buildAtlasDecisionContext({ plans: [{ planId: 'range-plan', symbol: 'SPY', strategyId: 'range-mean-reversion-v1', decision: { status: 'WATCH' }, rangeMeanReversion: { prior20Low: 90, sma20: 110, atr14: 5, stretchAtr: 1.2, adx14: 22, rsi14: 35, relativeVolume: 1.6, relativeStrength: -2, marketParticipation: 'MIXED', sectorAlignment: 'UNAVAILABLE' } }] })
+    expect(context.selectedPlan.rangeMeanReversion).toMatchObject({ prior20Low: 90, sma20: 110, stretchAtr: 1.2, adx14: 22, rsi14: 35, marketParticipation: 'MIXED', sectorAlignment: 'UNAVAILABLE' })
+  })
 })
