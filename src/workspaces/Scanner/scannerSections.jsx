@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { AlertsPanel, ScannerPanel, SignalPanel } from '../../components/panels.jsx'
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useScanners } from '../../hooks/useScanners.js'
@@ -6,9 +6,51 @@ import { useTradeQuality } from '../../hooks/useTradeQuality.js'
 import { usePaperEvaluation } from '../../hooks/usePaperEvaluation.js'
 import { usePaperOrderSimulation } from '../../hooks/usePaperOrderSimulation.js'
 import { MarketDataStatus } from '../../components/MarketDataStatus.jsx'
+import { composeQualifiedTradePlan, rankQualifiedTradePlans } from '../../../lib/opportunities/qualifiedTradePlan/index.js'
 
 function display(value) {
   return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
+}
+
+function value(numberValue) {
+  return Number.isFinite(Number(numberValue)) ? Number(numberValue) : 'Unavailable'
+}
+
+export function QualifiedTradePlanCard({ evaluation }) {
+  const plan = composeQualifiedTradePlan({ evaluation })
+  return <article className="strategy-manager-card">
+    <h3>Atlas Decision: {plan.symbol ?? 'Unknown'} · {display(plan.decision.status)}</h3>
+    <MarketDataStatus provenance={plan.market.provenance} />
+    <div className="metric-grid">
+      <MetricCard label="Side" value={display(plan.side)} />
+      <MetricCard label="Strategy" value={plan.strategyId ?? 'Unavailable'} />
+      <MetricCard label="Regime" value={display(plan.regime.trendRegime)} />
+      <MetricCard label="TQ" value={plan.quality.score == null ? 'Unavailable' : `${plan.quality.score} ${display(plan.quality.band)}`} />
+      <MetricCard label="Entry" value={value(plan.structure.entry)} />
+      <MetricCard label="Stop" value={value(plan.structure.stop)} />
+      <MetricCard label="Target" value={value(plan.structure.target)} />
+      <MetricCard label="R multiple" value={value(plan.structure.rMultiple)} />
+      <MetricCard label="Allowed quantity" value={plan.risk.allowedQuantity} />
+      <MetricCard label="Maximum planned loss" value={value(plan.risk.maximumPlannedLoss)} />
+      <MetricCard label="Potential target gain" value={value(plan.risk.potentialTargetGain)} />
+      <MetricCard label="Freshness" value={display(plan.market.freshness)} />
+    </div>
+    {plan.decision.supportingReasons.length ? <details><summary>Supporting evidence</summary><ul>{plan.decision.supportingReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></details> : null}
+    {plan.decision.cautionReasons.length ? <details><summary>Caution and rejection evidence</summary><ul>{plan.decision.cautionReasons.map((reason) => <li key={reason}>{reason}</li>)}</ul></details> : null}
+    <p>Provenance: {plan.market.provenance?.provider ?? 'Unavailable'} · Evidence: {plan.integrity.evidenceFingerprint ?? 'Unavailable'}</p>
+    <p>Read-only decision package. Human paper review remains required; potential target gain is not expected or guaranteed profit.</p>
+  </article>
+}
+
+export function QualifiedOpportunityRankingPanel({ plans = [] }) {
+  const ranking = rankQualifiedTradePlans({ plans })
+  return <section aria-label="Qualified opportunities">
+    <h3>Qualified Opportunities</h3>
+    {ranking.qualified.length === 0 ? <EmptyWorkspaceState>NO QUALIFIED OPPORTUNITIES</EmptyWorkspaceState> : <ol>{ranking.qualified.map((item) => <li key={item.planReference.planId}><strong>{item.symbol}</strong> · {display(item.side)} · {item.strategyId} · score {item.rankingScore} · {display(item.rankingBand)} · TQ {item.tradeQuality.score} · R {value(item.riskReward)} · {display(item.freshness)}</li>)}</ol>}
+    <h3>Watchlist / Watch Candidates</h3>
+    {ranking.watch.length === 0 ? <p>No WATCH candidates.</p> : <ul>{ranking.watch.map((item) => <li key={item.planReference.planId}><strong>{item.symbol}</strong> · score {item.rankingScore} · {item.cautionReasons.join(', ') || 'Conditional evidence requires review.'}</li>)}</ul>}
+    <p>Portfolio exposure evidence: {display(ranking.portfolioEvidence.status)}. Ranking is advisory only and does not change plan status, quantity, or risk controls.</p>
+  </section>
 }
 
 export function TradeQualityPanel({ candidate, state }) {
@@ -43,11 +85,13 @@ export function TradeQualityPanel({ candidate, state }) {
 
 export function PaperEvaluationPanel({ state } = {}) {
   const live = usePaperEvaluation(); const resolved = state ?? live
+  const plans = (resolved.evaluations ?? []).map((evaluation) => composeQualifiedTradePlan({ evaluation }))
   return <WorkspacePanel id="paper-evaluation" title="Controlled Paper Evaluation" subtitle="Manual, bounded, evaluation only">
     <button type="button" onClick={resolved.run} disabled={resolved.isLoading}>{resolved.isLoading ? 'Evaluating…' : 'Run Paper Evaluation'}</button>
     {resolved.isLoading ? <p role="status">Evaluating up to five reviewed candidates…</p> : null}
     {resolved.error ? <p role="alert">Paper evaluation is unavailable.</p> : null}
-    {resolved.evaluations?.map((item) => <article key={item.evaluationId} className="strategy-manager-card"><h3>{item.symbol} · {display(item.status)}</h3><MarketDataStatus provenance={item.marketData} /><p>{item.strategyId} · {item.tradeQuality?.score ?? 'No score'} {display(item.tradeQuality?.band)} · {item.tradeQuality?.confidence ?? 0}% confidence</p><p>Regime: {display(item.regime?.trendRegime)} · Risk: {display(item.riskSafety?.status)} · Freshness: {display(item.freshness)}</p>{item.blockers?.length ? <p>Blockers: {item.blockers.join(', ')}</p> : null}<p>Human paper review required. No order or portfolio action occurred.</p></article>)}
+    {resolved.evaluations?.map((item) => <Fragment key={item.evaluationId}><article className="strategy-manager-card"><h3>{item.symbol} · {display(item.status)}</h3><MarketDataStatus provenance={item.marketData} /><p>{item.strategyId} · {item.tradeQuality?.score ?? 'No score'} {display(item.tradeQuality?.band)} · {item.tradeQuality?.confidence ?? 0}% confidence</p><p>Regime: {display(item.regime?.trendRegime)} · Risk: {display(item.riskSafety?.status)} · Freshness: {display(item.freshness)}</p>{item.blockers?.length ? <p>Blockers: {item.blockers.join(', ')}</p> : null}<p>Human paper review required. No order or portfolio action occurred.</p></article><QualifiedTradePlanCard evaluation={item} /></Fragment>)}
+    {!resolved.isLoading && !resolved.error ? <QualifiedOpportunityRankingPanel plans={plans} /> : null}
     {!resolved.isLoading && !resolved.error && resolved.evaluations?.length === 0 ? <EmptyWorkspaceState>No eligible reviewed candidates have been evaluated.</EmptyWorkspaceState> : null}
   </WorkspacePanel>
 }
