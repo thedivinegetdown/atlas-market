@@ -15,14 +15,14 @@ describe('governed strategy-family registry', () => {
     const entry = buildStrategyFamilyRegistry({ strategies }).strategies.find((strategy) => strategy.strategyId === 'index-pullback-v1')
     expect(entry.strategyFingerprint).toBe('existing-fingerprint')
   })
-  it.each(['volatility-expansion-v1'])('keeps placeholder %s inactive and unselectable', (strategyId) => {
-    const registry = buildStrategyFamilyRegistry(); const entry = registry.strategies.find((strategy) => strategy.strategyId === strategyId)
-    expect(entry).toMatchObject({ implementationStatus: 'NOT_IMPLEMENTED', lifecycleStatus: 'INACTIVE', paperEligibility: 'INACTIVE', liveEligibility: 'LIVE_DISABLED' }); expect(registry.selectableStrategyIds).not.toContain(strategyId)
+  it('registers all four serious strategies as paper-observation-only implementations', () => {
+    const registry = buildStrategyFamilyRegistry(); const entry = registry.strategies.find((strategy) => strategy.strategyId === 'volatility-expansion-v1')
+    expect(entry).toMatchObject({ familyId: 'volatility-expansion', implementationStatus: 'IMPLEMENTED', lifecycleStatus: 'paper_forward_observation', paperEligibility: 'PAPER_OBSERVATION', liveEligibility: 'LIVE_DISABLED' }); expect(registry.selectableStrategyIds).toContain('volatility-expansion-v1')
   })
   it('does not enable a strategy merely because it is registered', () => {
-    const registry = buildStrategyFamilyRegistry(); const placeholder = registry.strategies.find((strategy) => strategy.strategyId === 'volatility-expansion-v1')
-    const selection = selectStrategiesForRegime({ regime, strategies: [placeholder] })
-    expect(selection.strategies[0].decision).toBe('UNKNOWN')
+    const registry = buildStrategyFamilyRegistry(); const implemented = registry.strategies.find((strategy) => strategy.strategyId === 'volatility-expansion-v1')
+    const selection = selectStrategiesForRegime({ regime, strategies: [implemented] })
+    expect(selection.strategies[0].decision).toBe('CONDITIONAL')
   })
   it('fails closed on duplicate strategy identifiers', () => expect(() => buildStrategyFamilyRegistry({ strategies: [EXISTING_ADAPTIVE_STRATEGY_RECORDS[0], EXISTING_ADAPTIVE_STRATEGY_RECORDS[0]] })).toThrow('duplicate strategy ids'))
   it('is deterministic, immutable, and does not mutate upstream metadata', () => {

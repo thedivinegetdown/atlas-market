@@ -1,0 +1,7 @@
+# Volatility Expansion v1
+
+`volatility-expansion-v1` is a daily, long-only, paper-forward-observation strategy. It requires a resolved sequence: at least three of the five prior completed sessions have canonical ATR percentile at or below 30, followed by a strict current-price break above the prior completed 20-session high.
+
+The shared daily indicator pipeline supplies ATR14, ATR%, ATR percentile, moving averages, ADX, RSI, relative volume, and relative strength. No provider or indicator pipeline is added. Entry requires fresh evidence, relative volume of at least 1.20, ADX14 from 20 through 75, RSI14 from 55 through 75, and SMA20 greater than SMA50. SMA50 greater than SMA200 is supportive; otherwise the signal is conditional. Strong bull and bull regimes are preferred; range, neutral risk, narrow strength, and mixed participation are conditional. Bear, strong bear, risk-off, broad weakness, and SMA20 at or below SMA50 are incompatible.
+
+The fixed `volatility-expansion-exit-v1.0.0` stop is `max(prior20High - ATR14, entryPrice - 1.5 * ATR14)`; the frozen target is entry plus 2.5R. The maximum hold is 10 sessions. Same-bar ambiguity is stop first, adverse gaps fill at open, favorable gaps cap at target, and stale exit evidence fails closed. There are no trailing stops, scaling, partial exits, discretionary changes, or live execution. VOL.1 observes the approved five-symbol universe independently with 20 sessions and 30 compliant outcomes.

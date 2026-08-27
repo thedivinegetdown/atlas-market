@@ -146,10 +146,11 @@ describe('deterministic adaptive strategy selection', () => {
       includeHistoricalIntelligence: true,
     })
     expect(marketDataService.getCandles).not.toHaveBeenCalled()
-    expect(result.suitability.strategies).toHaveLength(3)
+    expect(result.suitability.strategies).toHaveLength(4)
     expect(result.suitability.strategies[0].strategyId).toBe('index-pullback-v1')
     expect(result.suitability.strategies[1].strategyId).toBe('breakout-momentum-v1')
     expect(result.suitability.strategies[2].strategyId).toBe('range-mean-reversion-v1')
+    expect(result.suitability.strategies[3].strategyId).toBe('volatility-expansion-v1')
   })
 
   it('exposes an authenticated read-only endpoint with no raw provider evidence', async () => {
