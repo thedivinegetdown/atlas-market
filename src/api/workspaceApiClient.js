@@ -198,8 +198,12 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     getDecision(symbol) {
       return request('decision', { symbol, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load decision intelligence')
     },
-    getDecisionIntelligence(planId) {
-      return request('decision-intelligence', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', planId }, 'Unable to load decision intelligence')
+    async getDecisionIntelligence(planId) {
+      const response = await request('decision-intelligence', { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', planId }, 'Unable to load decision intelligence')
+      if (!response?.decisionIntelligence || typeof response.decisionIntelligence !== 'object') {
+        throw new Error('Decision intelligence response is unavailable')
+      }
+      return response.decisionIntelligence
     },
 
     getPortfolioSummary() {
