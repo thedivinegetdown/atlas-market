@@ -1,12 +1,52 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { afterEach, describe, expect, it } from 'vitest'
-import { DecisionIntelligenceSummary, ForwardObservationStatus, RangeMeanReversionDecisionPanel, StrategyAssessments } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { CopilotSections, DecisionIntelligenceSummary, ForwardObservationStatus, RangeMeanReversionDecisionPanel, StrategyAssessments } from '../src/workspaces/AtlasCopilot/copilotSections.jsx'
+
+vi.mock('../src/hooks/useDecisionIntelligence.js', () => ({
+  useDecisionIntelligence: () => ({
+    isLoading: false,
+    error: null,
+    intelligence: {
+      market: { freshness: 'FRESH', status: 'AVAILABLE', context: { participation: { status: 'MIXED' }, sectorLeadership: { leaders: [], laggards: [] } } },
+      opportunities: { qualifiedCount: 0, watchCount: 0, emptyQualifiedState: 'NO_QUALIFIED_OPPORTUNITIES', topQualifiedPlans: [], watchPlans: [] },
+      decisionQuality: { status: 'INSUFFICIENT_SAMPLE', recentTrend: 'INSUFFICIENT_DATA' },
+      evidence: { empiricalConfidence: 'UNAVAILABLE' },
+      portfolio: { exposure: { status: 'UNAVAILABLE' } },
+      strategyAssessments: [
+        { strategyId: 'index-pullback-v1', status: 'NO_TRADE' },
+        { strategyId: 'breakout-momentum-v1', status: 'NO_TRADE' },
+        { strategyId: 'range-mean-reversion-v1', status: 'NO_TRADE' },
+        { strategyId: 'volatility-expansion-v1', status: 'NO_TRADE' },
+      ],
+      observations: [
+        { experimentId: 'EDGE.2', strategyId: 'index-pullback-v1', status: 'NOT_STARTED' },
+        { experimentId: 'BREAKOUT.1', strategyId: 'breakout-momentum-v1', status: 'NOT_STARTED' },
+        { experimentId: 'RANGE.1', strategyId: 'range-mean-reversion-v1', status: 'NOT_STARTED' },
+        { experimentId: 'VOL.1', strategyId: 'volatility-expansion-v1', status: 'NOT_STARTED' },
+      ],
+      copilotContext: { selectedPlan: null, portfolioAdmission: null, decisionQuality: { status: 'INSUFFICIENT_SAMPLE' } },
+    },
+  }),
+}))
 
 let root; let container
 function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
 afterEach(() => { act(() => root?.unmount()); container?.remove() })
 describe('Decision Intelligence workspace summary', () => {
+  it('renders the production-shaped lazy Copilot and all governed decision evidence', async () => {
+    const view = render(<CopilotSections />)
+    await vi.waitFor(() => expect(view.textContent).toContain('Submit'))
+    expect(view.textContent).toContain('index-pullback-v1')
+    expect(view.textContent).toContain('breakout-momentum-v1')
+    expect(view.textContent).toContain('range-mean-reversion-v1')
+    expect(view.textContent).toContain('volatility-expansion-v1')
+    expect(view.textContent).toContain('EDGE.2')
+    expect(view.textContent).toContain('BREAKOUT.1')
+    expect(view.textContent).toContain('RANGE.1')
+    expect(view.textContent).toContain('VOL.1')
+    expect(view.textContent).not.toContain('Feature panel could not be loaded safely')
+  })
   it('renders qualified and watch evidence while preserving disabled execution', () => {
     const view = render(<DecisionIntelligenceSummary state={{ isLoading: false, intelligence: { market: { freshness: 'FRESH', status: 'AVAILABLE', context: { participation: { status: 'MIXED', labels: { display: 'SECTOR ETF PARTICIPATION PROXY' } }, sectorLeadership: { leaders: [{ symbol: 'XLK' }], laggards: [{ symbol: 'XLF' }] } } }, opportunities: { qualifiedCount: 1, watchCount: 1, topQualifiedPlans: [{ symbol: 'AAPL', side: 'long', strategyId: 'index-pullback-v1', rankingScore: 80, planReference: { planId: 'plan-a' }, portfolioEvidence: { status: 'AVAILABLE' } }], watchPlans: [{ symbol: 'IWM' }] }, decisionQuality: { status: 'INSUFFICIENT_SAMPLE', recentTrend: 'INSUFFICIENT_DATA', overall: { expectancy: 0 }, rNormalized: { metrics: null } }, evidence: { empiricalConfidence: 'UNAVAILABLE' }, portfolio: { exposure: { status: 'UNAVAILABLE' } } } }} />)
     expect(view.textContent).toContain('AAPL'); expect(view.textContent).toContain('WATCH: IWM'); expect(view.textContent).toContain('SECTOR ETF PARTICIPATION PROXY'); expect(view.textContent).toContain('Live execution disabled'); expect(view.textContent).toContain('empirical confidence UNAVAILABLE')

@@ -50,7 +50,7 @@ export function CopilotSections() {
   return (
     <>
       <LazyFeature label="Atlas Copilot">
-        <AtlasCopilotPanel atlasDecisionContext={decisionIntelligence.intelligence?.copilotContext} />
+        <AtlasCopilotPanel atlasDecisionContext={decisionIntelligence.intelligence?.copilotContext} MetricCard={MetricCard} />
       </LazyFeature>
       <DecisionIntelligenceSummary state={decisionIntelligence} />
       <StrategyAssessments assessments={decisionIntelligence.intelligence?.strategyAssessments} />
