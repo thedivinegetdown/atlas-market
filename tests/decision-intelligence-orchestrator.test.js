@@ -15,6 +15,15 @@ describe('decision intelligence orchestration', () => {
     const result = await buildDecisionIntelligence(input({ evaluations: [], selectedPlanId: 'other-tenant-plan' }))
     expect(result.opportunities.emptyQualifiedState).toBe('NO_QUALIFIED_OPPORTUNITIES'); expect(result.selectedDecision).toBeNull(); expect(result.copilotContext.selectedPlan).toBeNull()
   })
+  it('projects every governed strategy as insufficient when no current candidate evidence exists', async () => {
+    const result = await buildDecisionIntelligence(input({ evaluations: [] }))
+    const expectedStrategyIds = ['breakout-momentum-v1', 'index-pullback-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1']
+    expect(result.strategyAssessments.map((entry) => entry.strategyId)).toEqual(expectedStrategyIds)
+    expect(result.strategyAssessments.every((entry) => entry.status === 'INSUFFICIENT_DATA')).toBe(true)
+    expect(result.strategyAssessments.every((entry) => entry.noTradeReason === 'No current evaluated candidate evidence is available.')).toBe(true)
+    expect(result.copilotContext.strategyAssessments.map((entry) => entry.strategyId)).toEqual(expectedStrategyIds)
+    expect(result.opportunities.emptyQualifiedState).toBe('NO_QUALIFIED_OPPORTUNITIES')
+  })
   it('keeps blocked duplicate-symbol plans out of qualified ranking', async () => {
     const result = await buildDecisionIntelligence(input({ positions: [{ accountId: 'paper-a', symbol: 'AAPL', quantity: 5, currentPrice: 100, status: 'open', strategyId: 'index-pullback-v1' }] }))
     expect(result.opportunities.qualifiedCount).toBe(0); expect(result.opportunities.blockedCount).toBe(1); expect(result.opportunities.emptyQualifiedState).toBe('NO_QUALIFIED_OPPORTUNITIES')
@@ -25,8 +34,9 @@ describe('decision intelligence orchestration', () => {
   })
   it('projects bounded attributable strategy assessments to intelligence and Copilot', async () => {
     const result = await buildDecisionIntelligence(input({ evaluations: [{ ...evaluation, strategyId: 'volatility-expansion-v1', volatilityExpansionSignal: { suitabilityStatus: 'ENABLED', strategyFingerprint: 'volatility-fingerprint' } }] }))
-    expect(result.strategyAssessments).toEqual([expect.objectContaining({ strategyId: 'volatility-expansion-v1', status: 'QUALIFIED', evidenceType: 'volatility-expansion' })])
-    expect(result.copilotContext.strategyAssessments).toEqual([expect.objectContaining({ strategyId: 'volatility-expansion-v1', status: 'QUALIFIED' })])
+    expect(result.strategyAssessments).toContainEqual(expect.objectContaining({ strategyId: 'volatility-expansion-v1', status: 'QUALIFIED', evidenceType: 'volatility-expansion' }))
+    expect(result.copilotContext.strategyAssessments).toContainEqual(expect.objectContaining({ strategyId: 'volatility-expansion-v1', status: 'QUALIFIED' }))
+    expect(new Set(result.strategyAssessments.map((entry) => entry.strategyId))).toEqual(new Set(['index-pullback-v1', 'breakout-momentum-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1']))
   })
   it('keeps zero-quantity no-trade explanations deterministic and bounded', async () => {
     const result = await buildDecisionIntelligence(input({ evaluations: [{ ...evaluation, orderContext: { ...evaluation.orderContext, quantity: 0 } }] }))
