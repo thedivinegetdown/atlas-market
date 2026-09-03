@@ -29,4 +29,15 @@ describe('Dashboard Daily Briefing', () => {
     expect(view.textContent).toContain('index-pullback-v1')
     expect(view.textContent).toContain('1 blocker(s)')
   })
+  it.each([
+    [{ provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH' }, 'LIVE'],
+    [{ provider: 'mock', dataStatus: 'MOCK', freshness: 'FRESH', mock: true }, 'MOCK DATA'],
+    [{ provider: 'unknown', dataStatus: 'UNAVAILABLE', freshness: 'UNKNOWN' }, 'UNAVAILABLE'],
+  ])('renders the briefing market provenance without promotion', (marketData, label) => {
+    const value = briefing()
+    value.market.marketData = marketData
+    const view = render(<DailyBriefingPanel state={{ briefing: value, isLoading: false }} />)
+    expect(view.textContent).toContain(label)
+    if (marketData.dataStatus !== 'LIVE') expect(view.textContent).not.toContain('Provider: twelvedata')
+  })
 })

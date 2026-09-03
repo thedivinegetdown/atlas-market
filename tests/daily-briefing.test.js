@@ -59,6 +59,18 @@ describe('deterministic Daily Briefing', () => {
     expect(service.getMarketOverview).toHaveBeenCalledWith('SPY', { timeframe: '1D', now: undefined, includeHistoricalIntelligence: true })
     expect(marketDataService.getCandles).not.toHaveBeenCalled()
   })
+  it.each([
+    [{ provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false }, 'LIVE'],
+    [{ provider: 'mock', dataStatus: 'MOCK', freshness: 'FRESH', fallbackUsed: true, mock: true }, 'MOCK'],
+    [{ provider: 'unknown', dataStatus: 'UNAVAILABLE', freshness: 'UNKNOWN', fallbackUsed: false }, 'UNAVAILABLE'],
+  ])('projects the quote provenance into the briefing market model', async (provenance, dataStatus) => {
+    const service = createWorkspaceDataService({ marketDataService: { getCandles: vi.fn() } })
+    service.getMarketOverview = vi.fn().mockResolvedValue({ quote: { provenance, health: { available: dataStatus !== 'UNAVAILABLE' } }, regime: regime() })
+    service.getPortfolioSummary = vi.fn().mockResolvedValue(portfolio())
+    service.listAlerts = vi.fn().mockResolvedValue({ alerts: [] })
+    const result = await service.getDailyBriefing('SPY')
+    expect(result.briefing.market.marketData).toMatchObject({ provider: provenance.provider, dataStatus })
+  })
   it('exposes an authenticated compact endpoint', async () => {
     const service = { getDailyBriefing: vi.fn().mockResolvedValue({ briefing: buildDailyBriefing(base()) }) }
     const opportunityRepository = { listTradeQualityReviews: vi.fn().mockResolvedValue([]), listPaperEvaluations: vi.fn().mockResolvedValue([]) }
