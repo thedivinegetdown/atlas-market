@@ -1,11 +1,12 @@
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
-import { afterEach, describe, expect, it } from 'vitest'
-import { DailyBriefingPanel } from '../src/workspaces/Dashboard/dashboardSections.jsx'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { workspaceApiClient } from '../src/api/workspaceApiClient.js'
+import { DailyBriefingPanel, DashboardSections } from '../src/workspaces/Dashboard/dashboardSections.jsx'
 
 let root; let container
 function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
-afterEach(() => { act(() => root?.unmount()); container?.remove(); root = null; container = null })
+afterEach(() => { act(() => root?.unmount()); container?.remove(); vi.restoreAllMocks(); root = null; container = null })
 function briefing(status = 'READY') { return { status, asOf: '2026-07-30T20:00:00Z', market: { trendRegime: status === 'INSUFFICIENT_DATA' ? 'UNKNOWN' : 'BULL', riskRegime: 'RISK_ON', confidence: 85, freshness: 'FRESH' }, strategies: { enabled: 1, conditional: status === 'CAUTION' ? 1 : 0 }, opportunities: [], portfolioRisk: { openRisk: 500, drawdown: 2 }, operations: { criticalAlerts: 0 }, priorities: [{ id: 'review', level: status === 'CAUTION' ? 'MEDIUM' : 'INFORMATIONAL', title: 'Review current briefing', reason: 'Human review only.' }], warnings: [] } }
 
 describe('Dashboard Daily Briefing', () => {
@@ -39,5 +40,21 @@ describe('Dashboard Daily Briefing', () => {
     const view = render(<DailyBriefingPanel state={{ briefing: value, isLoading: false }} />)
     expect(view.textContent).toContain(label)
     if (marketData.dataStatus !== 'LIVE') expect(view.textContent).not.toContain('Provider: twelvedata')
+  })
+  it('reuses the Daily Briefing market overview without a second Dashboard endpoint call', async () => {
+    const provenance = { provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false }
+    const marketOverview = { quote: { symbol: 'SPY', price: 650, provenance }, regime: { marketData: provenance, classification: { status: 'COMPLETE', trendRegime: 'BULL', riskRegime: 'RISK_ON', confidence: 85 }, inputCoverage: { available: ['price'], missing: [], stale: [] } } }
+    vi.spyOn(workspaceApiClient, 'getDailyBriefing').mockResolvedValue({ briefing: briefing(), marketOverview })
+    vi.spyOn(workspaceApiClient, 'getMarketOverview').mockResolvedValue(marketOverview)
+    vi.spyOn(workspaceApiClient, 'getPortfolioSummary').mockResolvedValue({ summary: {} })
+    vi.spyOn(workspaceApiClient, 'getWatchlist').mockResolvedValue({ quotes: [] })
+    vi.spyOn(workspaceApiClient, 'getAlerts').mockResolvedValue({ alerts: [] })
+    vi.spyOn(workspaceApiClient, 'getHealth').mockResolvedValue({ status: 'healthy' })
+    const view = render(<DashboardSections summary={{}} />)
+    await act(async () => { await new Promise((resolve) => globalThis.setTimeout(resolve, 20)) })
+    expect(workspaceApiClient.getDailyBriefing).toHaveBeenCalledOnce()
+    expect(workspaceApiClient.getMarketOverview).not.toHaveBeenCalled()
+    expect(view.querySelector('#market-overview').textContent).toContain('$650.00')
+    expect(view.querySelector('#market-overview').textContent).toContain('LIVE')
   })
 })

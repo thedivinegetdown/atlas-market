@@ -207,8 +207,9 @@ export function MarketOverviewPanel({
   refreshing,
   error,
   onRefresh,
+  enabled,
 }) {
-  const fallback = useMarketOverview({ symbol: symbol ?? quote?.symbol, initialQuote: quote })
+  const fallback = useMarketOverview({ symbol: symbol ?? quote?.symbol, initialQuote: quote, enabled })
   const selectedQuote = quote ?? fallback.quote
   const selectedRegime = regime ?? fallback.regime
   const resolvedLoading = loading ?? fallback.isLoading

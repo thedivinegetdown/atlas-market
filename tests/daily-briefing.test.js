@@ -51,13 +51,69 @@ describe('deterministic Daily Briefing', () => {
   it('reuses one historical market overview without direct duplicate candle requests', async () => {
     const marketDataService = { getQuote: vi.fn(), getCandles: vi.fn(), getWatchlistQuotes: vi.fn() }
     const service = createWorkspaceDataService({ marketDataService })
-    service.getMarketOverview = vi.fn().mockResolvedValue({ quote: { provider: 'mock', health: { available: true } }, regime: regime() })
+    const marketOverview = { quote: { provider: 'mock', health: { available: true } }, regime: regime() }
+    service.getMarketOverview = vi.fn().mockResolvedValue(marketOverview)
     service.getPortfolioSummary = vi.fn().mockResolvedValue(portfolio())
     service.listAlerts = vi.fn().mockResolvedValue({ alerts: [] })
-    await service.getDailyBriefing('SPY')
+    const result = await service.getDailyBriefing('SPY')
     expect(service.getMarketOverview).toHaveBeenCalledOnce()
     expect(service.getMarketOverview).toHaveBeenCalledWith('SPY', { timeframe: '1D', now: undefined, includeHistoricalIntelligence: true })
     expect(marketDataService.getCandles).not.toHaveBeenCalled()
+    expect(result.marketOverview).toBe(marketOverview)
+  })
+  it('does not reacquire market evidence when a resolved market overview is supplied', async () => {
+    const liveProvenance = { provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false }
+    const marketOverview = { quote: { symbol: 'SPY', provenance: liveProvenance }, regime: regime({ marketData: liveProvenance }) }
+    const service = createWorkspaceDataService({ marketDataService: { getCandles: vi.fn() } })
+    service.getMarketOverview = vi.fn()
+    service.getPortfolioSummary = vi.fn().mockResolvedValue(portfolio())
+    service.listAlerts = vi.fn().mockResolvedValue({ alerts: [] })
+    const result = await service.getDailyBriefing('SPY', { marketOverview })
+    expect(service.getMarketOverview).not.toHaveBeenCalled()
+    expect(result.marketOverview).toBe(marketOverview)
+    expect(result.briefing.market.marketData).toMatchObject({ provider: 'twelvedata', dataStatus: 'LIVE' })
+  })
+  it('resolves quote and historical evidence once for a standalone Daily Briefing', async () => {
+    const provenance = { provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false }
+    const marketDataService = { getQuote: vi.fn().mockResolvedValue({ symbol: 'SPY', price: 650, provider: 'twelvedata', updatedAt: NOW, provenance }), getCandles: vi.fn() }
+    const indicatorPipeline = { build: vi.fn().mockResolvedValue(undefined) }
+    const service = createWorkspaceDataService({ marketDataService, indicatorPipeline })
+    service.getPortfolioSummary = vi.fn().mockResolvedValue(portfolio())
+    service.listAlerts = vi.fn().mockResolvedValue({ alerts: [] })
+    await service.getDailyBriefing('SPY')
+    expect(marketDataService.getQuote).toHaveBeenCalledOnce()
+    expect(indicatorPipeline.build).toHaveBeenCalledOnce()
+  })
+  it('preserves mock quote evidence when a market overview is supplied', async () => {
+    const mockProvenance = { provider: 'mock', dataStatus: 'MOCK', freshness: 'FRESH', fallbackUsed: true, mock: true }
+    const marketOverview = {
+      quote: { symbol: 'SPY', provenance: mockProvenance },
+      regime: regime({ marketData: mockProvenance, classification: { status: 'INSUFFICIENT_DATA', trendRegime: 'UNKNOWN', riskRegime: 'UNKNOWN' }, inputCoverage: { available: ['price'], missing: ['longMovingAverage'], stale: [] } }),
+    }
+    const service = createWorkspaceDataService({ marketDataService: { getCandles: vi.fn() } })
+    service.getMarketOverview = vi.fn()
+    service.getPortfolioSummary = vi.fn().mockResolvedValue(portfolio())
+    service.listAlerts = vi.fn().mockResolvedValue({ alerts: [] })
+    const result = await service.getDailyBriefing('SPY', { marketOverview })
+    expect(service.getMarketOverview).not.toHaveBeenCalled()
+    expect(result.briefing.status).toBe('INSUFFICIENT_DATA')
+    expect(result.briefing.market.marketData).toMatchObject({ provider: 'mock', dataStatus: 'MOCK' })
+    expect(result.marketOverview.regime.inputCoverage.missing).toContain('longMovingAverage')
+  })
+  it('keeps a live quote live when supplied historical evidence is unavailable', async () => {
+    const liveProvenance = { provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false }
+    const marketOverview = {
+      quote: { symbol: 'SPY', provenance: liveProvenance },
+      regime: regime({ marketData: liveProvenance, classification: { status: 'INSUFFICIENT_DATA', trendRegime: 'UNKNOWN', riskRegime: 'UNKNOWN' }, inputCoverage: { available: ['price'], missing: ['longMovingAverage'], stale: [] } }),
+    }
+    const service = createWorkspaceDataService({ marketDataService: { getCandles: vi.fn() } })
+    service.getMarketOverview = vi.fn()
+    service.getPortfolioSummary = vi.fn().mockResolvedValue(portfolio())
+    service.listAlerts = vi.fn().mockResolvedValue({ alerts: [] })
+    const result = await service.getDailyBriefing('SPY', { marketOverview })
+    expect(result.briefing.status).toBe('INSUFFICIENT_DATA')
+    expect(result.briefing.market.marketData).toMatchObject({ provider: 'twelvedata', dataStatus: 'LIVE' })
+    expect(result.marketOverview.regime.inputCoverage.missing).toContain('longMovingAverage')
   })
   it.each([
     [{ provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false }, 'LIVE'],

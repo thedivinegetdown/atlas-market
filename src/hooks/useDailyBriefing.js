@@ -3,6 +3,7 @@ import { workspaceApiClient } from '../api/workspaceApiClient.js'
 
 export function useDailyBriefing({ symbol = 'SPY', timeframe = '1D', enabled = true } = {}) {
   const [briefing, setBriefing] = useState(null)
+  const [marketOverview, setMarketOverview] = useState(null)
   const [isLoading, setIsLoading] = useState(enabled)
   const [error, setError] = useState(null)
   const refresh = useCallback(async () => {
@@ -12,6 +13,7 @@ export function useDailyBriefing({ symbol = 'SPY', timeframe = '1D', enabled = t
     try {
       const response = await workspaceApiClient.getDailyBriefing(symbol, timeframe)
       setBriefing(response.briefing ?? null)
+      setMarketOverview(response.marketOverview ?? null)
       return response.briefing ?? null
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'Unable to load daily briefing')
@@ -25,5 +27,5 @@ export function useDailyBriefing({ symbol = 'SPY', timeframe = '1D', enabled = t
     const timeoutId = globalThis.setTimeout(() => { void refresh() }, 0)
     return () => globalThis.clearTimeout(timeoutId)
   }, [enabled, refresh])
-  return { briefing, isLoading, error, refresh }
+  return { briefing, marketOverview, isLoading, error, refresh }
 }

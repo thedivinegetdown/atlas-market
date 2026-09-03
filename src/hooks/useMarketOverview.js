@@ -6,10 +6,10 @@ function getErrorMessage(error) {
   return error instanceof Error ? error.message : 'Unable to load selected symbol'
 }
 
-export function useMarketOverview({ symbol, initialQuote = null, pollingIntervalMs = null } = {}) {
+export function useMarketOverview({ symbol, initialQuote = null, pollingIntervalMs = null, enabled = true } = {}) {
   const [quote, setQuote] = useState(initialQuote)
   const [regime, setRegime] = useState(null)
-  const [isLoading, setIsLoading] = useState(Boolean(symbol) && !initialQuote)
+  const [isLoading, setIsLoading] = useState(enabled && Boolean(symbol) && !initialQuote)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState(null)
 
@@ -56,7 +56,7 @@ export function useMarketOverview({ symbol, initialQuote = null, pollingInterval
   }, [symbol])
 
   useEffect(() => {
-    if (symbol && pollingIntervalMs) {
+    if (enabled && symbol && pollingIntervalMs) {
       const subscription = createPollingSubscription({
         intervalMs: pollingIntervalMs,
         fetcher: refresh,
@@ -66,10 +66,10 @@ export function useMarketOverview({ symbol, initialQuote = null, pollingInterval
       return () => subscription.stop()
     }
 
-    if (symbol && !initialQuote) {
+    if (enabled && symbol && !initialQuote) {
       void refresh()
     }
-  }, [initialQuote, pollingIntervalMs, refresh, symbol])
+  }, [enabled, initialQuote, pollingIntervalMs, refresh, symbol])
 
   return {
     quote,

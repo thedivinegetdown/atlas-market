@@ -36,9 +36,11 @@ export function DailyBriefingPanel({ state } = {}) {
 }
 
 export function DashboardSections({ summary }) {
+  const dailyBriefingState = useDailyBriefing()
+  const marketOverview = dailyBriefingState.marketOverview
   return (
     <>
-      <DailyBriefingPanel />
+      <DailyBriefingPanel state={dailyBriefingState} />
       <WorkspacePanel id="dashboard-summary" title="Portfolio Summary" subtitle="Executive overview">
         <div className="metric-grid">
           <MetricCard label="Account Value" value={summary.accountValue} />
@@ -51,7 +53,15 @@ export function DashboardSections({ summary }) {
         <PortfolioSummaryPanel />
       </WorkspacePanel>
       <WorkspacePanel id="market-overview" title="Market Overview" subtitle="Selected market context">
-        <MarketOverviewPanel symbol="SPY" />
+        <MarketOverviewPanel
+          symbol="SPY"
+          quote={marketOverview?.quote}
+          regime={marketOverview?.regime}
+          loading={dailyBriefingState.isLoading}
+          error={dailyBriefingState.error}
+          onRefresh={dailyBriefingState.refresh}
+          enabled={false}
+        />
       </WorkspacePanel>
       <WorkspacePanel id="top-watchlist" title="Top Watchlist" subtitle="Tracked instruments">
         <WatchlistPanel />
