@@ -18,8 +18,8 @@ function values(count = 260) {
   })
 }
 
-function response(payload, { status = 200, ok = status >= 200 && status < 300 } = {}) {
-  return { ok, status, headers: { get: () => null }, async json() { return payload } }
+function response(payload, { status = 200, ok = status >= 200 && status < 300, headers = {} } = {}) {
+  return { ok, status, headers: { get: (name) => headers[name.toLowerCase()] ?? null }, async json() { return payload } }
 }
 
 function provider(fetchImpl, options = {}) {
@@ -169,6 +169,18 @@ describe('production historical candle integration', () => {
     expect(first).toMatchObject({ statusCode: 429, retryAfterSeconds: 30, error: { code: 'provider_rate_limited' } })
     expect(second).toMatchObject({ statusCode: 429, retryAfterSeconds: expect.any(Number), error: { code: 'provider_backoff_active' } })
     expect(fetchImpl).toHaveBeenCalledOnce()
+  })
+
+  it('logs one sanitized historical failure while preserving fail-closed behavior', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn() }
+    const fetchImpl = vi.fn().mockResolvedValue(response({ status: 'error', code: 429, message: 'minute quota reached: configured-existing-key', meta: { quota_scope: 'minute' } }, { headers: { 'retry-after': '15' } }))
+    const result = await provider(fetchImpl, { logger }).getCandles('SPY', { interval: '1d', limit: 260 })
+    const failures = logger.warn.mock.calls.filter(([event]) => event === 'twelve data provider request failed')
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({ ok: false, error: { code: 'provider_rate_limited' }, fallbackUsed: false, statusCode: 429 })
+    expect(failures).toHaveLength(1)
+    expect(failures[0][1]).toMatchObject({ operation: 'historical', provider: 'twelvedata', httpStatus: 200, providerErrorCode: 429, normalizedErrorCode: 'provider_rate_limited', quotaScope: 'minute', retryAfterSeconds: 15, sanitizedMessageCategory: 'RATE_LIMIT' })
+    expect(JSON.stringify(failures[0][1])).not.toMatch(/configured-existing-key|minute quota reached|apikey|authorization/i)
   })
 
   it('normalizes raw records independently of provider payload shape', () => {

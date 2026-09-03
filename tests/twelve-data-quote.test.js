@@ -2,8 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { createDefaultMarketDataProvider } from '../lib/market/defaultMarketDataProvider.js'
 import { createTwelveDataClient } from '../lib/market/twelveDataClient.js'
 
-function response(payload, { status = 200, ok = status >= 200 && status < 300 } = {}) {
-  return { ok, status, headers: { get: () => null }, async json() { return payload } }
+function response(payload, { status = 200, ok = status >= 200 && status < 300, headers = {} } = {}) {
+  return { ok, status, headers: { get: (name) => headers[name.toLowerCase()] ?? null }, async json() { return payload } }
 }
 
 describe('Twelve Data production quote compatibility', () => {
@@ -55,5 +55,25 @@ describe('Twelve Data production quote compatibility', () => {
       provenance: { provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false, mock: false },
     })
     expect(result.data[0].provenance.warningCodes).not.toContain('FALLBACK_PROVIDER_USED')
+  })
+
+  it('logs one sanitized quote failure for HTTP 429 and preserves fallback behavior', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn() }
+    const fetchImpl = vi.fn().mockResolvedValue(response({ message: 'daily credits exhausted: private-test-key' }, { status: 429, ok: false, headers: { 'retry-after': '30', 'x-ratelimit-reset': '60' } }))
+    const result = await createDefaultMarketDataProvider({ finnhubApiKey: '', twelveDataApiKey: 'private-test-key', fetchImpl, logger }).getQuote('SPY')
+    const failure = logger.warn.mock.calls.find(([event]) => event === 'twelve data provider request failed')?.[1]
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({ ok: true, provider: 'mock', fallbackUsed: true, mock: true })
+    expect(failure).toMatchObject({ event: 'twelve_data_provider_request_failed', operation: 'quote', provider: 'twelvedata', httpStatus: 429, normalizedErrorCode: 'provider_rate_limited', normalizedErrorClass: 'RATE_LIMITED', sanitizedMessageCategory: 'DAILY_QUOTA', quotaScope: 'daily', retryAfterSeconds: 30, resetSeconds: 60 })
+    expect(JSON.stringify(failure)).not.toMatch(/private-test-key|daily credits exhausted|apikey|authorization/i)
+  })
+
+  it('distinguishes HTTP-200 payload rate limits and maps explicit quota scope metadata', async () => {
+    const minute = await createTwelveDataClient({ apiKey: 'key', fetchImpl: vi.fn().mockResolvedValue(response({ status: 'error', code: 429, message: 'rate limited', meta: { quota_scope: 'minute' } })) }).getQuote('SPY')
+    const daily = await createTwelveDataClient({ apiKey: 'key', fetchImpl: vi.fn().mockResolvedValue(response({ status: 'error', code: 429, message: 'rate limited', meta: { quota_scope: 'daily' } })) }).getQuote('SPY')
+    const ambiguous = await createTwelveDataClient({ apiKey: 'key', fetchImpl: vi.fn().mockResolvedValue(response({ status: 'error', code: 429, message: 'credits exceeded' })) }).getQuote('SPY')
+    expect(minute.failure).toMatchObject({ httpStatus: 200, providerErrorCode: 429, quotaScope: 'minute', sanitizedMessageCategory: 'RATE_LIMIT' })
+    expect(daily.failure).toMatchObject({ httpStatus: 200, providerErrorCode: 429, quotaScope: 'daily', sanitizedMessageCategory: 'DAILY_QUOTA' })
+    expect(ambiguous.failure).toMatchObject({ httpStatus: 200, providerErrorCode: 429, quotaScope: 'unknown', sanitizedMessageCategory: 'RATE_LIMIT' })
   })
 })
