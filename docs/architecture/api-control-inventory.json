@@ -2,24 +2,24 @@
   "schemaVersion": 2,
   "generatedFrom": "netlify/functions/*.js",
   "summary": {
-    "total": 275,
+    "total": 276,
     "byWrapper": {
       "team-authenticated": 8,
-      "organization-authenticated": 244,
+      "organization-authenticated": 245,
       "authenticated": 21,
       "plain-api": 2,
       "unknown": 0
     },
     "byAccess": {
       "read": 78,
-      "mutation": 56,
+      "mutation": 57,
       "read-and-mutation": 141
     },
     "byPriority": {
       "P0": 0,
       "P1": 0,
       "P2": 0,
-      "P3": 275
+      "P3": 276
     }
   },
   "functions": [
@@ -2304,6 +2304,24 @@
       "authenticated": true,
       "boundary": "organization",
       "permission": "workspace.admin",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "forward-observation",
+      "path": "netlify/functions/forward-observation.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
       "csrfRequired": true,
       "endpointClassification": "AUTHENTICATED_MUTATION",
       "classificationReason": "Protected by the existing authenticated control and authorization boundary.",

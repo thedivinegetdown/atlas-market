@@ -280,7 +280,7 @@ describe('AUTH.2 API surface regression', () => {
     const inventory = buildApiControlInventory()
     expect(inventory.functions.filter((entry) => entry.wrapper === 'plain-api').map((entry) => entry.function)).toEqual(['health', 'watchlist'])
     expect(inventory.functions.filter((entry) => entry.wrapper === 'plain-api').every((entry) => entry.endpointClassification === 'PUBLIC_READ' && entry.access === 'read')).toBe(true)
-    expect(inventory.summary.byPriority).toEqual({ P0: 0, P1: 0, P2: 0, P3: 275 })
+    expect(inventory.summary.byPriority).toEqual({ P0: 0, P1: 0, P2: 0, P3: 276 })
   })
 
   it('forces Netlify Identity for non-production deploy and branch previews', () => {

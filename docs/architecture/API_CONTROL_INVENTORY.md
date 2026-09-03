@@ -10,19 +10,19 @@ This inventory reports source-level controls. It does not prove production ident
 
 | Classification | Count |
 | --- | ---: |
-| Total functions | 275 |
+| Total functions | 276 |
 | Wrapper: team-authenticated | 8 |
-| Wrapper: organization-authenticated | 244 |
+| Wrapper: organization-authenticated | 245 |
 | Wrapper: authenticated | 21 |
 | Wrapper: plain-api | 2 |
 | Wrapper: unknown | 0 |
 | Access: read | 78 |
-| Access: mutation | 56 |
+| Access: mutation | 57 |
 | Access: read-and-mutation | 141 |
 | Priority: P0 | 0 |
 | Priority: P1 | 0 |
 | Priority: P2 | 0 |
-| Priority: P3 | 275 |
+| Priority: P3 | 276 |
 
 ## Control semantics
 
@@ -158,6 +158,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `evidence-governance-health` | `netlify/functions/evidence-governance-health.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `evidence-governance-review` | `netlify/functions/evidence-governance-review.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `evidence-review-status-update` | `netlify/functions/evidence-review-status-update.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
+| `forward-observation` | `netlify/functions/forward-observation.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `health` | `netlify/functions/health.js` | PUBLIC_READ | Minimal liveness/readiness response contains no tenant data, mutation capability, or privileged operational detail. | GET | read | plain-api | none | no | controlled | P3 | Retain explicit public-read policy and regression coverage. |
 | `in-app-notifications` | `netlify/functions/in-app-notifications.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `institutional-chart-advanced-drawing-sync` | `netlify/functions/institutional-chart-advanced-drawing-sync.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
