@@ -54,6 +54,7 @@ describe('Dashboard Daily Briefing', () => {
     await act(async () => { await new Promise((resolve) => globalThis.setTimeout(resolve, 20)) })
     expect(workspaceApiClient.getDailyBriefing).toHaveBeenCalledOnce()
     expect(workspaceApiClient.getMarketOverview).not.toHaveBeenCalled()
+    expect(workspaceApiClient.getWatchlist).not.toHaveBeenCalled()
     expect(view.querySelector('#market-overview').textContent).toContain('$650.00')
     expect(view.querySelector('#market-overview').textContent).toContain('LIVE')
   })

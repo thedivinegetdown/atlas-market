@@ -82,8 +82,9 @@ export function WatchlistPanel({
   onRefresh,
   sortKey: initialSortKey = 'symbol',
   sortDirection = 'asc',
+  autoLoad = true,
 }) {
-  const fallback = useWatchlist()
+  const fallback = useWatchlist({ autoLoad })
   const hasControlledQuotes = quotes !== undefined
   const resolvedQuotes = quotes ?? fallback.quotes
   const resolvedSelected = selectedSymbol ?? fallback.selectedSymbol
@@ -193,7 +194,7 @@ export function WatchlistPanel({
         </table>
         {resolvedLoading && quotesWithSignals.length === 0 ? <StateMessage>Loading watchlist quotes...</StateMessage> : null}
         {resolvedError ? <StateMessage type="error">{resolvedError}</StateMessage> : null}
-        {!resolvedLoading && !resolvedError && quotesWithSignals.length === 0 ? <EmptyState label="No watchlist symbols available." /> : null}
+        {!resolvedLoading && !resolvedError && quotesWithSignals.length === 0 ? <EmptyState label={autoLoad ? 'No watchlist symbols available.' : 'Watchlist data has not been requested.'} /> : null}
       </div>
     </div>
   )

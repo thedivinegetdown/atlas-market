@@ -13,10 +13,11 @@ export function useWatchlist({
   initialQuotes = emptyQuotes,
   initialSymbol = defaultSymbols[0],
   pollingIntervalMs = null,
+  autoLoad = true,
 } = {}) {
   const [quotes, setQuotes] = useState(initialQuotes)
   const [selectedSymbol, setSelectedSymbol] = useState(initialSymbol)
-  const [isLoading, setIsLoading] = useState(initialQuotes.length === 0)
+  const [isLoading, setIsLoading] = useState(autoLoad && initialQuotes.length === 0)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [error, setError] = useState(null)
 
@@ -50,6 +51,8 @@ export function useWatchlist({
       return
     }
 
+    if (!autoLoad) return
+
     if (pollingIntervalMs) {
       const subscription = createPollingSubscription({
         intervalMs: pollingIntervalMs,
@@ -61,7 +64,7 @@ export function useWatchlist({
     }
 
     void fetchQuotes()
-  }, [fetchQuotes, initialQuotes, pollingIntervalMs])
+  }, [autoLoad, fetchQuotes, initialQuotes, pollingIntervalMs])
 
   const selectedQuote = useMemo(() => {
     return quotes.find((quote) => quote.symbol === selectedSymbol) ?? quotes[0] ?? null

@@ -64,7 +64,7 @@ export function DashboardSections({ summary }) {
         />
       </WorkspacePanel>
       <WorkspacePanel id="top-watchlist" title="Top Watchlist" subtitle="Tracked instruments">
-        <WatchlistPanel />
+        <WatchlistPanel autoLoad={false} />
       </WorkspacePanel>
       <WorkspacePanel id="open-alerts" title="Open Alerts" subtitle="Paper alert review">
         <AlertsPanel activeSymbol="SPY" />

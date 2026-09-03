@@ -28,8 +28,8 @@ async function flushApi() {
   })
 }
 
-function HookProbe() {
-  const watchlist = useWatchlist()
+function HookProbe({ autoLoad = true } = {}) {
+  const watchlist = useWatchlist({ autoLoad })
   return (
     <div>
       <span>{watchlist.isLoading ? 'loading' : 'ready'}</span>
@@ -102,6 +102,30 @@ describe('Part 11B workspace API client integration', () => {
     await flushApi()
 
     expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
+
+  it('defers automatic Watchlist loading without changing manual refresh behavior', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      async json() {
+        return { ok: true, data: { paperTrading: true, quotes: [{ symbol: 'SPY', price: 100 }] } }
+      },
+    })
+    globalThis.fetch = fetchMock
+
+    renderWithRoot(<HookProbe autoLoad={false} />)
+
+    await flushApi()
+    expect(container.textContent).toContain('ready')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    act(() => {
+      container.querySelector('button').click()
+    })
+    await flushApi()
+
+    expect(fetchMock).toHaveBeenCalledOnce()
+    expect(container.textContent).toContain('SPY')
   })
 
   it('exposes hook error state from API errors', async () => {
