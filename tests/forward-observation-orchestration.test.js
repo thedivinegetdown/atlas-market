@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import { runForwardObservation } from '../lib/opportunities/forwardTest/forwardObservationOrchestrator.js'
 import { createForwardObservationHandler } from '../netlify/functions/forward-observation.js'
+import { createWorkspaceApiClient } from '../src/api/workspaceApiClient.js'
 
 const NOW = '2026-09-03T19:45:00.000Z'
 const scope = { tenantContext: { organizationId: 'org-a', teamWorkspaceId: '', userId: 'user-a' }, accountId: 'paper-portfolio', userId: 'user-a' }
@@ -160,5 +161,22 @@ describe('forward observation endpoint', () => {
     const response = await createForwardObservationHandler(configured)(event({ organizationId: 'org-b', accountId: 'paper-portfolio' }))
     expect(response.statusCode).toBe(403)
     expect(configured.evidenceRepository.listPaperEvaluations).not.toHaveBeenCalled()
+  })
+})
+
+describe('forward observation production client', () => {
+  it('establishes CSRF and sends only the canonical scope', async () => {
+    const fetchImpl = vi.fn(async (url) => url.includes('/csrf-token')
+      ? { ok: true, status: 200, json: async () => ({ ok: true, data: { token: 'signed-csrf', expiresAt: '2099-01-01T00:00:00.000Z' } }) }
+      : { ok: true, status: 200, json: async () => ({ ok: true, data: { result: 'PASSIVE_WAIT', experiments: [] } }) })
+    const client = createWorkspaceApiClient({ fetchImpl, accessTokenProvider: () => 'identity-token' })
+
+    await client.runForwardObservation()
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2)
+    const [url, options] = fetchImpl.mock.calls[1]
+    expect(url).toContain('/forward-observation')
+    expect(options).toMatchObject({ method: 'POST', headers: { authorization: 'Bearer identity-token', 'x-csrf-token': 'signed-csrf' } })
+    expect(JSON.parse(options.body)).toEqual({ organizationId: 'org-atlas-local', accountId: 'paper-portfolio' })
   })
 })

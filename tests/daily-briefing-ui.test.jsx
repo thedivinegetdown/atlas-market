@@ -2,7 +2,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { workspaceApiClient } from '../src/api/workspaceApiClient.js'
-import { DailyBriefingPanel, DashboardSections } from '../src/workspaces/Dashboard/dashboardSections.jsx'
+import { DailyBriefingPanel, DashboardSections, GovernedObservationPanel } from '../src/workspaces/Dashboard/dashboardSections.jsx'
 
 let root; let container
 function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
@@ -57,5 +57,16 @@ describe('Dashboard Daily Briefing', () => {
     expect(workspaceApiClient.getWatchlist).not.toHaveBeenCalled()
     expect(view.querySelector('#market-overview').textContent).toContain('$650.00')
     expect(view.querySelector('#market-overview').textContent).toContain('LIVE')
+  })
+  it('runs governed forward observation only on explicit operator action', async () => {
+    const result = { result: 'PASSIVE_WAIT', experiments: [{ experimentId: 'EDGE.2', statusBefore: 'NOT_STARTED', statusAfter: 'NOT_STARTED', validSessions: 0, requiredSessions: 20, completedOutcomes: 0, requiredOutcomes: 30, reason: 'no_current_governed_evaluation' }] }
+    vi.spyOn(workspaceApiClient, 'runForwardObservation').mockResolvedValue(result)
+    const view = render(<GovernedObservationPanel />)
+    expect(workspaceApiClient.runForwardObservation).not.toHaveBeenCalled()
+    await act(async () => { view.querySelector('button').click(); await new Promise((resolve) => globalThis.setTimeout(resolve, 0)) })
+    expect(workspaceApiClient.runForwardObservation).toHaveBeenCalledOnce()
+    expect(view.textContent).toContain('PASSIVE WAIT')
+    expect(view.textContent).toContain('EDGE.2: NOT STARTED → NOT STARTED')
+    expect(view.textContent).toContain('PAPER ONLY')
   })
 })

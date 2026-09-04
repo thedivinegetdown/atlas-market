@@ -180,6 +180,12 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     getDailyBriefing(symbol = 'SPY', timeframe = '1D') {
       return request('daily-briefing', { symbol, timeframe, organizationId: 'org-atlas-local', accountId: 'paper-portfolio' }, 'Unable to load daily briefing')
     },
+    runForwardObservation() {
+      return request('forward-observation', {}, 'Unable to run governed forward observation', {
+        method: 'POST',
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' },
+      })
+    },
     runPaperEvaluation() {
       return request('paper-evaluation', {}, 'Unable to run paper evaluation', { method: 'POST', body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', symbol: 'SPY' } })
     },

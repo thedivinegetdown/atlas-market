@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import { AlertsPanel, DiagnosticsPanel, MarketOverviewPanel, PortfolioSummaryPanel, WatchlistPanel } from '../../components/panels.jsx'
 import { MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useDailyBriefing } from '../../hooks/useDailyBriefing.js'
 import { MarketDataStatus } from '../../components/MarketDataStatus.jsx'
+import { workspaceApiClient } from '../../api/workspaceApiClient.js'
 
 function display(value) { return String(value ?? 'UNKNOWN').replaceAll('_', ' ') }
 
@@ -35,12 +37,38 @@ export function DailyBriefingPanel({ state } = {}) {
   </WorkspacePanel>
 }
 
+export function GovernedObservationPanel({ state } = {}) {
+  const [liveState, setLiveState] = useState({ isLoading: false, result: null, error: null })
+  const resolved = state ?? liveState
+
+  async function run() {
+    setLiveState({ isLoading: true, result: null, error: null })
+    try {
+      const result = await workspaceApiClient.runForwardObservation()
+      setLiveState({ isLoading: false, result, error: null })
+    } catch (error) {
+      setLiveState({ isLoading: false, result: null, error: error instanceof Error ? error.message : 'Unable to run governed forward observation' })
+    }
+  }
+
+  return <WorkspacePanel id="governed-observation" title="Governed Forward Observation" subtitle="Server-authoritative paper evidence only">
+    <button type="button" onClick={state ? state.run : run} disabled={resolved.isLoading}>{resolved.isLoading ? 'Running observation…' : 'Run governed observation'}</button>
+    {resolved.error ? <p role="alert">{resolved.error}</p> : null}
+    {resolved.result ? <>
+      <p role="status"><strong>{display(resolved.result.result)}</strong></p>
+      <ul>{resolved.result.experiments?.map((experiment) => <li key={experiment.experimentId}><strong>{experiment.experimentId}: {display(experiment.statusBefore)} → {display(experiment.statusAfter)}</strong><p>{experiment.validSessions}/{experiment.requiredSessions} sessions · {experiment.completedOutcomes}/{experiment.requiredOutcomes} outcomes · {display(experiment.reason)}</p></li>)}</ul>
+    </> : <p>No observation has been run from this Dashboard session.</p>}
+    <p>PAPER ONLY · Live execution disabled · Client-supplied scientific state is prohibited.</p>
+  </WorkspacePanel>
+}
+
 export function DashboardSections({ summary }) {
   const dailyBriefingState = useDailyBriefing()
   const marketOverview = dailyBriefingState.marketOverview
   return (
     <>
       <DailyBriefingPanel state={dailyBriefingState} />
+      <GovernedObservationPanel />
       <WorkspacePanel id="dashboard-summary" title="Portfolio Summary" subtitle="Executive overview">
         <div className="metric-grid">
           <MetricCard label="Account Value" value={summary.accountValue} />
