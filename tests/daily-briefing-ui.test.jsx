@@ -2,7 +2,7 @@ import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { workspaceApiClient } from '../src/api/workspaceApiClient.js'
-import { DailyBriefingPanel, DashboardSections, GovernedObservationPanel } from '../src/workspaces/Dashboard/dashboardSections.jsx'
+import { DailyBriefingPanel, DashboardSections, GovernedDiscoveryPanel, GovernedObservationPanel } from '../src/workspaces/Dashboard/dashboardSections.jsx'
 
 let root; let container
 function render(element) { container = document.createElement('div'); document.body.appendChild(container); root = createRoot(container); act(() => root.render(element)); return container }
@@ -68,5 +68,16 @@ describe('Dashboard Daily Briefing', () => {
     expect(view.textContent).toContain('PASSIVE WAIT')
     expect(view.textContent).toContain('EDGE.2: NOT STARTED → NOT STARTED')
     expect(view.textContent).toContain('PAPER ONLY')
+  })
+  it('runs bounded opportunity discovery only on explicit operator action', async () => {
+    const matches = [{ scannerId: 'scanner-edge', scannerName: 'EDGE2 Fixed Observation Readiness', symbol: 'SPY', marketData: { provider: 'twelvedata', dataStatus: 'LIVE' } }]
+    vi.spyOn(workspaceApiClient, 'evaluateScanners').mockResolvedValue({ matches })
+    const view = render(<GovernedDiscoveryPanel />)
+    expect(workspaceApiClient.evaluateScanners).not.toHaveBeenCalled()
+    await act(async () => { view.querySelector('button').click(); await new Promise((resolve) => globalThis.setTimeout(resolve, 0)) })
+    expect(workspaceApiClient.evaluateScanners).toHaveBeenCalledOnce()
+    expect(view.textContent).toContain('1 bounded candidate found')
+    expect(view.textContent).toContain('SPY')
+    expect(view.textContent).toContain('human review')
   })
 })

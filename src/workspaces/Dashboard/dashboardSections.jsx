@@ -62,12 +62,39 @@ export function GovernedObservationPanel({ state } = {}) {
   </WorkspacePanel>
 }
 
+export function GovernedDiscoveryPanel({ state } = {}) {
+  const [liveState, setLiveState] = useState({ isLoading: false, matches: null, error: null })
+  const resolved = state ?? liveState
+
+  async function discover() {
+    setLiveState({ isLoading: true, matches: null, error: null })
+    try {
+      const response = await workspaceApiClient.evaluateScanners()
+      setLiveState({ isLoading: false, matches: response.matches ?? [], error: null })
+    } catch (error) {
+      setLiveState({ isLoading: false, matches: null, error: error instanceof Error ? error.message : 'Unable to discover governed opportunities' })
+    }
+  }
+
+  return <WorkspacePanel id="governed-discovery" title="Governed Opportunity Discovery" subtitle="Bounded scanner evidence for human review">
+    <button type="button" onClick={state ? state.discover : discover} disabled={resolved.isLoading}>{resolved.isLoading ? 'Discovering opportunities…' : 'Discover opportunities'}</button>
+    {resolved.error ? <p role="alert">{resolved.error}</p> : null}
+    {Array.isArray(resolved.matches) ? (resolved.matches.length ? <>
+      <p role="status">{resolved.matches.length} bounded candidate{resolved.matches.length === 1 ? '' : 's'} found. Trade Quality and paper evaluation remain human-gated.</p>
+      <ul>{resolved.matches.map((match) => <li key={`${match.scannerId}-${match.symbol}`}><strong>{match.symbol}</strong> · {match.scannerName} · {display(match.marketData?.dataStatus ?? 'UNKNOWN')} · {match.marketData?.provider ?? 'unknown'}</li>)}</ul>
+      <a href="/scanner">Open Scanner to review candidates</a>
+    </> : <p role="status">No bounded scanner candidates found under the existing criteria.</p>) : <p>Discovery has not been run from this Dashboard session.</p>}
+    <p>Advisory only. No orders, strategy changes, or automatic paper execution occur.</p>
+  </WorkspacePanel>
+}
+
 export function DashboardSections({ summary }) {
   const dailyBriefingState = useDailyBriefing()
   const marketOverview = dailyBriefingState.marketOverview
   return (
     <>
       <DailyBriefingPanel state={dailyBriefingState} />
+      <GovernedDiscoveryPanel />
       <GovernedObservationPanel />
       <WorkspacePanel id="dashboard-summary" title="Portfolio Summary" subtitle="Executive overview">
         <div className="metric-grid">
