@@ -122,6 +122,17 @@ describe('PI.2 canonical durable paper evidence', () => {
     expect(await createAtlasAiRepository({ database }).listPaperEvaluations(scope())).toHaveLength(2)
   })
 
+  it('serializes PA.1 candidate linkage as JSON for the PostgreSQL JSONB contract', async () => {
+    const query = vi.fn().mockResolvedValue({ rows: [{ id: 'saved' }], rowCount: 1 })
+    await createAtlasAiRepository({ database: { connected: true, query } }).savePaperEvaluation({
+      ...scope(), evaluation: evaluation(),
+    })
+
+    const [, params] = query.mock.calls[0]
+    expect(params[8]).toBe(JSON.stringify(['opp-aapl-1']))
+    expect(JSON.parse(params[8])).toEqual(['opp-aapl-1'])
+  })
+
   it('suppresses PA.2 duplicates after restart and preserves PA.1 evidence linkage', async () => {
     const database = createHistoryDatabase()
     const first = await createAtlasAiRepository({ database }).savePaperSimulation({ ...scope(), simulation: simulation() })
