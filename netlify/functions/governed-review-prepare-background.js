@@ -18,9 +18,14 @@ const GOVERNED_STRATEGIES = Object.freeze([
 
 const PREPARATION_STORE = 'governedReviewPreparations'
 const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
+const STALE_THRESHOLD_MS = 5 * 60 * 1000 // 5 minutes
 
 function createPreparationId() {
   return `prep_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+}
+
+function createClaimToken() {
+  return `claim_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`
 }
 
 function getPreparationStore(repository) {
@@ -36,16 +41,63 @@ async function savePreparation(repository, preparation) {
   return result
 }
 
-async function getPreparation(repository, id, tenantContext) {
+/**
+ * Atomically create or reuse preparation for this org/user.
+ * Uses upsert with ON CONFLICT on the unique active index.
+ * Returns { preparation, created, existingId }
+ */
+async function createOrReusePreparation(repository, organizationId, userId, tenantContext, now) {
+  const preparationId = `prep_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
+  const claimToken = createClaimToken()
+  const expiresAt = new Date(Date.now() + PREPARATION_TTL_MS).toISOString()
+  const nowIso = now().toISOString()
+
+  const preparation = {
+    id: preparationId,
+    organizationId,
+    userId,
+    tenantContext,
+    status: 'pending',
+    createdAt: nowIso,
+    updatedAt: nowIso,
+    expiresAt,
+    attempt: 0,
+    claimToken,
+    universe: BREAKOUT_OBSERVATION_UNIVERSE,
+    strategies: GOVERNED_STRATEGIES.map(s => s.id),
+  }
+
   const store = getPreparationStore(repository)
-  if (!store) return null
-  return store.getScoped(id, tenantContext)
+  if (!store) {
+    throw new Error(`Preparation store ${PREPARATION_STORE} not available`)
+  }
+
+  // Try to insert new preparation
+  // If unique active constraint violated, fetch the existing active preparation
+  try {
+    await store.upsertScoped(preparationId, preparation, tenantContext)
+    return { preparation, created: true, existingId: null }
+  } catch (err) {
+    // Check if it's a unique constraint violation on active preparation
+    if (err?.message?.includes('idx_atlas_governed_review_preparations_active_unique') ||
+        err?.message?.includes('unique constraint') ||
+        err?.code === '23505') {
+      // Fetch existing active preparation
+      const existing = await findActivePreparation(repository, organizationId, userId)
+      if (existing) {
+        return { preparation: existing, created: false, existingId: existing.id }
+      }
+    }
+    throw err
+  }
 }
 
+/**
+ * Find active (pending/running, non-expired) preparation for org/user
+ */
 async function findActivePreparation(repository, organizationId, userId) {
   const store = getPreparationStore(repository)
   if (!store) return null
-  // Query for pending or running preparation for this org/user
   const records = await store.listScoped({
     organizationId,
     userId,
@@ -55,7 +107,7 @@ async function findActivePreparation(repository, organizationId, userId) {
   for (const record of records) {
     const p = record.payload ?? record
     const expiresAt = p.expiresAt ? new Date(p.expiresAt).getTime() : 0
-    if (expiresAt && expiresAt <= now) continue // skip expired
+    if (expiresAt && expiresAt <= now) continue
     if (p.status === 'pending' || p.status === 'running') {
       return p
     }
@@ -63,28 +115,81 @@ async function findActivePreparation(repository, organizationId, userId) {
   return null
 }
 
+/**
+ * Atomically claim a pending preparation for execution.
+ * Uses optimistic locking with attempt counter and claim_token.
+ * Returns { claimed: true, preparation } or { claimed: false, reason, preparation? }
+ */
 async function claimPreparation(repository, preparationId, tenantContext) {
   const store = getPreparationStore(repository)
   if (!store) return { claimed: false, reason: 'store_unavailable' }
+
   const record = await store.getScoped(preparationId, tenantContext)
   if (!record) return { claimed: false, reason: 'not_found' }
+
   const prep = record.payload ?? record
+  const nowIso = new Date().toISOString()
+
+  // Already completed/failed/expired - no claim
   if (prep.status === 'completed') return { claimed: false, reason: 'already_completed', preparation: prep }
   if (prep.status === 'expired') return { claimed: false, reason: 'expired', preparation: prep }
   if (prep.status === 'failed') return { claimed: false, reason: 'failed', preparation: prep }
+
+  // Already running - check if stale
   if (prep.status === 'running') {
-    // Check if it's stale (no update for > 5 minutes)
     const updatedAt = prep.updatedAt ? new Date(prep.updatedAt).getTime() : 0
-    if (Date.now() - updatedAt > 5 * 60 * 1000) {
-      // Stale running - can claim
-      await savePreparation(repository, { ...prep, status: 'running', updatedAt: new Date().toISOString() })
-      return { claimed: true, preparation: prep }
+    if (Date.now() - updatedAt > STALE_THRESHOLD_MS) {
+      // Stale - attempt atomic recovery with incremented attempt
+      const newAttempt = (prep.attempt ?? 0) + 1
+      const newClaimToken = createClaimToken()
+      try {
+        // Atomic: only update if claim_token still matches and status is still running
+        const updated = await store.conditionalUpdateScoped(
+          preparationId,
+          {
+            status: 'running',
+            attempt: newAttempt,
+            claimToken: newClaimToken,
+            updatedAt: new Date().toISOString(),
+          },
+          { claimToken: prep.claimToken, status: 'running' },
+          tenantContext
+        )
+        if (updated) {
+          return { claimed: true, preparation: { ...prep, status: 'running', attempt: newAttempt, claimToken: newClaimToken, updatedAt: new Date().toISOString() } }
+        }
+      } catch (err) {
+        // Conditional update failed - another worker got it
+        return { claimed: false, reason: 'claimed_by_other', preparation: prep }
+      }
+      return { claimed: false, reason: 'claimed_by_other', preparation: prep }
     }
-    return { claimed: false, reason: 'already_running', preparation: prep }
-  }
-  // pending - claim it
-  await savePreparation(repository, { ...prep, status: 'running', updatedAt: new Date().toISOString() })
-  return { claimed: true, preparation: prep }
+
+    // Pending - attempt atomic claim
+    const newAttempt = (prep.attempt ?? 0) + 1
+    const newClaimToken = createClaimToken()
+    try {
+      // Atomic: only update if claim_token still matches and status is pending
+      const updated = await store.conditionalUpdateScoped(
+        preparationId,
+        {
+          status: 'running',
+          attempt: newAttempt,
+          claimToken: newClaimToken,
+          startedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+        { claimToken: prep.claimToken, status: 'pending' },
+        tenantContext
+      )
+      if (updated) {
+        return { claimed: true, preparation: { ...prep, status: 'running', attempt: newAttempt, claimToken: newClaimToken, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } }
+      }
+    } catch (err) {
+      // Conditional update failed
+      return { claimed: false, reason: 'claimed_by_other', preparation: prep }
+    }
+    return { claimed: false, reason: 'claimed_by_other', preparation: prep }
 }
 
 async function runGovernedPreparation(preparation, context) {
@@ -95,7 +200,7 @@ async function runGovernedPreparation(preparation, context) {
       ...preparation,
       status: 'running',
       startedAt: now().toISOString(),
-      updatedAt: new Date().toISOString(),
+      updatedAt: now().toISOString(),
     })
 
     // Build ONE shared market evidence packet for the governed universe
@@ -237,52 +342,59 @@ async function runGovernedPreparation(preparation, context) {
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
   const { organizationId, user, tenantContext, requestId } = context
   const repository = context.repository
+  const now = () => new Date()
 
-  // Check for existing active preparation (deduplication)
-  const existing = await findActivePreparation(repository, organizationId, user.id)
-  if (existing) {
+  // Atomically create or reuse preparation (deduplication)
+  const { preparation, created, existingId } = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, now)
+
+  if (!created) {
     return {
       ok: true,
       data: {
-        preparationId: existing.id,
-        status: existing.status,
+        preparationId: existingId,
+        status: preparation.status,
         message: 'Governed review preparation already in progress',
         reused: true,
       },
     }
   }
 
-  const preparationId = createPreparationId()
-  const creditBudget = createCreditBudget({ dailyLimit: 800, minuteLimit: 6 })
-  const expiresAt = new Date(Date.now() + PREPARATION_TTL_MS).toISOString()
-
-  const preparation = {
-    id: preparationId,
-    organizationId,
-    userId: user.id,
-    tenantContext,
-    status: 'pending',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    expiresAt,
-    universe: BREAKOUT_OBSERVATION_UNIVERSE,
-    strategies: GOVERNED_STRATEGIES.map(s => s.id),
+  // Claim the preparation atomically
+  const claimResult = await claimPreparation(repository, preparation.id, tenantContext)
+  if (!claimResult.claimed) {
+    // Should not happen for newly created, but handle gracefully
+    if (claimResult.reason === 'already_completed') {
+      return {
+        ok: true,
+        data: {
+          preparationId: preparation.id,
+          status: 'completed',
+          message: 'Governed review preparation already completed',
+        },
+      }
+    }
+    return {
+      ok: true,
+      data: {
+        preparationId: preparation.id,
+        status: preparation.status,
+        message: `Could not claim preparation: ${claimResult.reason}`,
+      },
+    }
   }
 
-  await savePreparation(repository, preparation)
-
-  // Start background preparation (fire and forget with claim check)
+  // Start background preparation (fire and forget with claimed preparation)
   const workspaceDataService = createWorkspaceDataService()
-  runGovernedPreparation({ ...preparation, repository }, {
+  runGovernedPreparation({ ...claimResult.preparation, repository }, {
     workspaceDataService,
-    creditBudget,
-    now: () => new Date(),
-  }).catch(err => serverLogger.error('governed preparation background error', { preparationId, error: err?.message }))
+    creditBudget: createCreditBudget({ dailyLimit: 800, minuteLimit: 6 }),
+    now,
+  }).catch(err => serverLogger.error('governed preparation background error', { preparationId: preparation.id, error: err?.message }))
 
   return {
     ok: true,
     data: {
-      preparationId,
+      preparationId: preparation.id,
       status: 'pending',
       message: 'Governed review preparation started',
     },
@@ -292,43 +404,3 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   workspaceAction: 'read',
   routeId: 'governed-review-prepare',
 })
-
-function createPreparationId() {
-  return `prep_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
-}
-
-const PREPARATION_STORE = 'governedReviewPreparations'
-const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000 // 24 hours
-
-function getPreparationStore(repository) {
-  return repository.getStore(PREPARATION_STORE)
-}
-
-async function savePreparation(repository, preparation) {
-  const store = getPreparationStore(repository)
-  if (!store) {
-    throw new Error(`Preparation store ${PREPARATION_STORE} not available`)
-  }
-  const result = await store.upsertScoped(preparation.id, preparation, preparation.tenantContext)
-  return result
-}
-
-async function findActivePreparation(repository, organizationId, userId) {
-  const store = getPreparationStore(repository)
-  if (!store) return null
-  const records = await store.listScoped({
-    organizationId,
-    userId,
-    limit: 10,
-  })
-  const now = Date.now()
-  for (const record of records) {
-    const p = record.payload ?? record
-    const expiresAt = p.expiresAt ? new Date(p.expiresAt).getTime() : 0
-    if (expiresAt && expiresAt <= now) continue
-    if (p.status === 'pending' || p.status === 'running') {
-      return p
-    }
-  }
-  return null
-}
