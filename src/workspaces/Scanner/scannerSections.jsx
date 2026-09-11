@@ -1,4 +1,4 @@
-import { Fragment, useState, useCallback } from 'react'
+import { Fragment, useState, useCallback, useEffect } from 'react'
 import { AlertsPanel, ScannerPanel, SignalPanel } from '../../components/panels.jsx'
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useScanners } from '../../hooks/useScanners.js'
@@ -7,6 +7,7 @@ import { usePaperEvaluation } from '../../hooks/usePaperEvaluation.js'
 import { usePaperOrderSimulation } from '../../hooks/usePaperOrderSimulation.js'
 import { MarketDataStatus } from '../../components/MarketDataStatus.jsx'
 import { workspaceApiClient } from '../../api/workspaceApiClient.js'
+import { serverLogger } from '../../../lib/logging/logger.js'
 import { BREAKOUT_OBSERVATION_UNIVERSE } from '../../../lib/opportunities/forwardTest/forwardObservationEngine.js'
 import { composeQualifiedTradePlan, rankQualifiedTradePlans } from '../../../lib/opportunities/qualifiedTradePlan/index.js'
 
@@ -56,19 +57,15 @@ export function QualifiedOpportunityRankingPanel({ plans = [] }) {
 }
 
 export function GovernedReviewQueue() {
-  const [queue, setQueue] = useState([])
-  const [isLoading, setIsLoading] = useState(false)
+  const [preparationId, setPreparationId] = useState(null)
+  const [preparationStatus, setPreparationStatus] = useState('idle')
+  const [queueItems, setQueueItems] = useState([])
   const [error, setError] = useState(null)
   const [selectedStrategies, setSelectedStrategies] = useState({})
-  const [showStrategySelection, setShowStrategySelection] = useState({})
-
-  const { evaluateScanners } = useScanners()
-
-  const FORWARD_OBSERVATION_SYMBOLS = new Set(BREAKOUT_OBSERVATION_UNIVERSE)
+  const [pollInterval, setPollInterval] = useState(null)
 
   const displayStrategyName = (strategyId) => {
     const names = {
-      'index-pullback-v1': 'Index Pullback (EDGE.2)',
       'breakout-momentum-v1': 'Breakout Momentum (BREAKOUT.1)',
       'range-mean-reversion-v1': 'Range Mean Reversion (RANGE.1)',
       'volatility-expansion-v1': 'Volatility Expansion (VOL.1)',
@@ -76,71 +73,62 @@ export function GovernedReviewQueue() {
     return names[strategyId] || strategyId
   }
 
+  const clearPolling = useCallback(() => {
+    if (pollInterval) {
+      clearInterval(pollInterval)
+      setPollInterval(null)
+    }
+  }, [pollInterval])
+
   const handlePrepareQueue = useCallback(async () => {
-    setIsLoading(true)
+    clearPolling()
     setError(null)
-    setQueue([])
+    setQueueItems([])
     setSelectedStrategies({})
-    setShowStrategySelection({})
+    setPreparationStatus('preparing')
 
     try {
-      // Step 1: Run authoritative scanner evaluation to get legitimate matches
-      const scannerMatches = await evaluateScanners()
-
-      // Step 2: Filter to only forward-observation universe symbols that are actual scanner matches
-      const eligibleMatches = scannerMatches.filter((match) =>
-        FORWARD_OBSERVATION_SYMBOLS.has(match.symbol)
-      )
-
-      if (eligibleMatches.length === 0) {
-        setQueue([])
-        setIsLoading(false)
-        return
+      const response = await workspaceApiClient.startGovernedReviewPreparation()
+      if (!response.ok || !response.data?.preparationId) {
+        throw new Error(response?.error?.message || 'Failed to start preparation')
       }
+      const pid = response.data.preparationId
+      setPreparationId(pid)
+      setPreparationStatus('preparing')
 
-      // Step 3: Evaluate trade quality for each legitimate match
-      // Pass the full match as candidate to preserve scanner evidence, provenance, fingerprints
-      const results = await Promise.all(
-        eligibleMatches.map(async (match) => {
-          try {
-            const response = await workspaceApiClient.getTradeQuality({
-              symbol: match.symbol,
-              scannerSource: match.scannerName,
-              opportunityId: match.scannerId ? `${match.scannerId}-${match.symbol}-${match.evaluatedAt}` : undefined,
-              strategyId: match.strategyId, // may be undefined, getTradeQuality will evaluate all strategies
-            })
-            return {
-              symbol: match.symbol,
-              quality: response.quality ?? null,
-              strategyAttribution: response.strategyAttribution ?? [],
-              error: null,
-              scannerMatch: match, // preserve original scanner evidence
-            }
-          } catch (err) {
-            return {
-              symbol: match.symbol,
-              quality: null,
-              strategyAttribution: [],
-              error: err instanceof Error ? err.message : 'Evaluation failed',
-              scannerMatch: match,
+      // Poll for completion
+      const interval = setInterval(async () => {
+        try {
+          const statusResponse = await workspaceApiClient.getGovernedReviewPreparationStatus(pid)
+          if (statusResponse.ok && statusResponse.data) {
+            const { status, queueItems: items, error: prepError, providerCalls } = statusResponse.data
+            setPreparationStatus(status)
+            if (status === 'completed') {
+              clearPolling()
+              setQueueItems(items || [])
+            } else if (status === 'failed') {
+              clearPolling()
+              setError(prepError || 'Preparation failed')
+              setPreparationStatus('failed')
             }
           }
-        })
-      )
-      setQueue(results)
+        } catch (err) {
+          serverLogger?.warn?.('governed review status poll failed', { error: err?.message })
+        }
+      }, 3000)
+      setPollInterval(interval)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to prepare review queue')
-    } finally {
-      setIsLoading(false)
+      clearPolling()
+      setError(err instanceof Error ? err.message : 'Failed to start preparation')
+      setPreparationStatus('failed')
     }
-  }, [evaluateScanners])
+  }, [clearPolling])
 
-  const handleSelectStrategy = (symbol, strategyId) => {
+  const handleSelectStrategy = useCallback((symbol, strategyId) => {
     setSelectedStrategies(prev => ({ ...prev, [symbol]: strategyId }))
-    setShowStrategySelection(prev => ({ ...prev, [symbol]: false }))
-  }
+  }, [])
 
-  const handleSaveReview = async (symbol, item) => {
+  const handleSaveReview = useCallback(async (symbol, item) => {
     const strategyId = selectedStrategies[symbol]
     if (!strategyId || !item.quality) return
 
@@ -151,145 +139,126 @@ export function GovernedReviewQueue() {
         reviewState: 'saved',
         orderContext: item.quality.orderContext ?? null,
       })
-      setQueue(prev => prev.map(i =>
+      setQueueItems(prev => prev.map(i =>
         i.symbol === symbol ? { ...i, reviewSaved: true } : i
       ))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to save review')
     }
-  }
+  }, [selectedStrategies])
 
-  const getPrimaryEligible = (item) => {
+  const getPrimaryEligible = useCallback((item) => {
     const q = item.quality
     return q?.score != null && q?.opportunityId && q?.strategyId && q.strategyId !== 'strategy-unknown'
-  }
+  }, [])
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => clearPolling()
+  }, [clearPolling])
 
   return (
-    <WorkspacePanel id="governed-review-queue" title="Governed Review Queue" subtitle="Fixed forward-observation universe · Human review required">
+    <WorkspacePanel id="governed-review-queue" title="Governed Review Queue" subtitle="BREAKOUT.1 · RANGE.1 · VOL.1 · Human review required">
       <div style={{ marginBottom: '1rem' }}>
         <button
           type="button"
           onClick={handlePrepareQueue}
-          disabled={isLoading}
+          disabled={preparationStatus === 'preparing'}
           style={{ marginRight: '1rem' }}
         >
-          {isLoading ? 'Preparing Queue…' : 'Prepare Governed Review'}
+          {preparationStatus === 'preparing' ? 'Preparing…' : 'Prepare Governed Review'}
         </button>
-        {queue.length > 0 && <span style={{ color: '#666', fontSize: '0.875rem' }}>
-          {queue.length} legitimate scanner match{queue.length === 1 ? '' : 'es'} in forward-observation universe
+        {preparationStatus === 'preparing' && <span style={{ color: '#666', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+          Acquiring evidence & evaluating strategies… (may take ≥60s cold)
+        </span>}
+        {preparationStatus === 'completed' && <span style={{ color: 'green', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+          Ready — {queueItems.length} governed match{queueItems.length === 1 ? '' : 'es'}
+        </span>}
+        {preparationStatus === 'failed' && <span style={{ color: 'var(--color-error, #c00)', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+          Failed — click to retry
         </span>}
       </div>
 
       {error && <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>{error}</p>}
 
-      {!isLoading && queue.length === 0 && !error && (
-        <EmptyWorkspaceState>Click "Prepare Governed Review" to evaluate legitimate scanner matches in the forward-observation universe.</EmptyWorkspaceState>
+      {preparationStatus === 'idle' && (
+        <EmptyWorkspaceState>Click "Prepare Governed Review" to evaluate BREAKOUT.1, RANGE.1, and VOL.1 strategies across the governed universe.</EmptyWorkspaceState>
       )}
 
-      {isLoading && <p role="status">Evaluating scanner matches and trade quality…</p>}
+      {preparationStatus === 'preparing' && (
+        <p role="status">Acquiring shared market evidence and evaluating governed strategies…</p>
+      )}
 
-      {queue.map((item, index) => (
-        <article key={item.symbol} className="strategy-manager-card" style={{ marginBottom: '1rem' }}>
-          <h3>{item.symbol}</h3>
+      {preparationStatus === 'completed' && queueItems.length === 0 && (
+        <EmptyWorkspaceState>
+          <strong>No governed strategy opportunities currently have deterministic evidence.</strong>
+          <br />The governed strategies (BREAKOUT.1, RANGE.1, VOL.1) found no legitimate matches in the current market regime.
+        </EmptyWorkspaceState>
+      )}
 
-          {item.error && (
-            <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>Error: {item.error}</p>
+      {queueItems.map((item) => (
+        <article key={`${item.symbol}-${item.strategyId}`} className="strategy-manager-card" style={{ marginBottom: '1rem' }}>
+          <h3>{item.symbol} — {displayStrategyName(item.strategyId)}</h3>
+
+          <div className="metric-grid">
+            <MetricCard label="TQ Score" value={item.quality?.score == null ? 'Not scored' : `${item.quality.score}/100`} />
+            <MetricCard label="Band" value={item.quality?.band ? item.quality.band : 'N/A'} />
+            <MetricCard label="Confidence" value={item.quality?.confidence != null ? `${item.quality.confidence}%` : 'N/A'} />
+            <MetricCard label="Coverage" value={item.quality?.evidenceCoverage != null ? `${item.quality.evidenceCoverage}%` : 'N/A'} />
+            <MetricCard label="Suitability" value={item.suitabilityStatus} />
+            <MetricCard label="Regime" value={item.regime?.classification?.trendRegime ?? 'N/A'} />
+          </div>
+
+          <details style={{ marginBottom: '0.5rem' }}>
+            <summary>Signal Details</summary>
+            <div style={{ fontSize: '0.875rem' }}>
+              <p><strong>Side:</strong> {item.signal?.side ?? 'N/A'}</p>
+              <p><strong>Current Price:</strong> {item.signal?.currentPrice ?? 'N/A'}</p>
+              <p><strong>Prior 20H:</strong> {item.signal?.prior20High ?? 'N/A'}</p>
+              <p><strong>Prior 20L:</strong> {item.signal?.prior20Low ?? 'N/A'}</p>
+              <p><strong>SMA20 / SMA50 / SMA200:</strong> {item.signal?.SMA20 ?? 'N/A'} / {item.signal?.SMA50 ?? 'N/A'} / {item.signal?.SMA200 ?? 'N/A'}</p>
+              <p><strong>ADX / RSI / ATR:</strong> {item.signal?.ADX ?? 'N/A'} / {item.signal?.RSI ?? 'N/A'} / {item.signal?.ATR ?? 'N/A'}</p>
+              <p><strong>ATR %ile / Rel Vol / Rel Str:</strong> {item.signal?.ATRPercentile ?? 'N/A'} / {item.signal?.relativeVolume ?? 'N/A'} / {item.signal?.relativeStrengthPct ?? 'N/A'}</p>
+              <p><strong>Strategy Fingerprint:</strong> {item.signal?.strategyFingerprint ?? 'N/A'}</p>
+            </div>
+          </details>
+
+          <details style={{ marginBottom: '0.5rem' }}>
+            <summary>Regime & Provenance</summary>
+            <div style={{ fontSize: '0.875rem' }}>
+              <p><strong>Trend Regime:</strong> {item.regime?.classification?.trendRegime ?? 'N/A'}</p>
+              <p><strong>Volatility Regime:</strong> {item.regime?.classification?.volatilityRegime ?? 'N/A'}</p>
+              <p><strong>Risk Regime:</strong> {item.regime?.classification?.riskRegime ?? 'N/A'}</p>
+              <p><strong>Regime Status:</strong> {item.regime?.classification?.status ?? 'N/A'}</p>
+              <p><strong>Freshness:</strong> {item.regime?.freshness ?? 'N/A'}</p>
+              <p><strong>Quote Provider:</strong> {item.provenance?.quote?.provider ?? 'N/A'} · {item.provenance?.quote?.dataStatus ?? 'N/A'}</p>
+              <p><strong>Candles:</strong> {item.provenance?.candles?.candleCount ?? 'N/A'} · {item.provenance?.candles?.provider ?? 'N/A'}</p>
+            </div>
+          </details>
+
+          {item.missingInputs?.length || item.blockingReasons?.length ? (
+            <details style={{ marginBottom: '0.5rem' }}>
+              <summary>Evidence Gaps</summary>
+              {item.blockingReasons?.map((reason) => <p key={reason} style={{ color: 'var(--color-error, #c00)' }}>{reason}</p>)}
+              {item.missingInputs?.length ? <p>Missing: {item.missingInputs.join(', ')}</p> : null}
+            </details>
+          ) : null}
+
+          {getPrimaryEligible(item) && !item.reviewSaved && (
+            <button
+              type="button"
+              onClick={() => handleSaveReview(item.symbol, item)}
+              style={{ marginTop: '0.5rem' }}
+            >
+              Save Review
+            </button>
           )}
+          {item.reviewSaved && <p style={{ color: 'green', marginTop: '0.5rem' }}>✓ Review saved</p>}
 
-          {!item.error && !item.quality && (
-            <p>No trade quality evidence available for this symbol.</p>
-          )}
-
-          {!item.error && item.quality && (
-            <>
-              <MarketDataStatus provenance={item.quality.marketData} />
-              <div className="metric-grid">
-                <MetricCard label="Score" value={item.quality.score == null ? 'Not scored' : `${item.quality.score}/100`} />
-                <MetricCard label="Band" value={display(item.quality.band)} />
-                <MetricCard label="Confidence" value={`${item.quality.confidence}%`} />
-                <MetricCard label="Coverage" value={`${item.quality.evidenceCoverage}%`} />
-                <MetricCard label="Freshness" value={display(item.quality.freshness)} />
-                <MetricCard label="Primary Strategy" value={item.quality.strategyId ?? 'None'} />
-              </div>
-
-              {item.scannerMatch && (
-                <details style={{ marginBottom: '0.5rem' }}>
-                  <summary>Scanner Evidence</summary>
-                  <div style={{ fontSize: '0.875rem' }}>
-                    <p><strong>Scanner:</strong> {item.scannerMatch.scannerName} ({item.scannerMatch.scannerId})</p>
-                    <p><strong>Matched Criteria:</strong> {item.scannerMatch.matchedCriteria?.join(', ') || 'N/A'}</p>
-                    <p><strong>Evaluated At:</strong> {item.scannerMatch.evaluatedAt ? new Date(item.scannerMatch.evaluatedAt).toLocaleString() : 'N/A'}</p>
-                    <p><strong>Provenance:</strong> {item.scannerMatch.marketData?.provider || 'Unknown'} · {item.scannerMatch.marketData?.dataStatus || 'Unknown'}</p>
-                  </div>
-                </details>
-              )}
-
-              {item.strategyAttribution.length === 0 && (
-                <p style={{ color: 'var(--color-warning, #b80)' }}>
-                  <strong>Zero Attribution:</strong> No strategies have deterministic evidence for this symbol.
-                  Save Review is not available.
-                </p>
-              )}
-
-              {item.strategyAttribution.length === 1 && (
-                <>
-                  <p><strong>Single Attribution: {displayStrategyName(item.strategyAttribution[0].strategyId)}</strong></p>
-                  <p>Suitability: {item.strategyAttribution[0].suitabilityStatus} · TQ: {item.strategyAttribution[0].quality?.score ?? 'N/A'} {display(item.strategyAttribution[0].quality?.band)}</p>
-                  {getPrimaryEligible(item) && !item.reviewSaved && (
-                    <button
-                      type="button"
-                      onClick={() => handleSaveReview(item.symbol, item)}
-                    >
-                      Save Review
-                    </button>
-                  )}
-                  {item.reviewSaved && <p style={{ color: 'green' }}>✓ Review saved</p>}
-                </>
-              )}
-
-              {item.strategyAttribution.length > 1 && (
-                <div className="strategy-selection">
-                  <h4>Multiple Attributions — Select One</h4>
-                  <p>Select exactly one strategy to review. Only strategies with deterministic evidence are shown.</p>
-                  <ul>
-                    {item.strategyAttribution.map((attr) => (
-                      <li key={attr.strategyId}>
-                        <label>
-                          <input
-                            type="radio"
-                            name={`strategy-selection-${item.symbol}`}
-                            value={attr.strategyId}
-                            checked={selectedStrategies[item.symbol] === attr.strategyId}
-                            onChange={() => handleSelectStrategy(item.symbol, attr.strategyId)}
-                          />
-                          <strong>{displayStrategyName(attr.strategyId)}</strong>
-                          <span> · Suitability: {attr.suitabilityStatus}</span>
-                          <span> · TQ: {attr.quality?.score ?? 'N/A'} {display(attr.quality?.band)}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                  {selectedStrategies[item.symbol] && getPrimaryEligible(item) && !item.reviewSaved && (
-                    <button
-                      type="button"
-                      onClick={() => handleSaveReview(item.symbol, item)}
-                    >
-                      Save Review for {displayStrategyName(selectedStrategies[item.symbol])}
-                    </button>
-                  )}
-                  {selectedStrategies[item.symbol] && item.reviewSaved && <p style={{ color: 'green' }}>✓ Review saved</p>}
-                </div>
-              )}
-
-              {item.quality.reasons?.length ? <details><summary>Supporting reasons</summary><ul>{item.quality.reasons.slice(0, 5).map((reason) => <li key={reason}>{reason}</li>)}</ul></details> : null}
-              {item.quality.missingInputs?.length || item.quality.blockingReasons?.length ? <details><summary>Evidence and blockers</summary>{item.quality.blockingReasons?.map((reason) => <p key={reason}>{reason}</p>)}{item.quality.missingInputs?.length ? <p>Missing: {item.quality.missingInputs.join(', ')}</p> : null}</details> : null}
-
-              <p style={{ fontSize: '0.875rem', color: '#666' }}>
-                Advisory only. Paper trading remains mandatory; this score cannot rank scanners, activate strategies,
-                place orders, or override risk controls.
-              </p>
-            </>
-          )}
+          <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+            Advisory only. Paper trading remains mandatory; this score cannot rank scanners, activate strategies,
+            place orders, or override risk controls.
+          </p>
         </article>
       ))}
     </WorkspacePanel>

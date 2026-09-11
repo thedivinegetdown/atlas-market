@@ -333,6 +333,17 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
         body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', paperTrading: true },
       })
     },
+
+    startGovernedReviewPreparation() {
+      return request('governed-review-prepare-background', {}, 'Unable to start governed review preparation', {
+        method: 'POST',
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' },
+      })
+    },
+
+    getGovernedReviewPreparationStatus(preparationId) {
+      return request('governed-review-status', { preparationId }, 'Unable to get preparation status')
+    },
   }
 }
 
