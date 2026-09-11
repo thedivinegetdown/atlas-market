@@ -344,60 +344,103 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   const repository = context.repository
   const now = () => new Date()
 
-  // Atomically create or reuse preparation (deduplication)
-  const { preparation, created, existingId } = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, now)
+  serverLogger.info('governed review prepare start', { 
+    organizationId, 
+    userId: user.id, 
+    requestId 
+  })
 
-  if (!created) {
-    return {
-      ok: true,
-      data: {
-        preparationId: existingId,
-        status: preparation.status,
-        message: 'Governed review preparation already in progress',
-        reused: true,
-      },
+  try {
+    // Atomically create or reuse preparation (deduplication)
+    serverLogger.debug('governed review createOrReusePreparation start', { organizationId, userId: user.id })
+    const { preparation, created, existingId } = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, now)
+
+    serverLogger.info('governed review createOrReusePreparation result', { 
+      preparationId: preparation.id, 
+      created, 
+      existingId,
+      status: preparation.status 
+    })
+
+    if (!created) {
+      return {
+        ok: true,
+        data: {
+          preparationId: existingId,
+          status: preparation.status,
+          message: 'Governed review preparation already in progress',
+          reused: true,
+        },
+      }
     }
-  }
 
-  // Claim the preparation atomically
-  const claimResult = await claimPreparation(repository, preparation.id, tenantContext)
-  if (!claimResult.claimed) {
-    // Should not happen for newly created, but handle gracefully
-    if (claimResult.reason === 'already_completed') {
+    // Claim the preparation atomically
+    serverLogger.debug('governed review claimPreparation start', { preparationId: preparation.id })
+    const claimResult = await claimPreparation(repository, preparation.id, tenantContext)
+    serverLogger.info('governed review claimPreparation result', { 
+      preparationId: preparation.id, 
+      claimed: claimResult.claimed, 
+      reason: claimResult.reason 
+    })
+    if (!claimResult.claimed) {
+      // Should not happen for newly created, but handle gracefully
+      if (claimResult.reason === 'already_completed') {
+        return {
+          ok: true,
+          data: {
+            preparationId: preparation.id,
+            status: 'completed',
+            message: 'Governed review preparation already completed',
+          },
+        }
+      }
+      serverLogger.warn('governed review claim failed', { 
+        preparationId: preparation.id, 
+        reason: claimResult.reason 
+      })
       return {
         ok: true,
         data: {
           preparationId: preparation.id,
-          status: 'completed',
-          message: 'Governed review preparation already completed',
+          status: preparation.status,
+          message: `Could not claim preparation: ${claimResult.reason}`,
         },
       }
     }
+
+    // Start background preparation (fire and forget with claimed preparation)
+    const workspaceDataService = createWorkspaceDataService()
+    runGovernedPreparation({ ...claimResult.preparation, repository }, {
+      workspaceDataService,
+      creditBudget: createCreditBudget({ dailyLimit: 800, minuteLimit: 6 }),
+      now,
+    }).catch(err => serverLogger.error('governed preparation background error', { preparationId: preparation.id, error: err?.message }))
+
+    serverLogger.info('governed review preparation started successfully', { preparationId: preparation.id })
+
     return {
       ok: true,
       data: {
         preparationId: preparation.id,
-        status: preparation.status,
-        message: `Could not claim preparation: ${claimResult.reason}`,
+        status: 'pending',
+        message: 'Governed review preparation started',
       },
     }
-  }
-
-  // Start background preparation (fire and forget with claimed preparation)
-  const workspaceDataService = createWorkspaceDataService()
-  runGovernedPreparation({ ...claimResult.preparation, repository }, {
-    workspaceDataService,
-    creditBudget: createCreditBudget({ dailyLimit: 800, minuteLimit: 6 }),
-    now,
-  }).catch(err => serverLogger.error('governed preparation background error', { preparationId: preparation.id, error: err?.message }))
-
-  return {
-    ok: true,
-    data: {
-      preparationId: preparation.id,
-      status: 'pending',
-      message: 'Governed review preparation started',
-    },
+  } catch (err) {
+    serverLogger.error('governed review prepare handler error', { 
+      organizationId, 
+      userId: user.id, 
+      error: err?.message,
+      stack: err?.stack 
+    })
+    return {
+      ok: false,
+      error: {
+        code: 'preparation_start_failed',
+        message: 'Unable to start governed review preparation',
+        details: err?.message ?? 'Unknown error',
+      },
+    }
   }
 }, {
   requiredPermission: 'dashboard.read',
