@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { Fragment, useState, useCallback } from 'react'
 import { AlertsPanel, ScannerPanel, SignalPanel } from '../../components/panels.jsx'
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useScanners } from '../../hooks/useScanners.js'
@@ -6,6 +6,8 @@ import { useTradeQuality } from '../../hooks/useTradeQuality.js'
 import { usePaperEvaluation } from '../../hooks/usePaperEvaluation.js'
 import { usePaperOrderSimulation } from '../../hooks/usePaperOrderSimulation.js'
 import { MarketDataStatus } from '../../components/MarketDataStatus.jsx'
+import { workspaceApiClient } from '../../api/workspaceApiClient.js'
+import { BREAKOUT_OBSERVATION_UNIVERSE } from '../../../lib/opportunities/forwardTest/forwardObservationEngine.js'
 import { composeQualifiedTradePlan, rankQualifiedTradePlans } from '../../../lib/opportunities/qualifiedTradePlan/index.js'
 
 function display(value) {
@@ -51,6 +53,247 @@ export function QualifiedOpportunityRankingPanel({ plans = [] }) {
     {ranking.watch.length === 0 ? <p>No WATCH candidates.</p> : <ul>{ranking.watch.map((item) => <li key={item.planReference.planId}><strong>{item.symbol}</strong> · score {item.rankingScore} · {item.cautionReasons.join(', ') || 'Conditional evidence requires review.'}</li>)}</ul>}
     <p>Portfolio exposure evidence: {display(ranking.portfolioEvidence.status)}. Ranking is advisory only and does not change plan status, quantity, or risk controls.</p>
   </section>
+}
+
+export function GovernedReviewQueue() {
+  const [queue, setQueue] = useState([])
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState(null)
+  const [selectedStrategies, setSelectedStrategies] = useState({})
+  const [showStrategySelection, setShowStrategySelection] = useState({})
+
+  const { evaluateScanners } = useScanners()
+
+  const FORWARD_OBSERVATION_SYMBOLS = new Set(BREAKOUT_OBSERVATION_UNIVERSE)
+
+  const displayStrategyName = (strategyId) => {
+    const names = {
+      'index-pullback-v1': 'Index Pullback (EDGE.2)',
+      'breakout-momentum-v1': 'Breakout Momentum (BREAKOUT.1)',
+      'range-mean-reversion-v1': 'Range Mean Reversion (RANGE.1)',
+      'volatility-expansion-v1': 'Volatility Expansion (VOL.1)',
+    }
+    return names[strategyId] || strategyId
+  }
+
+  const handlePrepareQueue = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    setQueue([])
+    setSelectedStrategies({})
+    setShowStrategySelection({})
+
+    try {
+      // Step 1: Run authoritative scanner evaluation to get legitimate matches
+      const scannerMatches = await evaluateScanners()
+
+      // Step 2: Filter to only forward-observation universe symbols that are actual scanner matches
+      const eligibleMatches = scannerMatches.filter((match) =>
+        FORWARD_OBSERVATION_SYMBOLS.has(match.symbol)
+      )
+
+      if (eligibleMatches.length === 0) {
+        setQueue([])
+        setIsLoading(false)
+        return
+      }
+
+      // Step 3: Evaluate trade quality for each legitimate match
+      // Pass the full match as candidate to preserve scanner evidence, provenance, fingerprints
+      const results = await Promise.all(
+        eligibleMatches.map(async (match) => {
+          try {
+            const response = await workspaceApiClient.getTradeQuality({
+              symbol: match.symbol,
+              scannerSource: match.scannerName,
+              opportunityId: match.scannerId ? `${match.scannerId}-${match.symbol}-${match.evaluatedAt}` : undefined,
+              strategyId: match.strategyId, // may be undefined, getTradeQuality will evaluate all strategies
+            })
+            return {
+              symbol: match.symbol,
+              quality: response.quality ?? null,
+              strategyAttribution: response.strategyAttribution ?? [],
+              error: null,
+              scannerMatch: match, // preserve original scanner evidence
+            }
+          } catch (err) {
+            return {
+              symbol: match.symbol,
+              quality: null,
+              strategyAttribution: [],
+              error: err instanceof Error ? err.message : 'Evaluation failed',
+              scannerMatch: match,
+            }
+          }
+        })
+      )
+      setQueue(results)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to prepare review queue')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [evaluateScanners])
+
+  const handleSelectStrategy = (symbol, strategyId) => {
+    setSelectedStrategies(prev => ({ ...prev, [symbol]: strategyId }))
+    setShowStrategySelection(prev => ({ ...prev, [symbol]: false }))
+  }
+
+  const handleSaveReview = async (symbol, item) => {
+    const strategyId = selectedStrategies[symbol]
+    if (!strategyId || !item.quality) return
+
+    try {
+      await workspaceApiClient.saveReviewedOpportunity({
+        ...item.quality,
+        strategyId,
+        reviewState: 'saved',
+        orderContext: item.quality.orderContext ?? null,
+      })
+      setQueue(prev => prev.map(i =>
+        i.symbol === symbol ? { ...i, reviewSaved: true } : i
+      ))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save review')
+    }
+  }
+
+  const getPrimaryEligible = (item) => {
+    const q = item.quality
+    return q?.score != null && q?.opportunityId && q?.strategyId && q.strategyId !== 'strategy-unknown'
+  }
+
+  return (
+    <WorkspacePanel id="governed-review-queue" title="Governed Review Queue" subtitle="Fixed forward-observation universe · Human review required">
+      <div style={{ marginBottom: '1rem' }}>
+        <button
+          type="button"
+          onClick={handlePrepareQueue}
+          disabled={isLoading}
+          style={{ marginRight: '1rem' }}
+        >
+          {isLoading ? 'Preparing Queue…' : 'Prepare Governed Review'}
+        </button>
+        {queue.length > 0 && <span style={{ color: '#666', fontSize: '0.875rem' }}>
+          {queue.length} legitimate scanner match{queue.length === 1 ? '' : 'es'} in forward-observation universe
+        </span>}
+      </div>
+
+      {error && <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>{error}</p>}
+
+      {!isLoading && queue.length === 0 && !error && (
+        <EmptyWorkspaceState>Click "Prepare Governed Review" to evaluate legitimate scanner matches in the forward-observation universe.</EmptyWorkspaceState>
+      )}
+
+      {isLoading && <p role="status">Evaluating scanner matches and trade quality…</p>}
+
+      {queue.map((item, index) => (
+        <article key={item.symbol} className="strategy-manager-card" style={{ marginBottom: '1rem' }}>
+          <h3>{item.symbol}</h3>
+
+          {item.error && (
+            <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>Error: {item.error}</p>
+          )}
+
+          {!item.error && !item.quality && (
+            <p>No trade quality evidence available for this symbol.</p>
+          )}
+
+          {!item.error && item.quality && (
+            <>
+              <MarketDataStatus provenance={item.quality.marketData} />
+              <div className="metric-grid">
+                <MetricCard label="Score" value={item.quality.score == null ? 'Not scored' : `${item.quality.score}/100`} />
+                <MetricCard label="Band" value={display(item.quality.band)} />
+                <MetricCard label="Confidence" value={`${item.quality.confidence}%`} />
+                <MetricCard label="Coverage" value={`${item.quality.evidenceCoverage}%`} />
+                <MetricCard label="Freshness" value={display(item.quality.freshness)} />
+                <MetricCard label="Primary Strategy" value={item.quality.strategyId ?? 'None'} />
+              </div>
+
+              {item.scannerMatch && (
+                <details style={{ marginBottom: '0.5rem' }}>
+                  <summary>Scanner Evidence</summary>
+                  <div style={{ fontSize: '0.875rem' }}>
+                    <p><strong>Scanner:</strong> {item.scannerMatch.scannerName} ({item.scannerMatch.scannerId})</p>
+                    <p><strong>Matched Criteria:</strong> {item.scannerMatch.matchedCriteria?.join(', ') || 'N/A'}</p>
+                    <p><strong>Evaluated At:</strong> {item.scannerMatch.evaluatedAt ? new Date(item.scannerMatch.evaluatedAt).toLocaleString() : 'N/A'}</p>
+                    <p><strong>Provenance:</strong> {item.scannerMatch.marketData?.provider || 'Unknown'} · {item.scannerMatch.marketData?.dataStatus || 'Unknown'}</p>
+                  </div>
+                </details>
+              )}
+
+              {item.strategyAttribution.length === 0 && (
+                <p style={{ color: 'var(--color-warning, #b80)' }}>
+                  <strong>Zero Attribution:</strong> No strategies have deterministic evidence for this symbol.
+                  Save Review is not available.
+                </p>
+              )}
+
+              {item.strategyAttribution.length === 1 && (
+                <>
+                  <p><strong>Single Attribution: {displayStrategyName(item.strategyAttribution[0].strategyId)}</strong></p>
+                  <p>Suitability: {item.strategyAttribution[0].suitabilityStatus} · TQ: {item.strategyAttribution[0].quality?.score ?? 'N/A'} {display(item.strategyAttribution[0].quality?.band)}</p>
+                  {getPrimaryEligible(item) && !item.reviewSaved && (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveReview(item.symbol, item)}
+                    >
+                      Save Review
+                    </button>
+                  )}
+                  {item.reviewSaved && <p style={{ color: 'green' }}>✓ Review saved</p>}
+                </>
+              )}
+
+              {item.strategyAttribution.length > 1 && (
+                <div className="strategy-selection">
+                  <h4>Multiple Attributions — Select One</h4>
+                  <p>Select exactly one strategy to review. Only strategies with deterministic evidence are shown.</p>
+                  <ul>
+                    {item.strategyAttribution.map((attr) => (
+                      <li key={attr.strategyId}>
+                        <label>
+                          <input
+                            type="radio"
+                            name={`strategy-selection-${item.symbol}`}
+                            value={attr.strategyId}
+                            checked={selectedStrategies[item.symbol] === attr.strategyId}
+                            onChange={() => handleSelectStrategy(item.symbol, attr.strategyId)}
+                          />
+                          <strong>{displayStrategyName(attr.strategyId)}</strong>
+                          <span> · Suitability: {attr.suitabilityStatus}</span>
+                          <span> · TQ: {attr.quality?.score ?? 'N/A'} {display(attr.quality?.band)}</span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                  {selectedStrategies[item.symbol] && getPrimaryEligible(item) && !item.reviewSaved && (
+                    <button
+                      type="button"
+                      onClick={() => handleSaveReview(item.symbol, item)}
+                    >
+                      Save Review for {displayStrategyName(selectedStrategies[item.symbol])}
+                    </button>
+                  )}
+                  {selectedStrategies[item.symbol] && item.reviewSaved && <p style={{ color: 'green' }}>✓ Review saved</p>}
+                </div>
+              )}
+
+              {item.quality.reasons?.length ? <details><summary>Supporting reasons</summary><ul>{item.quality.reasons.slice(0, 5).map((reason) => <li key={reason}>{reason}</li>)}</ul></details> : null}
+              {item.quality.missingInputs?.length || item.quality.blockingReasons?.length ? <details><summary>Evidence and blockers</summary>{item.quality.blockingReasons?.map((reason) => <p key={reason}>{reason}</p>)}{item.quality.missingInputs?.length ? <p>Missing: {item.quality.missingInputs.join(', ')}</p> : null}</details> : null}
+
+              <p style={{ fontSize: '0.875rem', color: '#666' }}>
+                Advisory only. Paper trading remains mandatory; this score cannot rank scanners, activate strategies,
+                place orders, or override risk controls.
+              </p>
+            </>
+          )}
+        </article>
+      ))}
+    </WorkspacePanel>
+  )
 }
 
 export function TradeQualityPanel({ candidate, state }) {
@@ -215,6 +458,7 @@ export function ScannerSections() {
       <WorkspacePanel id="opportunity-review" title="Opportunity Review" subtitle="Safe review state">
         <EmptyWorkspaceState>No live trading actions are available from scanner opportunities.</EmptyWorkspaceState>
       </WorkspacePanel>
+      <GovernedReviewQueue />
       <TradeQualityPanel candidate={candidate} />
       <PaperEvaluationPanel />
       <PaperSimulationPanel />
