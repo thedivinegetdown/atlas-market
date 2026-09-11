@@ -3,7 +3,7 @@ import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 const PREPARATION_STORE = 'governedReviewPreparations'
 
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
-  const { body, query, repository, tenantContext } = context
+  const { body, query, repository, tenantContext, user, organizationId } = context
   const preparationId = body?.preparationId ?? query?.preparationId
 
   if (!preparationId) {
@@ -31,6 +31,40 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   }
 
   const payload = record.payload ?? record
+
+  // Verify authorization: preparation must belong to this org/user
+  if (payload.organizationId !== organizationId || payload.userId !== user.id) {
+    return {
+      ok: false,
+      error: { code: 'forbidden', message: 'Access denied' },
+    }
+  }
+
+  // Check expiration
+  const now = Date.now()
+  const expiresAt = payload.expiresAt ? new Date(payload.expiresAt).getTime() : 0
+  if (expiresAt && expiresAt <= now) {
+    // Mark as expired if not already
+    if (payload.status !== 'expired' && payload.status !== 'completed' && payload.status !== 'failed') {
+      const { createOrganizationAuthenticatedApiHandler: _ } = await import('./_shared/authApi.js')
+      // Note: we can't easily update here without repository, but status check will catch it
+      return {
+        ok: true,
+        data: {
+          preparationId: payload.id,
+          status: 'expired',
+          createdAt: payload.createdAt,
+          startedAt: payload.startedAt,
+          completedAt: payload.completedAt,
+          failedAt: payload.failedAt,
+          error: 'Preparation expired',
+          queueItems: [],
+          providerCalls: null,
+          expired: true,
+        },
+      }
+    }
+  }
 
   return {
     ok: true,
