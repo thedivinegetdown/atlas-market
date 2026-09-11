@@ -3,21 +3,28 @@ import { createOrReusePreparation } from '../../../lib/workspace/governedReviewP
 import { serverLogger } from '../../../lib/logging/logger.js'
 
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
-  const { organizationId, user, tenantContext, requestId } = context
+  const { organizationId, user, tenantContext, requestId, session } = context
   const repository = context.repository
   const now = () => new Date()
 
-  serverLogger.info('governed review prepare start', { organizationId, userId: user.id, requestId })
+  serverLogger.info('governed review prepare start', { 
+    organizationId, 
+    userId: user?.id, 
+    requestId,
+    hasRepo: !!repository,
+    hasSession: !!session,
+    hasToken: !!(session?.token ?? session?.access_token)
+  })
 
   try {
-    // Import preparation logic (static import - bundled at build time)
+    serverLogger.debug('governed review createOrReusePreparation start', { organizationId, userId: user?.id })
     const { preparation, created, existingId } = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, now)
 
     serverLogger.info('governed review prepare result', { 
-      preparationId: preparation.id, 
+      preparationId: preparation?.id, 
       created, 
       existingId,
-      status: preparation.status 
+      status: preparation?.status 
     })
 
     if (!created) {
@@ -33,14 +40,13 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     }
 
     // Trigger background worker (fire-and-forget)
-    // In production, this is an internal HTTP call to the background function
-    // For Netlify, we use the internal function URL pattern
     const backgroundUrl = `/.netlify/functions/governed-review-prepare-background`
     try {
       const fetchImpl = globalThis.fetch
       if (typeof fetchImpl === 'function') {
-        const accessToken = context.session?.token ?? context.session?.access_token
-        await fetchImpl(backgroundUrl, {
+        const accessToken = session?.token ?? session?.access_token
+        serverLogger.debug('governed review triggering background', { preparationId: preparation.id, hasToken: !!accessToken })
+        const bgResponse = await fetchImpl(backgroundUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -48,16 +54,23 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
           },
           body: JSON.stringify({ preparationId: preparation.id }),
         })
-        serverLogger.info('governed review background worker triggered', { preparationId: preparation.id })
+        serverLogger.info('governed review background worker triggered', { 
+          preparationId: preparation.id, 
+          bgStatus: bgResponse.status,
+          bgOk: bgResponse.ok 
+        })
+      } else {
+        serverLogger.warn('governed review no fetch implementation available')
       }
     } catch (triggerErr) {
       serverLogger.warn('governed review background trigger failed', { 
         preparationId: preparation.id, 
-        error: triggerErr?.message 
+        error: triggerErr?.message,
+        stack: triggerErr?.stack
       })
-      // Don't fail the request - background may still be invoked by Netlify
     }
 
+    serverLogger.info('governed review prepare returning success', { preparationId: preparation.id })
     return {
       ok: true,
       data: {
@@ -69,9 +82,11 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   } catch (err) {
     serverLogger.error('governed review prepare handler error', { 
       organizationId, 
-      userId: user.id, 
+      userId: user?.id, 
       error: err?.message,
-      stack: err?.stack 
+      stack: err?.stack,
+      name: err?.name,
+      code: err?.code
     })
     return {
       ok: false,
