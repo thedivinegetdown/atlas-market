@@ -72,9 +72,11 @@ export function TradeQualityPanel({ candidate, state }) {
     if (!candidate?.symbol) return
     const result = await resolved.evaluate()
     if (result?.strategyAttribution?.length) {
-      setShowStrategySelection(true)
       if (result.strategyAttribution.length === 1) {
         setSelectedStrategyId(result.strategyAttribution[0].strategyId)
+        setShowStrategySelection(false)
+      } else {
+        setShowStrategySelection(true)
       }
     }
   }
