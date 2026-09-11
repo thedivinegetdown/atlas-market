@@ -344,6 +344,10 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     getGovernedReviewPreparationStatus(preparationId) {
       return request('governed-review-status', { preparationId }, 'Unable to get preparation status')
     },
+
+    diagnoseGovernedReview() {
+      return request('governed-review-diag', {}, 'Unable to diagnose governed review')
+    },
   }
 }
 
