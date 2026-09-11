@@ -34,10 +34,8 @@ function createMockMarketDataService() {
   const candleCache = new Map() // Simulate 5-min cache
   return {
     async getQuotes(symbols) {
-      quoteCalls.push({ symbols: [...symbols], timestamp: Date.now() })
-      for (const s of symbols) {
-        quoteCalls.push({ symbol: s, via: 'getQuotes->getQuote', timestamp: Date.now() })
-      }
+      // Batch API: 1 HTTP request for all symbols
+      quoteCalls.push({ symbols: [...symbols], batch: true, timestamp: Date.now() })
       return symbols.map(s => ({
         ok: true,
         symbol: s,
@@ -246,8 +244,8 @@ describe('Market Evidence Packet', () => {
     // NOTE: do NOT reset candle cache - we're testing cache reuse
     await packetBuilder.build(['SPY', 'QQQ', 'IWM'])
 
-    // Quotes: 1 getQuotes + 3 getQuote = 4 calls (always called for freshness)
-    expect(marketDataService.quoteCalls.length - initialQuoteCalls).toBe(4)
+    // Quotes: 1 batch call (always called for freshness)
+    expect(marketDataService.quoteCalls.length - initialQuoteCalls).toBe(1)
     // Candles: all cached, zero provider calls
     expect(marketDataService.candleCalls.length - initialCandleCalls).toBe(0)
   })
@@ -256,8 +254,8 @@ describe('Market Evidence Packet', () => {
     marketDataService.reset()
     await packetBuilder.build(['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'])
 
-    // 1 getQuotes + 5 getQuote = 6 quote calls, 5 historical calls (cache miss)
-    expect(marketDataService.quoteCalls.length).toBe(6)
+    // 1 batch quote request, 5 historical calls (cache miss)
+    expect(marketDataService.quoteCalls.length).toBe(1)
     expect(marketDataService.candleCalls.length).toBe(5)
     // Benchmark: 0 additional (reuses SPY)
   })
