@@ -57,28 +57,109 @@ export function TradeQualityPanel({ candidate, state }) {
   const liveState = useTradeQuality(state ? null : candidate)
   const resolved = state ?? liveState
   const quality = resolved.quality
+  const strategyAttribution = resolved.strategyAttribution ?? []
+  const [selectedStrategyId, setSelectedStrategyId] = useState(null)
+  const [showStrategySelection, setShowStrategySelection] = useState(false)
+
+  const candidateWithStrategy = selectedStrategyId
+    ? { ...candidate, strategyId: selectedStrategyId }
+    : candidate
+
+  const evalState = useTradeQuality(candidateWithStrategy)
+  const evalQuality = evalState.quality
+
+  const handleEvaluate = async () => {
+    if (!candidate?.symbol) return
+    const result = await resolved.evaluate()
+    if (result?.strategyAttribution?.length) {
+      setShowStrategySelection(true)
+      if (result.strategyAttribution.length === 1) {
+        setSelectedStrategyId(result.strategyAttribution[0].strategyId)
+      }
+    }
+  }
+
+  const handleSelectStrategy = (strategyId) => {
+    setSelectedStrategyId(strategyId)
+    setShowStrategySelection(false)
+  }
+
+  const handleReviewSelected = async () => {
+    if (!selectedStrategyId || !candidate?.symbol) return
+    await evalState.evaluate()
+  }
+
+  const displayStrategyName = (strategyId) => {
+    const names = {
+      'index-pullback-v1': 'Index Pullback (EDGE.2)',
+      'breakout-momentum-v1': 'Breakout Momentum (BREAKOUT.1)',
+      'range-mean-reversion-v1': 'Range Mean Reversion (RANGE.1)',
+      'volatility-expansion-v1': 'Volatility Expansion (VOL.1)',
+    }
+    return names[strategyId] || strategyId
+  }
+
   return (
     <WorkspacePanel id="trade-quality" title="Trade Quality" subtitle="Deterministic, read-only opportunity review">
       {!candidate && !quality ? <EmptyWorkspaceState>Select Review quality on a scanner match. No score affects scanner order.</EmptyWorkspaceState> : null}
-      {candidate && !quality && !resolved.isLoading && !resolved.error ? <button type="button" onClick={resolved.evaluate}>Evaluate {candidate.symbol}</button> : null}
+      {candidate && !quality && !resolved.isLoading && !resolved.error && !showStrategySelection ? (
+        <button type="button" onClick={handleEvaluate}>Evaluate {candidate.symbol}</button>
+      ) : null}
       {resolved.isLoading ? <p role="status">Evaluating trade quality…</p> : null}
       {resolved.error ? <p role="alert">Trade quality is unavailable.</p> : null}
-      {quality ? <>
-        <MarketDataStatus provenance={quality.marketData} />
-        <div className="metric-grid">
-          <MetricCard label="Symbol" value={quality.symbol} />
-          <MetricCard label="Score" value={quality.score == null ? 'Not scored' : `${quality.score}/100`} />
-          <MetricCard label="Band" value={display(quality.band)} />
-          <MetricCard label="Confidence" value={`${quality.confidence}%`} />
-          <MetricCard label="Coverage" value={`${quality.evidenceCoverage}%`} />
-          <MetricCard label="Freshness" value={display(quality.freshness)} />
+      {showStrategySelection && strategyAttribution.length > 0 && (
+        <div className="strategy-selection">
+          <h3>Attributed Strategies for {candidate.symbol}</h3>
+          <p>Select one strategy to review. Only strategies with deterministic evidence are shown.</p>
+          <ul>
+            {strategyAttribution.map((attr) => (
+              <li key={attr.strategyId}>
+                <label>
+                  <input
+                    type="radio"
+                    name="strategy-selection"
+                    value={attr.strategyId}
+                    checked={selectedStrategyId === attr.strategyId}
+                    onChange={() => handleSelectStrategy(attr.strategyId)}
+                  />
+                  <strong>{displayStrategyName(attr.strategyId)}</strong>
+                  <span> · Suitability: {attr.suitabilityStatus}</span>
+                  <span> · TQ: {attr.quality?.score ?? 'N/A'} {display(attr.quality?.band)}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+          {strategyAttribution.length === 0 && <p>No strategies have deterministic evidence for this candidate.</p>}
         </div>
-        <h3>Dimension breakdown</h3>
-        <div className="metric-grid">{Object.entries(quality.dimensions ?? {}).map(([name, value]) => <MetricCard key={name} label={display(name)} value={value == null ? 'Missing' : value} />)}</div>
-        {quality.reasons?.length ? <ul>{quality.reasons.slice(0, 5).map((reason) => <li key={reason}>{reason}</li>)}</ul> : null}
-        {quality.missingInputs?.length || quality.blockingReasons?.length ? <details><summary>Evidence and blockers</summary>{quality.blockingReasons?.map((reason) => <p key={reason}>{reason}</p>)}{quality.missingInputs?.length ? <p>Missing: {quality.missingInputs.join(', ')}</p> : null}</details> : null}
-        <p>Advisory only. Paper trading remains mandatory; this score cannot rank scanners, activate strategies, place orders, or override risk controls.</p>
-      </> : null}
+      )}
+      {selectedStrategyId && !showStrategySelection && (
+        <>
+          <p><strong>Reviewing: {displayStrategyName(selectedStrategyId)}</strong></p>
+          <button type="button" onClick={() => setShowStrategySelection(true)}>Change strategy</button>
+          <hr />
+          {evalState.isLoading ? <p role="status">Evaluating trade quality…</p> : null}
+          {evalState.error ? <p role="alert">Trade quality is unavailable.</p> : null}
+          {evalQuality ? <>
+            <MarketDataStatus provenance={evalQuality.marketData} />
+            <div className="metric-grid">
+              <MetricCard label="Symbol" value={evalQuality.symbol} />
+              <MetricCard label="Score" value={evalQuality.score == null ? 'Not scored' : `${evalQuality.score}/100`} />
+              <MetricCard label="Band" value={display(evalQuality.band)} />
+              <MetricCard label="Confidence" value={`${evalQuality.confidence}%`} />
+              <MetricCard label="Coverage" value={`${evalQuality.evidenceCoverage}%`} />
+              <MetricCard label="Freshness" value={display(evalQuality.freshness)} />
+            </div>
+            <h3>Dimension breakdown</h3>
+            <div className="metric-grid">{Object.entries(evalQuality.dimensions ?? {}).map(([name, value]) => <MetricCard key={name} label={display(name)} value={value == null ? 'Missing' : value} />)}</div>
+            {evalQuality.reasons?.length ? <ul>{evalQuality.reasons.slice(0, 5).map((reason) => <li key={reason}>{reason}</li>)}</ul> : null}
+            {evalQuality.missingInputs?.length || evalQuality.blockingReasons?.length ? <details><summary>Evidence and blockers</summary>{evalQuality.blockingReasons?.map((reason) => <p key={reason}>{reason}</p>)}{evalQuality.missingInputs?.length ? <p>Missing: {evalQuality.missingInputs.join(', ')}</p> : null}</details> : null}
+            <button type="button" onClick={handleReviewSelected}>Save Review</button>
+            <p>Advisory only. Paper trading remains mandatory; this score cannot rank scanners, activate strategies, place orders, or override risk controls.</p>
+          </> : (
+            <button type="button" onClick={handleReviewSelected}>Evaluate & Save Review</button>
+          )}
+        </>
+      )}
     </WorkspacePanel>
   )
 }
