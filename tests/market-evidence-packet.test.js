@@ -3,6 +3,7 @@ import { createMarketEvidencePacketBuilder, MARKET_EVIDENCE_PACKET_VERSION, GOVE
 import { createMarketDataService } from '../lib/market/marketDataService.js'
 import { createMarketRegimeOrchestrator } from '../lib/market/regime/marketRegimeOrchestrator.js'
 import { createDailyIndicatorPipeline } from '../lib/market/indicators/dailyIndicatorPipeline.js'
+import { createCreditBudget } from '../lib/market/creditBudget.js'
 import { buildBreakoutMomentumSignal } from '../lib/strategies/breakout/breakoutMomentumSignal.js'
 import { buildRangeMeanReversionSignal } from '../lib/strategies/range/rangeMeanReversionSignal.js'
 import { buildVolatilityExpansionSignal } from '../lib/strategies/volatility/volatilityExpansionSignal.js'
@@ -74,6 +75,13 @@ function createMockMarketDataService() {
   }
 }
 
+function createTestCreditBudget() {
+  return createCreditBudget({
+    dailyLimit: 10000,
+    minuteLimit: 10000,
+  })
+}
+
 function createMockRegimeOrchestrator() {
   return {
     classify(ctx) {
@@ -111,16 +119,18 @@ function createMockIndicatorPipeline() {
 }
 
 describe('Market Evidence Packet', () => {
-  let marketDataService, regimeOrchestrator, indicatorPipeline, packetBuilder
+  let marketDataService, regimeOrchestrator, indicatorPipeline, packetBuilder, testCreditBudget
 
   beforeEach(() => {
     marketDataService = createMockMarketDataService()
     regimeOrchestrator = createMockRegimeOrchestrator()
     indicatorPipeline = createMockIndicatorPipeline()
+    testCreditBudget = createTestCreditBudget()
     packetBuilder = createMarketEvidencePacketBuilder({
       marketDataService,
       regimeOrchestrator,
       indicatorPipeline,
+      creditBudget: testCreditBudget,
       now: () => '2026-08-15T14:30:00.000Z',
     })
   })
