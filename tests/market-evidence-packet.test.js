@@ -31,34 +31,39 @@ const MOCK_CANDLES = (symbol) => Array.from({ length: 260 }, (_, i) => ({
 function createMockMarketDataService() {
   const quoteCalls = []
   const candleCalls = []
-  const candleCache = new Map() // Simulate 5-min cache
+  const candleCache = new Map()
   return {
     async getQuotes(symbols) {
-      // Batch API: 1 HTTP request for all symbols
-      quoteCalls.push({ symbols: [...symbols], batch: true, timestamp: Date.now() })
-      return symbols.map(s => ({
+      quoteCalls.push({ symbols: [...symbols], batch: true, credits: symbols.length, timestamp: Date.now() })
+      return {
         ok: true,
-        symbol: s,
-        price: MOCK_QUOTES[s].price,
-        open: MOCK_QUOTES[s].open,
-        high: MOCK_QUOTES[s].high,
-        low: MOCK_QUOTES[s].low,
-        previousClose: MOCK_QUOTES[s].previousClose,
-        change: MOCK_QUOTES[s].change,
-        changePercent: MOCK_QUOTES[s].changePercent,
-        volume: MOCK_QUOTES[s].volume,
         provider: 'twelvedata',
-        updatedAt: MOCK_QUOTES[s].updatedAt,
-        provenance: { provider: 'twelvedata', dataStatus: 'LIVE', observedAt: MOCK_QUOTES[s].updatedAt, receivedAt: new Date().toISOString(), fallbackUsed: false, mock: false },
-      }))
+        assetType: 'equity',
+        data: symbols.map(s => ({
+          ok: true,
+          symbol: s,
+          price: MOCK_QUOTES[s].price,
+          open: MOCK_QUOTES[s].open,
+          high: MOCK_QUOTES[s].high,
+          low: MOCK_QUOTES[s].low,
+          previousClose: MOCK_QUOTES[s].previousClose,
+          change: MOCK_QUOTES[s].change,
+          changePercent: MOCK_QUOTES[s].changePercent,
+          volume: MOCK_QUOTES[s].volume,
+          provider: 'twelvedata',
+          updatedAt: MOCK_QUOTES[s].updatedAt,
+          provenance: { provider: 'twelvedata', dataStatus: 'LIVE', observedAt: MOCK_QUOTES[s].updatedAt, receivedAt: new Date().toISOString(), fallbackUsed: false, mock: false },
+        })),
+        receivedAt: new Date().toISOString(),
+        credits: { used: symbols.length, remaining: 795, limit: 800 },
+      }
     },
     async getCandles(symbol) {
-      // Simulate cache hit (second call within 5 min)
       if (candleCache.has(symbol)) {
         return candleCache.get(symbol)
       }
       candleCalls.push({ symbol, timestamp: Date.now() })
-      const result = { ok: true, provider: 'twelvedata', data: MOCK_CANDLES(symbol), candleCount: 260, historyCompleteness: 1.0, receivedAt: new Date().toISOString() }
+      const result = { ok: true, provider: 'twelvedata', data: MOCK_CANDLES(symbol), candleCount: 260, historyCompleteness: 1.0, receivedAt: new Date().toISOString(), credits: { used: 1, remaining: 794, limit: 800 } }
       candleCache.set(symbol, result)
       return result
     },
@@ -168,7 +173,6 @@ describe('Market Evidence Packet', () => {
       context: { symbol: 'SPY', timeframe: '1D' },
     }, { logger: serverLogger })
 
-    // Build signal using packet evidence
     const signalFromPacket = buildBreakoutMomentumSignal({
       symbol: 'SPY',
       currentPrice: ev.quote.price,
@@ -180,7 +184,6 @@ describe('Market Evidence Packet', () => {
       generatedAt: packet.asOf,
     })
 
-    // Build signal using direct inputs (same data)
     const signalDirect = buildBreakoutMomentumSignal({
       symbol: 'SPY',
       currentPrice: ev.quote.price,
@@ -235,34 +238,42 @@ describe('Market Evidence Packet', () => {
   })
 
   it('no duplicate provider calls for repeated packet consumers', async () => {
-    // Build first packet
     await packetBuilder.build(['SPY', 'QQQ', 'IWM'])
     const initialQuoteCalls = marketDataService.quoteCalls.length
     const initialCandleCalls = marketDataService.candleCalls.length
 
-    // Build second packet (should reuse cached candles from first build)
-    // NOTE: do NOT reset candle cache - we're testing cache reuse
     await packetBuilder.build(['SPY', 'QQQ', 'IWM'])
 
-    // Quotes: 1 batch call (always called for freshness)
     expect(marketDataService.quoteCalls.length - initialQuoteCalls).toBe(1)
-    // Candles: all cached, zero provider calls
     expect(marketDataService.candleCalls.length - initialCandleCalls).toBe(0)
   })
 
-  it('cold-run provider call count is explicit and minimal', async () => {
+  it('cold-run provider call count and credits are explicit', async () => {
     marketDataService.reset()
-    await packetBuilder.build(['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'])
+    const packet = await packetBuilder.build(['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'])
 
-    // 1 batch quote request, 5 historical calls (cache miss)
     expect(marketDataService.quoteCalls.length).toBe(1)
     expect(marketDataService.candleCalls.length).toBe(5)
-    // Benchmark: 0 additional (reuses SPY)
+    expect(packet.providerCalls.credits).toBe(10)
+    expect(packet.providerCalls.http).toBe(6)
+    expect(packet.providerCalls.breakdown.creditCalls.length).toBe(6)
+  })
+
+it('warm-run reuses cached candles and only spends quote credits', async () => {
+    await packetBuilder.build(['SPY', 'QQQ', 'IWM'])
+    const packet = await packetBuilder.build(['SPY', 'QQQ', 'IWM'])
+
+    expect(marketDataService.quoteCalls.length).toBe(2)
+    expect(marketDataService.candleCalls.length).toBe(3)
+    // Second build: 1 batch quote (3 symbols = 3 credits) + 0 historical (cached)
+    expect(packet.providerCalls.credits).toBeGreaterThanOrEqual(3)
+    // http count tracks service calls, not actual HTTP (historical calls cached)
+    expect(packet.providerCalls.http).toBeGreaterThanOrEqual(1)
   })
 
   it('handles missing quote/candles gracefully', async () => {
     const failingService = {
-      async getQuotes() { return [] },
+      async getQuotes() { return { ok: true, data: [] } },
       async getCandles() { return { ok: false, error: { code: 'historical_data_unavailable' }, provider: 'twelvedata' } },
       getMarketStatus() { return { ok: true, data: { isOpen: true } } },
     }
@@ -280,10 +291,9 @@ describe('Market Evidence Packet', () => {
   })
 
   it('existing non-packet call paths still work', async () => {
-    // Verify marketDataService.getQuotes and getCandles work directly
-    const quotes = await marketDataService.getQuotes(['SPY'])
-    expect(quotes.length).toBe(1)
-    expect(quotes[0].symbol).toBe('SPY')
+    const quoteResponse = await marketDataService.getQuotes(['SPY'])
+    expect(quoteResponse.data.length).toBe(1)
+    expect(quoteResponse.data[0].symbol).toBe('SPY')
 
     const candles = await marketDataService.getCandles('SPY')
     expect(candles.ok).toBe(true)
