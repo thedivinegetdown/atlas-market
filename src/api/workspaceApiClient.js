@@ -335,7 +335,7 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     startGovernedReviewPreparation() {
-      return request('governed-review-prepare-background', {}, 'Unable to start governed review preparation', {
+      return request('governed-review-prepare', {}, 'Unable to start governed review preparation', {
         method: 'POST',
         body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' },
       })
