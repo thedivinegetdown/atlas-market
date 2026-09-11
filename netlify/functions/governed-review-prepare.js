@@ -1,4 +1,5 @@
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
+import { createOrReusePreparation } from '../../../lib/workspace/governedReviewPreparation.js'
 import { serverLogger } from '../../../lib/logging/logger.js'
 
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
@@ -9,9 +10,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   serverLogger.info('governed review prepare start', { organizationId, userId: user.id, requestId })
 
   try {
-    // Import preparation logic
-    const { createOrReusePreparation } = await import('../../../lib/workspace/governedReviewPreparation.js')
-    
+    // Import preparation logic (static import - bundled at build time)
     const { preparation, created, existingId } = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, now)
 
     serverLogger.info('governed review prepare result', { 
