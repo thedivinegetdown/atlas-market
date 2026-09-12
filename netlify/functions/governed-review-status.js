@@ -2,6 +2,18 @@ import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 
 const PREPARATION_STORE = 'governedReviewPreparations'
 
+function safeClaimDiagnostics(value) {
+  if (!value || typeof value !== 'object') return null
+  return {
+    workerEntered: value.workerEntered === true,
+    scopedPreparationLoaded: value.scopedPreparationLoaded === true,
+    physicalStatusMatchesExpected: value.physicalStatusMatchesExpected === true,
+    physicalClaimTokenMatchesExpected: value.physicalClaimTokenMatchesExpected === true,
+    conditionalUpdateAttempted: value.conditionalUpdateAttempted === true,
+    claimSucceeded: value.claimSucceeded === true,
+  }
+}
+
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
   const { body, query, repository, tenantContext, user, organizationId } = context
   const preparationId = body?.preparationId ?? query?.preparationId
@@ -73,6 +85,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
       status: payload.status,
       attempt: payload.attempt ?? 0,
       claimTokenPresent: Boolean(payload.claimToken),
+      claimDiagnostics: safeClaimDiagnostics(payload.claimDiagnostics),
       createdAt: payload.createdAt,
       startedAt: payload.startedAt,
       completedAt: payload.completedAt,

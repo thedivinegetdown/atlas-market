@@ -35,6 +35,14 @@ async function savePreparation(repository, preparation) {
   return result
 }
 
+async function publishClaimDiagnostics(store, preparationId, diagnostics, tenantContext) {
+  try {
+    await store.recordClaimDiagnosticsScoped?.(preparationId, diagnostics, tenantContext)
+  } catch {
+    // Claim observability must not alter claim execution semantics.
+  }
+}
+
 export async function claimPreparation(repository, preparationId, tenantContext) {
   const store = repository.getStore(PREPARATION_STORE)
   if (!store) return { claimed: false, reason: 'store_unavailable' }
@@ -43,6 +51,15 @@ export async function claimPreparation(repository, preparationId, tenantContext)
   if (!record) return { claimed: false, reason: 'not_found' }
 
   const prep = record.payload ?? record
+  const diagnostics = {
+    workerEntered: true,
+    scopedPreparationLoaded: true,
+    physicalStatusMatchesExpected: record.status === prep.status,
+    physicalClaimTokenMatchesExpected: (record.claim_token ?? null) === (prep.claimToken ?? null),
+    conditionalUpdateAttempted: false,
+    claimSucceeded: false,
+  }
+  await publishClaimDiagnostics(store, preparationId, diagnostics, tenantContext)
   const now = Date.now()
 
   if (prep.status === 'completed') return { claimed: false, reason: 'already_completed', preparation: prep }
@@ -61,12 +78,16 @@ export async function claimPreparation(repository, preparationId, tenantContext)
   const attempt = (prep.attempt ?? 0) + 1
   const claimToken = createClaimToken()
   try {
+    diagnostics.conditionalUpdateAttempted = true
+    await publishClaimDiagnostics(store, preparationId, diagnostics, tenantContext)
     const updated = await store.conditionalUpdateScoped(
       preparationId,
       { status: 'running', attempt, claimToken, startedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() },
       { claimToken: prep.claimToken, status: prep.status },
       tenantContext,
     )
+    diagnostics.claimSucceeded = updated === true
+    await publishClaimDiagnostics(store, preparationId, diagnostics, tenantContext)
     if (updated) return { claimed: true, preparation: { ...prep, status: 'running', attempt, claimToken, startedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() } }
   } catch (err) {
     return { claimed: false, reason: 'claimed_by_other', preparation: prep }

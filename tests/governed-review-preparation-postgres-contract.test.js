@@ -42,7 +42,7 @@ describe('governed review preparation PostgreSQL contract', () => {
     expect(first.created).toBe(true)
     expect(second).toMatchObject({ created: false, existingId: first.preparation.id })
     expect(claim).toMatchObject({ claimed: true, preparation: { status: 'running', attempt: 1 } })
-    const claimSql = query.mock.calls.at(-1)[0]
+    const claimSql = query.mock.calls.map(([sql]) => sql).find((sql) => sql.includes('claim_token') && sql.includes('payload = payload || $10::jsonb'))
     expect(claimSql).toContain('claim_token')
     expect(claimSql).toContain('payload = payload || $10::jsonb')
     expect(claimSql).toContain('status = $11')
