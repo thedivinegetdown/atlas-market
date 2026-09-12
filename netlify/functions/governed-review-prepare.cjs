@@ -1,4 +1,4 @@
-import { runMigrations } from '../../../lib/db/migrations.js'
+const { runMigrations } = require('../../../lib/db/migrations.js')
 
 const PREPARATION_STORE = 'governedReviewPreparations'
 const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000
@@ -35,7 +35,7 @@ async function savePreparation(store, preparation, tenantContext) {
   return store.upsertScoped(preparation.id, preparation, preparation.tenantContext)
 }
 
-export const handler = async (event, context) => {
+const handler = async (event, context) => {
   const { organizationId, user, tenantContext, requestId, session } = context
   const repository = context.repository
 
@@ -74,12 +74,13 @@ export const handler = async (event, context) => {
       strategies: ['breakout-momentum-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1'],
     }
 
-    log('creating preparation', { preparationId, organizationId, userId: user.id })
+    console.log('[governed-review-prepare] creating preparation', { preparationId, organizationId, userId: user.id })
     let preparationResult
     try {
-      await repository.getStore('governedReviewPreparations').upsertScoped(preparationId, preparation, tenantContext)
+      const store = repository.getStore('governedReviewPreparations')
+      await store.upsertScoped(preparationId, preparation, tenantContext)
       preparationResult = { preparation, created: true, existingId: null }
-      log('preparation created', { preparationId })
+      console.log('[governed-review-prepare] preparation created', { preparationId })
     } catch (err) {
       if (err?.message?.includes('idx_atlas_governed_review_preparations_active_unique') ||
           err?.message?.includes('unique constraint') ||
@@ -173,3 +174,5 @@ export const handler = async (event, context) => {
     }
   }
 }
+
+module.exports = { handler }
