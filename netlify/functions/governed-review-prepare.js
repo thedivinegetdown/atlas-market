@@ -174,4 +174,5 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   requiredPermission: 'dashboard.read',
   workspaceAction: 'read',
   routeId: 'governed-review-prepare',
+  allowedMethods: ['GET', 'POST'],
 })
