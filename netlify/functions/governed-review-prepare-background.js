@@ -10,6 +10,13 @@ import { serverLogger } from '../../lib/logging/logger.js'
 
 const OBSERVABILITY_STAGES = Object.freeze([
   'dispatchAccepted',
+  'functionModuleLoaded',
+  'functionInvocationStarted',
+  'authWrapperEntered',
+  'bearerAccepted',
+  'csrfAccepted',
+  'organizationAccepted',
+  'authenticatedHandlerEntered',
   'workerRequestReceived',
   'bearerAuthenticated',
   'csrfValidated',
@@ -24,6 +31,8 @@ function logStage(stage, preparationId, metadata = {}) {
   if (!OBSERVABILITY_STAGES.includes(stage)) return
   serverLogger.info(`governed review stage: ${stage}`, { preparationId, stage, ...metadata })
 }
+
+logStage('functionModuleLoaded', null, { module: 'governed-review-prepare-background' })
 
 const GOVERNED_STRATEGIES = Object.freeze([
   { id: 'breakout-momentum-v1', name: 'Breakout Momentum', experiment: 'BREAKOUT.1', signalBuilder: buildBreakoutMomentumSignal },

@@ -11,6 +11,7 @@ import {
 } from '../../../lib/security/requestGuards.js'
 import { TRADING_EVENTS } from '../../../lib/observability/eventLogger.js'
 import { createObservabilityRecord, normalizeErrorCategory } from '../../../lib/system/releaseObservabilityReadinessEngine.js'
+import { logAuthStage } from './authApi.js'
 
 export function createRequestId() {
   return `req_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`
@@ -133,6 +134,8 @@ export function createApiHandler(resolver, {
         })
       }
       assertSafePayload(body)
+
+      logAuthStage('functionInvocationStarted', { body, query: getQuery(event) }, { requestId })
 
       const data = await resolver({
         event,

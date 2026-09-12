@@ -12,6 +12,13 @@ import { serverLogger } from '../../../lib/logging/logger.js'
 
 const OBSERVABILITY_STAGES = Object.freeze([
   'dispatchAccepted',
+  'functionModuleLoaded',
+  'functionInvocationStarted',
+  'authWrapperEntered',
+  'bearerAccepted',
+  'csrfAccepted',
+  'organizationAccepted',
+  'authenticatedHandlerEntered',
   'workerRequestReceived',
   'bearerAuthenticated',
   'csrfValidated',
@@ -22,7 +29,7 @@ const OBSERVABILITY_STAGES = Object.freeze([
   'claimSucceeded',
 ])
 
-function logAuthStage(stage, context, metadata = {}) {
+export function logAuthStage(stage, context, metadata = {}) {
   if (!OBSERVABILITY_STAGES.includes(stage)) return
   const preparationId = context?.body?.preparationId ?? context?.query?.preparationId
   serverLogger.info(`governed review stage: ${stage}`, { preparationId, stage, ...metadata })
@@ -100,6 +107,7 @@ export function createAuthenticatedApiHandler(resolver, {
 } = {}) {
   const resolvedAuthProvider = authProvider ?? createAuthenticationProvider({ env })
   return createPersistenceApiHandler(async (context) => {
+    logAuthStage('authWrapperEntered', context, { requestId: context.requestId })
     assertOriginAllowed(context.event, allowedOrigins, env)
     const token = extractBearerOrCookieToken(context.event)
     if (!token) {
@@ -119,8 +127,10 @@ export function createAuthenticatedApiHandler(resolver, {
         publicMessage: 'authentication required',
       })
     }
+    logAuthStage('bearerAccepted', context, { userId: authentication.user?.id })
     logAuthStage('bearerAuthenticated', context, { userId: authentication.user?.id })
     assertCsrfReady(context.event, { bearerToken: token, session: authentication.session, user: authentication.user })
+    logAuthStage('csrfAccepted', context, { userId: authentication.user?.id })
     logAuthStage('csrfValidated', context, { userId: authentication.user?.id })
     let authorization
     try {
@@ -139,6 +149,7 @@ export function createAuthenticatedApiHandler(resolver, {
         metadata: { code: error?.code ?? 'forbidden' },
       })
     }
+    logAuthStage('authenticatedHandlerEntered', context, { userId: authentication.user?.id, requestId: context.requestId })
     return resolver({
       ...context,
       token,
@@ -183,6 +194,7 @@ export function createOrganizationAuthenticatedApiHandler(resolver, {
         metadata: { crossOrganizationAccessDenied: workspaceAccess.crossOrganizationAccessDenied },
       })
     }
+    logAuthStage('organizationAccepted', context, { organizationId, userId: context.user.id })
     logAuthStage('organizationResolved', context, { organizationId, userId: context.user.id })
     return resolver({
       ...context,
