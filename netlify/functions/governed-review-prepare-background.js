@@ -1,14 +1,12 @@
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
-import { createWorkspaceDataService } from '../../../lib/workspace/workspaceDataService.js'
-import { createCreditBudget } from '../../../lib/market/creditBudget.js'
-import { BREAKOUT_OBSERVATION_UNIVERSE } from '../../../lib/opportunities/forwardTest/forwardObservationEngine.js'
-import { buildBreakoutMomentumSignal } from '../../../lib/strategies/breakout/breakoutMomentumSignal.js'
-import { buildRangeMeanReversionSignal } from '../../../lib/strategies/range/rangeMeanReversionSignal.js'
-import { buildVolatilityExpansionSignal } from '../../../lib/strategies/volatility/volatilityExpansionSignal.js'
-import { scoreTradeQuality } from '../../../lib/opportunities/quality/index.js'
-import { selectStrategiesForRegime } from '../../../lib/strategies/adaptive/index.js'
-import { EXISTING_ADAPTIVE_STRATEGY_RECORDS } from '../../../lib/strategies/adaptive/index.js'
-import { serverLogger } from '../../../lib/logging/logger.js'
+import { createWorkspaceDataService } from '../../lib/workspace/workspaceDataService.js'
+import { buildBreakoutMomentumSignal } from '../../lib/strategies/breakout/breakoutMomentumSignal.js'
+import { buildRangeMeanReversionSignal } from '../../lib/strategies/range/rangeMeanReversionSignal.js'
+import { buildVolatilityExpansionSignal } from '../../lib/strategies/volatility/volatilityExpansionSignal.js'
+import { scoreTradeQuality } from '../../lib/opportunities/quality/index.js'
+import { selectStrategiesForRegime } from '../../lib/strategies/adaptive/index.js'
+import { EXISTING_ADAPTIVE_STRATEGY_RECORDS } from '../../lib/strategies/adaptive/index.js'
+import { serverLogger } from '../../lib/logging/logger.js'
 
 const GOVERNED_STRATEGIES = Object.freeze([
   { id: 'breakout-momentum-v1', name: 'Breakout Momentum', experiment: 'BREAKOUT.1', signalBuilder: buildBreakoutMomentumSignal },
@@ -37,7 +35,7 @@ async function savePreparation(repository, preparation) {
   return result
 }
 
-async function claimPreparation(repository, preparationId, tenantContext) {
+export async function claimPreparation(repository, preparationId, tenantContext) {
   const store = repository.getStore(PREPARATION_STORE)
   if (!store) return { claimed: false, reason: 'store_unavailable' }
 
@@ -45,66 +43,36 @@ async function claimPreparation(repository, preparationId, tenantContext) {
   if (!record) return { claimed: false, reason: 'not_found' }
 
   const prep = record.payload ?? record
-  const nowIso = new Date().toISOString()
-  const STALE_THRESHOLD_MS = 5 * 60 * 1000
+  const now = Date.now()
 
   if (prep.status === 'completed') return { claimed: false, reason: 'already_completed', preparation: prep }
   if (prep.status === 'expired') return { claimed: false, reason: 'expired', preparation: prep }
   if (prep.status === 'failed') return { claimed: false, reason: 'failed', preparation: prep }
 
+  if (prep.expiresAt && new Date(prep.expiresAt).getTime() <= now) {
+    await savePreparation(repository, { ...prep, status: 'expired', updatedAt: new Date(now).toISOString() })
+    return { claimed: false, reason: 'expired', preparation: { ...prep, status: 'expired' } }
+  }
   if (prep.status === 'running') {
     const updatedAt = prep.updatedAt ? new Date(prep.updatedAt).getTime() : 0
-    if (Date.now() - updatedAt > 5 * 60 * 1000) {
-      const newAttempt = (prep.attempt ?? 0) + 1
-      const newClaimToken = `claim_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`
-      try {
-        const updated = await store.conditionalUpdateScoped(
-          preparationId,
-          { status: 'running', attempt: newAttempt, claimToken: newClaimToken, updatedAt: new Date().toISOString() },
-          { claimToken: prep.claimToken, status: 'running' },
-          tenantContext
-        )
-        if (updated) {
-          return { claimed: true, preparation: { ...prep, status: 'running', attempt: newAttempt, claimToken: newClaimToken, updatedAt: new Date().toISOString() } }
-        }
-      } catch (err) {
-        return { claimed: false, reason: 'claimed_by_other', preparation: prep }
-      }
-      return { claimed: false, reason: 'claimed_by_other', preparation: prep }
-    }
-
-    const newAttempt = (prep.attempt ?? 0) + 1
-    const newClaimToken = `claim_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`
-    try {
-      const updated = await store.conditionalUpdateScoped(
-        preparationId,
-        { status: 'running', attempt: newAttempt, claimToken: newClaimToken, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() },
-        { claimToken: prep.claimToken, status: 'pending' },
-        tenantContext
-      )
-      if (updated) {
-        return { claimed: true, preparation: { ...prep, status: 'running', attempt: newAttempt, claimToken: newClaimToken, startedAt: new Date().toISOString(), updatedAt: new Date().toISOString() } }
-      }
-    } catch (err) {
-      return { claimed: false, reason: 'claimed_by_other', preparation: prep }
-    }
-    return { claimed: false, reason: 'claimed_by_other', preparation: prep }
+    if (now - updatedAt <= STALE_THRESHOLD_MS) return { claimed: false, reason: 'already_running', preparation: prep }
   }
 
-async function savePreparation(repository, preparation) {
-  const store = repository.getStore(PREPARATION_STORE)
-  if (!store) throw new Error(`Preparation store ${PREPARATION_STORE} not available`)
-  return store.upsertScoped(preparation.id, preparation, preparation.tenantContext)
+  const attempt = (prep.attempt ?? 0) + 1
+  const claimToken = createClaimToken()
+  try {
+    const updated = await store.conditionalUpdateScoped(
+      preparationId,
+      { status: 'running', attempt, claimToken, startedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() },
+      { claimToken: prep.claimToken, status: prep.status },
+      tenantContext,
+    )
+    if (updated) return { claimed: true, preparation: { ...prep, status: 'running', attempt, claimToken, startedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() } }
+  } catch (err) {
+    return { claimed: false, reason: 'claimed_by_other', preparation: prep }
+  }
+  return { claimed: false, reason: 'claimed_by_other', preparation: prep }
 }
-
-const GOVERNED_STRATEGIES = Object.freeze([
-  { id: 'breakout-momentum-v1', name: 'Breakout Momentum', experiment: 'BREAKOUT.1', signalBuilder: buildBreakoutMomentumSignal },
-  { id: 'range-mean-reversion-v1', name: 'Range Mean Reversion', experiment: 'RANGE.1', signalBuilder: buildRangeMeanReversionSignal },
-  { id: 'volatility-expansion-v1', name: 'Volatility Expansion', experiment: 'VOL.1', signalBuilder: buildVolatilityExpansionSignal },
-])
-
-const PREPARATION_STORE = 'governedReviewPreparations'
-const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000
 const BREAKOUT_OBSERVATION_UNIVERSE = Object.freeze(['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'])
 
 async function runGovernedPreparation(preparation, context) {
