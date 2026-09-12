@@ -120,17 +120,20 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
 
     if (!response.ok || payload?.ok === false) {
       const message = getErrorMessage(payload, fallbackMessage)
+      const errorCode = payload?.error?.code
       clientLogger.warn('workspace api request failed', {
         path,
         status: response.status,
-        code: payload?.error?.code,
+        code: errorCode,
         message,
       })
       emitDiagnostics({
         apiStatus: 'degraded',
         lastError: message,
       })
-      throw new Error(message)
+      const error = new Error(message)
+      error.code = errorCode
+      throw error
     }
 
     emitDiagnostics({

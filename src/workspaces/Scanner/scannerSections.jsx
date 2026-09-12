@@ -108,7 +108,8 @@ export function GovernedReviewQueue() {
               setQueueItems(items || [])
             } else if (status === 'failed') {
               clearPolling()
-              setError(prepError || 'Preparation failed')
+              const diagnosticCode = prepError ? ` [${prepError}]` : ''
+              setError(prepError ? `Preparation failed: ${prepError}${diagnosticCode}` : 'Preparation failed')
               setPreparationStatus('failed')
             }
           }
@@ -119,7 +120,9 @@ export function GovernedReviewQueue() {
       setPollInterval(interval)
     } catch (err) {
       clearPolling()
-      setError(err instanceof Error ? err.message : 'Failed to start preparation')
+      const message = err instanceof Error ? err.message : 'Failed to start preparation'
+      const code = err.code ? ` [${err.code}]` : ''
+      setError(`${message}${code}`)
       setPreparationStatus('failed')
     }
   }, [clearPolling])
