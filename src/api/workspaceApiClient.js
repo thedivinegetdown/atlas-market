@@ -345,7 +345,7 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     },
 
     getGovernedReviewPreparationStatus(preparationId) {
-      return request('governed-review-status', { preparationId }, 'Unable to get preparation status')
+      return request('governed-review-status', { preparationId, organizationId: 'org-atlas-local' }, 'Unable to get preparation status')
     },
 
     diagnoseGovernedReview() {
