@@ -1,6 +1,4 @@
-import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 import { runMigrations } from '../../../lib/db/migrations.js'
-import { serverLogger } from '../../../lib/logging/logger.js'
 
 const PREPARATION_STORE = 'governedReviewPreparations'
 const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000
@@ -40,7 +38,6 @@ async function savePreparation(store, preparation, tenantContext) {
 export const handler = async (event, context) => {
   const { organizationId, user, tenantContext, requestId, session } = context
   const repository = context.repository
-  const now = () => new Date()
 
   const log = (...args) => console.log('[governed-review-prepare]', ...args)
 
@@ -61,7 +58,6 @@ export const handler = async (event, context) => {
     const preparationId = `prep_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
     const claimToken = `claim_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
-    const nowIso = new Date().toISOString()
 
     const preparation = {
       id: preparationId,
@@ -81,16 +77,14 @@ export const handler = async (event, context) => {
     log('creating preparation', { preparationId, organizationId, userId: user.id })
     let preparationResult
     try {
-      const store = repository.getStore('governedReviewPreparations')
-      await store.upsertScoped(preparationId, preparation, tenantContext)
+      await repository.getStore('governedReviewPreparations').upsertScoped(preparationId, preparation, tenantContext)
       preparationResult = { preparation, created: true, existingId: null }
       log('preparation created', { preparationId })
     } catch (err) {
       if (err?.message?.includes('idx_atlas_governed_review_preparations_active_unique') ||
           err?.message?.includes('unique constraint') ||
           err?.code === '23505') {
-        const store = repository.getStore('governedReviewPreparations')
-        const records = await store.listScoped({ organizationId, userId: user.id, limit: 10 })
+        const records = await repository.getStore('governedReviewPreparations').listScoped({ organizationId, userId: user.id, limit: 10 })
         const now = Date.now()
         let existing = null
         for (const record of records) {
@@ -179,5 +173,3 @@ export const handler = async (event, context) => {
     }
   }
 }
-
-export default handler
