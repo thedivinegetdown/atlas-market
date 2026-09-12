@@ -2,8 +2,14 @@ import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 import { serverLogger } from '../../lib/logging/logger.js'
 import { createOrReusePreparation } from '../../lib/workspace/governedReviewPreparation.js'
 
+export function resolveBackgroundDispatchUrl(event = {}, env = process.env) {
+  const baseUrl = event.rawUrl ?? env.URL ?? env.DEPLOY_PRIME_URL
+  if (!baseUrl) throw new Error('Background dispatch origin is unavailable.')
+  return new URL('/.netlify/functions/governed-review-prepare-background', baseUrl).toString()
+}
+
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
-  const { organizationId, user, tenantContext, session } = context
+  const { organizationId, user, tenantContext, session, event } = context
   const repository = context.repository
 
   const log = (...args) => serverLogger.debug('[governed-review-prepare]', ...args)
@@ -58,7 +64,8 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
 
     const { preparation: prep, created, existingId } = preparationResult
 
-    if (!created) {
+    const shouldDispatch = created || prep.status === 'pending'
+    if (!shouldDispatch) {
       return {
         ok: true,
         data: {
@@ -72,11 +79,12 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
 
     // Stage: BACKGROUND_DISPATCH
     try {
+      const backgroundUrl = resolveBackgroundDispatchUrl(event)
       const accessToken = context.session?.token ?? context.session?.access_token
       const fetchController = new AbortController()
       const timeoutId = setTimeout(() => fetchController.abort(), 5000)
       const fetchStart = Date.now()
-      const bgResponse = await fetch(`/.netlify/functions/governed-review-prepare-background`, {
+      const bgResponse = await fetch(backgroundUrl, {
         method: 'POST',
         signal: fetchController.signal,
         headers: {
@@ -105,8 +113,9 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
       ok: true,
       data: {
         preparationId: prep.id,
-        status: 'pending',
-        message: 'Governed review preparation started',
+        status: prep.status,
+        message: created ? 'Governed review preparation started' : 'Governed review preparation dispatch resumed',
+        reused: !created,
       },
     }
   } catch (err) {
