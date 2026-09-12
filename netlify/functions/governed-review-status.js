@@ -71,6 +71,8 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     data: {
       preparationId: payload.id,
       status: payload.status,
+      attempt: payload.attempt ?? 0,
+      claimTokenPresent: Boolean(payload.claimToken),
       createdAt: payload.createdAt,
       startedAt: payload.startedAt,
       completedAt: payload.completedAt,
