@@ -8,6 +8,25 @@ import { resolveTeamWorkspaceAccess } from '../../../lib/auth/teamWorkspaceAcces
 import { normalizeTenantContext } from '../../../lib/auth/tenantIsolation.js'
 import { createPersistenceApiHandler } from './persistenceApi.js'
 import { verifyCsrfToken } from '../../../lib/security/csrfProtection.js'
+import { serverLogger } from '../../../lib/logging/logger.js'
+
+const OBSERVABILITY_STAGES = Object.freeze([
+  'dispatchAccepted',
+  'workerRequestReceived',
+  'bearerAuthenticated',
+  'csrfValidated',
+  'organizationResolved',
+  'workerHandlerEntered',
+  'preparationLoaded',
+  'claimAttempted',
+  'claimSucceeded',
+])
+
+function logAuthStage(stage, context, metadata = {}) {
+  if (!OBSERVABILITY_STAGES.includes(stage)) return
+  const preparationId = context?.body?.preparationId ?? context?.query?.preparationId
+  serverLogger.info(`governed review stage: ${stage}`, { preparationId, stage, ...metadata })
+}
 
 function getHeader(headers = {}, name) {
   return headers[name] ?? headers[name.toLowerCase()] ?? headers[name.toUpperCase()]
@@ -100,7 +119,9 @@ export function createAuthenticatedApiHandler(resolver, {
         publicMessage: 'authentication required',
       })
     }
+    logAuthStage('bearerAuthenticated', context, { userId: authentication.user?.id })
     assertCsrfReady(context.event, { bearerToken: token, session: authentication.session, user: authentication.user })
+    logAuthStage('csrfValidated', context, { userId: authentication.user?.id })
     let authorization
     try {
       authorization = authorizationService.assert({
@@ -162,6 +183,7 @@ export function createOrganizationAuthenticatedApiHandler(resolver, {
         metadata: { crossOrganizationAccessDenied: workspaceAccess.crossOrganizationAccessDenied },
       })
     }
+    logAuthStage('organizationResolved', context, { organizationId, userId: context.user.id })
     return resolver({
       ...context,
       organizationId,

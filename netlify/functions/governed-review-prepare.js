@@ -2,6 +2,23 @@ import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 import { serverLogger } from '../../lib/logging/logger.js'
 import { createOrReusePreparation } from '../../lib/workspace/governedReviewPreparation.js'
 
+const OBSERVABILITY_STAGES = Object.freeze([
+  'dispatchAccepted',
+  'workerRequestReceived',
+  'bearerAuthenticated',
+  'csrfValidated',
+  'organizationResolved',
+  'workerHandlerEntered',
+  'preparationLoaded',
+  'claimAttempted',
+  'claimSucceeded',
+])
+
+function logStage(stage, preparationId, metadata = {}) {
+  if (!OBSERVABILITY_STAGES.includes(stage)) return
+  serverLogger.info(`governed review stage: ${stage}`, { preparationId, stage, ...metadata })
+}
+
 export function resolveBackgroundDispatchUrl(event = {}, env = process.env) {
   const baseUrl = event.rawUrl ?? env.URL ?? env.DEPLOY_PRIME_URL
   if (!baseUrl) throw new Error('Background dispatch origin is unavailable.')
@@ -104,6 +121,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
         }
       }
       log('background worker enqueued', { elapsedMs: Date.now() - fetchStart, status: bgResponse.status })
+      logStage('dispatchAccepted', prep.id, { backgroundStatus: bgResponse.status, elapsedMs: Date.now() - fetchStart })
     } catch (triggerErr) {
       return {
         ok: false,

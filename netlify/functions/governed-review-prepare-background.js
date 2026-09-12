@@ -8,6 +8,23 @@ import { selectStrategiesForRegime } from '../../lib/strategies/adaptive/index.j
 import { EXISTING_ADAPTIVE_STRATEGY_RECORDS } from '../../lib/strategies/adaptive/index.js'
 import { serverLogger } from '../../lib/logging/logger.js'
 
+const OBSERVABILITY_STAGES = Object.freeze([
+  'dispatchAccepted',
+  'workerRequestReceived',
+  'bearerAuthenticated',
+  'csrfValidated',
+  'organizationResolved',
+  'workerHandlerEntered',
+  'preparationLoaded',
+  'claimAttempted',
+  'claimSucceeded',
+])
+
+function logStage(stage, preparationId, metadata = {}) {
+  if (!OBSERVABILITY_STAGES.includes(stage)) return
+  serverLogger.info(`governed review stage: ${stage}`, { preparationId, stage, ...metadata })
+}
+
 const GOVERNED_STRATEGIES = Object.freeze([
   { id: 'breakout-momentum-v1', name: 'Breakout Momentum', experiment: 'BREAKOUT.1', signalBuilder: buildBreakoutMomentumSignal },
   { id: 'range-mean-reversion-v1', name: 'Range Mean Reversion', experiment: 'RANGE.1', signalBuilder: buildRangeMeanReversionSignal },
@@ -41,6 +58,16 @@ async function publishClaimDiagnostics(store, preparationId, diagnostics, tenant
   } catch {
     // Claim observability must not alter claim execution semantics.
   }
+  // Also persist diagnostics directly on the preparation record
+  try {
+    const record = await store.getScoped(preparationId, tenantContext)
+    if (record) {
+      const prep = record.payload ?? record
+      await store.upsertScoped(preparationId, { ...prep, claimDiagnostics: diagnostics }, tenantContext)
+    }
+  } catch {
+    // Best-effort persistence, must not alter claim execution
+  }
 }
 
 export async function claimPreparation(repository, preparationId, tenantContext) {
@@ -51,6 +78,7 @@ export async function claimPreparation(repository, preparationId, tenantContext)
   if (!record) return { claimed: false, reason: 'not_found' }
 
   const prep = record.payload ?? record
+  logStage('preparationLoaded', preparationId, { status: prep.status, attempt: prep.attempt ?? 0 })
   const diagnostics = {
     workerEntered: true,
     scopedPreparationLoaded: true,
@@ -78,6 +106,7 @@ export async function claimPreparation(repository, preparationId, tenantContext)
   const attempt = (prep.attempt ?? 0) + 1
   const claimToken = createClaimToken()
   try {
+    logStage('claimAttempted', preparationId, { attempt })
     diagnostics.conditionalUpdateAttempted = true
     await publishClaimDiagnostics(store, preparationId, diagnostics, tenantContext)
     const updated = await store.conditionalUpdateScoped(
@@ -88,7 +117,10 @@ export async function claimPreparation(repository, preparationId, tenantContext)
     )
     diagnostics.claimSucceeded = updated === true
     await publishClaimDiagnostics(store, preparationId, diagnostics, tenantContext)
-    if (updated) return { claimed: true, preparation: { ...prep, status: 'running', attempt, claimToken, startedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() } }
+    if (updated) {
+      logStage('claimSucceeded', preparationId, { attempt, claimToken: claimToken.slice(0, 8) + '...' })
+      return { claimed: true, preparation: { ...prep, status: 'running', attempt, claimToken, startedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() } }
+    }
   } catch (err) {
     return { claimed: false, reason: 'claimed_by_other', preparation: prep }
   }
@@ -242,7 +274,8 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     return { ok: false, error: { code: 'validation_error', message: 'preparationId is required' } }
   }
 
-  serverLogger.info('governed review background worker start', { preparationId, requestId })
+  logStage('workerRequestReceived', preparationId, { requestId })
+  logStage('workerHandlerEntered', preparationId, { requestId })
 
   try {
     const claimResult = await claimPreparation(repository, preparationId, tenantContext)

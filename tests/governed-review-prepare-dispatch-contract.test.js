@@ -5,7 +5,7 @@ vi.mock('../netlify/functions/_shared/authApi.js', () => ({
 }))
 
 vi.mock('../lib/logging/logger.js', () => ({
-  serverLogger: { debug: vi.fn(), error: vi.fn() },
+  serverLogger: { debug: vi.fn(), info: vi.fn(), error: vi.fn() },
 }))
 
 vi.mock('../lib/workspace/governedReviewPreparation.js', () => ({
