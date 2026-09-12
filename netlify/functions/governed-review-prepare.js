@@ -14,11 +14,11 @@ function createClaimToken() {
 }
 
 function getPreparationStore(repository) {
-  return repository.getStore(PREPARATION_STORE)
+  return repository.getStore('governedReviewPreparations')
 }
 
 async function findActivePreparation(repository, organizationId, userId) {
-  const store = repository.getStore(PREPARATION_STORE)
+  const store = repository.getStore('governedReviewPreparations')
   if (!store) return null
   const records = await store.listScoped({ organizationId, userId, limit: 10 })
   const now = Date.now()
@@ -33,26 +33,24 @@ async function findActivePreparation(repository, organizationId, userId) {
   return null
 }
 
-export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
+async function savePreparation(store, preparation, tenantContext) {
+  return store.upsertScoped(preparation.id, preparation, preparation.tenantContext)
+}
+
+export const handler = async (event, context) => {
   const { organizationId, user, tenantContext, requestId, session } = context
   const repository = context.repository
   const now = () => new Date()
 
-  serverLogger.info('governed review prepare start', { 
-    organizationId, 
-    userId: user?.id, 
-    requestId,
-    hasRepo: !!repository,
-    hasSession: !!session,
-    hasToken: !!(session?.token ?? session?.access_token)
-  })
+  const log = (...args) => console.log('[governed-review-prepare]', ...args)
+
+  log('start', { organizationId, userId: user?.id })
 
   try {
-    // Ensure migrations are applied (idempotent)
     if (repository?.initialize) {
-      serverLogger.debug('governed review initializing repository')
+      log('initializing repository')
       await repository.initialize()
-      serverLogger.info('governed review repository initialized')
+      log('repository initialized')
     }
 
     const store = repository.getStore('governedReviewPreparations')
@@ -71,8 +69,8 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
       userId: user.id,
       tenantContext,
       status: 'pending',
-      createdAt: nowIso,
-      updatedAt: nowIso,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
       expiresAt,
       attempt: 0,
       claimToken,
@@ -80,32 +78,32 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
       strategies: ['breakout-momentum-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1'],
     }
 
-    serverLogger.debug('governed review createOrReusePreparation start', { organizationId, userId: user.id })
+    log('creating preparation', { preparationId, organizationId, userId: user.id })
     let preparationResult
     try {
+      const store = repository.getStore('governedReviewPreparations')
       await store.upsertScoped(preparationId, preparation, tenantContext)
       preparationResult = { preparation, created: true, existingId: null }
-      serverLogger.info('governed review preparation created', { preparationId, organizationId, userId: user.id })
+      log('preparation created', { preparationId })
     } catch (err) {
       if (err?.message?.includes('idx_atlas_governed_review_preparations_active_unique') ||
           err?.message?.includes('unique constraint') ||
           err?.code === '23505') {
-        const existing = await (async () => {
-          const records = await store.listScoped({ organizationId, userId: user.id, limit: 10 })
-          const now = Date.now()
-          for (const record of records) {
-            const p = record.payload ?? record
-            const expiresAt = p.expiresAt ? new Date(p.expiresAt).getTime() : 0
-            if (expiresAt && expiresAt <= now) continue
-            if (p.status === 'pending' || p.status === 'running') {
-              return p
-            }
+        const store = repository.getStore('governedReviewPreparations')
+        const records = await store.listScoped({ organizationId, userId: user.id, limit: 10 })
+        const now = Date.now()
+        let existing = null
+        for (const record of records) {
+          const p = record.payload ?? record
+          const expiresAt = p.expiresAt ? new Date(p.expiresAt).getTime() : 0
+          if (expiresAt && expiresAt <= Date.now()) continue
+          if (p.status === 'pending' || p.status === 'running') {
+            existing = p
+            break
           }
-          return null
-        })()
+        }
         if (existing) {
           preparationResult = { preparation: existing, created: false, existingId: existing.id }
-          serverLogger.info('governed review reused existing', { existingId: existing.id })
         } else {
           throw err
         }
@@ -116,85 +114,70 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
 
     const { preparation, created, existingId } = preparationResult
 
-    serverLogger.info('governed review prepare result', { 
-      preparationId: preparation?.id, 
-      created, 
-      existingId,
-      status: preparation?.status 
-    })
-
     if (!created) {
       return {
-        ok: true,
-        data: {
-          preparationId: existingId,
-          status: preparation.status,
-          message: 'Governed review preparation already in progress',
-          reused: true,
-        },
+        statusCode: 200,
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          ok: true,
+          data: {
+            preparationId: existingId,
+            status: preparation.status,
+            message: 'Governed review preparation already in progress',
+            reused: true,
+          },
+        }),
       }
     }
 
-    // Trigger background worker (fire-and-forget)
+    // Trigger background worker
     const backgroundUrl = `/.netlify/functions/governed-review-prepare-background`
     try {
-      const fetchImpl = globalThis.fetch
-      if (typeof fetchImpl === 'function') {
-        const accessToken = session?.token ?? session?.access_token
-        serverLogger.debug('governed review triggering background', { preparationId: preparation.id, hasToken: !!accessToken })
-        const bgResponse = await fetchImpl(backgroundUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
-          },
-          body: JSON.stringify({ preparationId: preparation.id }),
-        })
-        serverLogger.info('governed review background worker triggered', { 
-          preparationId: preparation.id, 
-          bgStatus: bgResponse.status,
-          bgOk: bgResponse.ok 
-        })
-      } else {
-        serverLogger.warn('governed review no fetch implementation available')
-      }
-    } catch (triggerErr) {
-      serverLogger.warn('governed review background trigger failed', { 
-        preparationId: preparation.id, 
-        error: triggerErr?.message,
-        stack: triggerErr?.stack
+      const accessToken = context.session?.token ?? context.session?.access_token
+      await fetch(`/.netlify/functions/governed-review-prepare-background`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
+        body: JSON.stringify({ preparationId: preparation.id }),
       })
+    } catch (triggerErr) {
+      console.warn('background trigger failed', { error: triggerErr?.message })
     }
 
-    serverLogger.info('governed review prepare returning success', { preparationId: preparation.id })
     return {
-      ok: true,
-      data: {
-        preparationId: preparation.id,
-        status: 'pending',
-        message: 'Governed review preparation started',
-      },
+      statusCode: 200,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ok: true,
+        data: {
+          preparationId: preparation.id,
+          status: 'pending',
+          message: 'Governed review preparation started',
+        },
+      }),
     }
   } catch (err) {
-    serverLogger.error('governed review prepare handler error', { 
-      organizationId, 
-      userId: user?.id, 
+    console.error('governed review prepare error', { 
       error: err?.message,
       stack: err?.stack,
       name: err?.name,
       code: err?.code
     })
     return {
-      ok: false,
-      error: {
-        code: 'preparation_start_failed',
-        message: 'Unable to start governed review preparation',
-        details: err?.message ?? 'Unknown error',
-      },
+      statusCode: 500,
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        ok: false,
+        error: {
+          code: 'preparation_start_failed',
+          message: 'Unable to start governed review preparation',
+          details: err?.message ?? 'Unknown error',
+        },
+      }),
     }
   }
-}, {
-  requiredPermission: 'dashboard.read',
-  workspaceAction: 'read',
-  routeId: 'governed-review-prepare',
-})
+}
+
+export default handler
