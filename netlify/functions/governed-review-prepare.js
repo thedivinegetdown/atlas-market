@@ -1,5 +1,6 @@
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 import { createOrReusePreparation } from '../../../lib/workspace/governedReviewPreparation.js'
+import { runMigrations } from '../../../lib/db/migrations.js'
 import { serverLogger } from '../../../lib/logging/logger.js'
 
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
@@ -17,6 +18,13 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   })
 
   try {
+    // Ensure migrations are applied (idempotent)
+    if (repository?.initialize) {
+      serverLogger.debug('governed review initializing repository')
+      await repository.initialize()
+      serverLogger.info('governed review repository initialized')
+    }
+
     serverLogger.debug('governed review createOrReusePreparation start', { organizationId, userId: user?.id })
     const { preparation, created, existingId } = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, now)
 
