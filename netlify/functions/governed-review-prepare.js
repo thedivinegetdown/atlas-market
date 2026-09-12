@@ -3,6 +3,8 @@ import { createOrReusePreparation } from '../../../lib/workspace/governedReviewP
 import { runMigrations } from '../../../lib/db/migrations.js'
 import { serverLogger } from '../../../lib/logging/logger.js'
 
+// Force rebuild: 2025-09-12
+
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
   const { organizationId, user, tenantContext, requestId, session } = context
   const repository = context.repository
