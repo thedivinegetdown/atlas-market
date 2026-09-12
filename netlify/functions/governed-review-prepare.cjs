@@ -41,13 +41,17 @@ const handler = async (event, context) => {
 
   const log = (...args) => console.log('[governed-review-prepare]', ...args)
 
+  const now = Date.now()
   log('start', { organizationId, userId: user?.id })
 
   try {
-    if (repository?.initialize) {
+    // Check if repo is already initialized (avoid re-initializing on every request)
+    if (repository?.initialize && !repository._initialized) {
       log('initializing repository')
+      const initStart = Date.now()
       await repository.initialize()
-      log('repository initialized')
+      repository._initialized = true
+      log('repository initialized', { elapsedMs: Date.now() - initStart })
     }
 
     const store = repository.getStore('governedReviewPreparations')
@@ -78,7 +82,9 @@ const handler = async (event, context) => {
     let preparationResult
     try {
       const store = repository.getStore('governedReviewPreparations')
+      const insertStart = Date.now()
       await store.upsertScoped(preparationId, preparation, tenantContext)
+      log('upsert completed', { elapsedMs: Date.now() - insertStart })
       preparationResult = { preparation, created: true, existingId: null }
       console.log('[governed-review-prepare] preparation created', { preparationId })
     } catch (err) {
@@ -125,22 +131,29 @@ const handler = async (event, context) => {
       }
     }
 
-    // Trigger background worker
+    // Trigger background worker - fire and forget with timeout
     const backgroundUrl = `/.netlify/functions/governed-review-prepare-background`
     try {
       const accessToken = context.session?.token ?? context.session?.access_token
+      const fetchController = new AbortController()
+      const timeoutId = setTimeout(() => fetchController.abort(), 5000)
+      const fetchStart = Date.now()
       await fetch(`/.netlify/functions/governed-review-prepare-background`, {
         method: 'POST',
+        signal: fetchController.signal,
         headers: {
           'Content-Type': 'application/json',
           ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({ preparationId: preparation.id }),
       })
+      clearTimeout(timeoutId)
+      log('background worker triggered', { elapsedMs: Date.now() - fetchStart })
     } catch (triggerErr) {
       console.warn('background trigger failed', { error: triggerErr?.message })
     }
 
+    log('returning success', { totalElapsedMs: Date.now() - now })
     return {
       statusCode: 200,
       headers: { 'content-type': 'application/json' },
