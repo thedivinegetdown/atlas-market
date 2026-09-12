@@ -1,0 +1,15 @@
+import { afterEach, describe, expect, it } from 'vitest'
+import { publishGovernedReviewRuntimeMetadata } from '../src/workspaces/Scanner/scannerSections.jsx'
+
+describe('governed review runtime metadata', () => {
+  afterEach(() => { delete globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ })
+
+  it('retains only safe lifecycle observability fields and never a raw claim token', () => {
+    publishGovernedReviewRuntimeMetadata({ preparationId: 'prep-1', status: 'pending', reused: false })
+    publishGovernedReviewRuntimeMetadata({ preparationId: 'prep-1', status: 'running', attempt: 1, claimTokenPresent: true, claimToken: 'must-not-appear' })
+
+    expect(globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__).toEqual({
+      preparationId: 'prep-1', status: 'running', attempt: 1, claimTokenPresent: true, reused: false,
+    })
+  })
+})

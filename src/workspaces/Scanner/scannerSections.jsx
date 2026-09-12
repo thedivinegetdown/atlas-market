@@ -19,6 +19,21 @@ function value(numberValue) {
   return Number.isFinite(Number(numberValue)) ? Number(numberValue) : 'Unavailable'
 }
 
+// Deliberately nonvisual: permits authenticated runtime verification without
+// rendering lifecycle internals or ever exposing the raw claim token.
+export function publishGovernedReviewRuntimeMetadata(data = {}) {
+  if (typeof globalThis === 'undefined') return
+  const current = globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ ?? {}
+  globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ = {
+    ...current,
+    preparationId: data.preparationId ?? current.preparationId ?? null,
+    status: data.status ?? current.status ?? null,
+    attempt: Number.isInteger(data.attempt) ? data.attempt : (current.attempt ?? 0),
+    claimTokenPresent: typeof data.claimTokenPresent === 'boolean' ? data.claimTokenPresent : (current.claimTokenPresent ?? false),
+    ...(typeof data.reused === 'boolean' ? { reused: data.reused } : {}),
+  }
+}
+
 export function QualifiedTradePlanCard({ evaluation }) {
   const plan = composeQualifiedTradePlan({ evaluation })
   return <article className="strategy-manager-card">
@@ -95,6 +110,7 @@ export function GovernedReviewQueue() {
       const pid = response.data.preparationId
       setPreparationId(pid)
       setPreparationStatus('preparing')
+      publishGovernedReviewRuntimeMetadata(response.data)
 
       // Poll for completion
       const interval = setInterval(async () => {
@@ -103,6 +119,7 @@ export function GovernedReviewQueue() {
           if (statusResponse.ok && statusResponse.data) {
             const { status, queueItems: items, error: prepError, providerCalls } = statusResponse.data
             setPreparationStatus(status)
+            publishGovernedReviewRuntimeMetadata(statusResponse.data)
             if (status === 'completed') {
               clearPolling()
               setQueueItems(items || [])
