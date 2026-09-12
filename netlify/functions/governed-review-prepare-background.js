@@ -308,6 +308,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     return { ok: false, error: { code: 'background_failed', message: 'Background preparation failed', details: err?.message } }
   }
 }, {
+  allowedMethods: ['POST'],
   requiredPermission: 'dashboard.read',
   workspaceAction: 'read',
   routeId: 'governed-review-prepare-background',
