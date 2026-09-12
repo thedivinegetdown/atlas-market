@@ -113,7 +113,7 @@ const handler = async (event, context) => {
       }
     }
 
-    const { preparation, created, existingId } = preparationResult
+    const { preparation: prep, created, existingId } = preparationResult
 
     if (!created) {
       return {
@@ -123,7 +123,7 @@ const handler = async (event, context) => {
           ok: true,
           data: {
             preparationId: existingId,
-            status: preparation.status,
+            status: prep.status,
             message: 'Governed review preparation already in progress',
             reused: true,
           },
@@ -145,7 +145,7 @@ const handler = async (event, context) => {
           'Content-Type': 'application/json',
           ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
         },
-        body: JSON.stringify({ preparationId: preparation.id }),
+        body: JSON.stringify({ preparationId: prep.id }),
       })
       clearTimeout(timeoutId)
       log('background worker triggered', { elapsedMs: Date.now() - fetchStart })
@@ -160,7 +160,7 @@ const handler = async (event, context) => {
       body: JSON.stringify({
         ok: true,
         data: {
-          preparationId: preparation.id,
+          preparationId: prep.id,
           status: 'pending',
           message: 'Governed review preparation started',
         },
