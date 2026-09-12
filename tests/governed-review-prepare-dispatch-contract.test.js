@@ -18,7 +18,7 @@ import { createOrReusePreparation } from '../lib/workspace/governedReviewPrepara
 afterEach(() => vi.unstubAllGlobals())
 
 describe('governed review prepare background dispatch contract', () => {
-  it('forwards the authenticated bearer and authorized organization scope while treating 202 as enqueue acceptance', async () => {
+  it('forwards authenticated bearer, CSRF, and authorized organization scope while treating 202 as enqueue acceptance', async () => {
     const preparation = { id: 'prep-dispatch-1', status: 'pending' }
     createOrReusePreparation.mockResolvedValue({ preparation, created: true, existingId: null })
     const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 202 }))
@@ -29,7 +29,10 @@ describe('governed review prepare background dispatch contract', () => {
       user: { id: 'user-1' },
       token: 'test-bearer-token',
       tenantContext: { organizationId: 'org-1', userId: 'user-1' },
-      event: { rawUrl: 'https://atlas-market.netlify.app/.netlify/functions/governed-review-prepare' },
+      event: {
+        rawUrl: 'https://atlas-market.netlify.app/.netlify/functions/governed-review-prepare',
+        headers: { 'x-csrf-token': 'test-csrf-token' },
+      },
       repository: { getStore: vi.fn(() => ({})) },
     })
 
@@ -37,7 +40,10 @@ describe('governed review prepare background dispatch contract', () => {
       'https://atlas-market.netlify.app/.netlify/functions/governed-review-prepare-background',
       expect.objectContaining({
         method: 'POST',
-        headers: expect.objectContaining({ Authorization: 'Bearer test-bearer-token' }),
+        headers: expect.objectContaining({
+          Authorization: 'Bearer test-bearer-token',
+          'X-CSRF-Token': 'test-csrf-token',
+        }),
         body: JSON.stringify({ preparationId: 'prep-dispatch-1', organizationId: 'org-1' }),
       }),
     )

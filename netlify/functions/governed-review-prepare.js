@@ -80,6 +80,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     // Stage: BACKGROUND_DISPATCH
     try {
       const backgroundUrl = resolveBackgroundDispatchUrl(event)
+      const csrfToken = event?.headers?.['x-csrf-token'] ?? event?.headers?.['X-CSRF-Token']
       const fetchController = new AbortController()
       const timeoutId = setTimeout(() => fetchController.abort(), 5000)
       const fetchStart = Date.now()
@@ -89,8 +90,9 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
         headers: {
           'Content-Type': 'application/json',
           // A Netlify background function acknowledges enqueue with HTTP 202 before
-          // its authenticated handler runs, so it must receive the original bearer.
+          // its authenticated handler runs, so it must receive the original session proof.
           Authorization: `Bearer ${token}`,
+          ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
         },
         body: JSON.stringify({ preparationId: prep.id, organizationId }),
       })
