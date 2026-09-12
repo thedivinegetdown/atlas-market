@@ -1,3 +1,6 @@
+import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
+import { serverLogger } from '../../../lib/logging/logger.js'
+
 const PREPARATION_STORE = 'governedReviewPreparations'
 const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000
 
@@ -29,16 +32,25 @@ async function findActivePreparation(repository, organizationId, userId) {
   return null
 }
 
-const handler = async (event, context) => {
+export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
   const { organizationId, user, tenantContext, requestId, session } = context
   const repository = context.repository
 
-  const log = (...args) => console.log('[governed-review-prepare]', ...args)
+  const log = (...args) => serverLogger.debug('[governed-review-prepare]', ...args)
 
   const now = Date.now()
   log('start', { organizationId, userId: user?.id })
 
   try {
+    // Ensure repository is initialized (idempotent)
+    if (repository?.initialize && !repository._initialized) {
+      log('initializing repository')
+      const initStart = Date.now()
+      await repository.initialize()
+      repository._initialized = true
+      log('repository initialized', { elapsedMs: Date.now() - initStart })
+    }
+
     const store = repository.getStore('governedReviewPreparations')
     if (!store) {
       throw new Error('Preparation store governedReviewPreparations not available')
@@ -63,20 +75,19 @@ const handler = async (event, context) => {
       strategies: ['breakout-momentum-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1'],
     }
 
-    console.log('[governed-review-prepare] creating preparation', { preparationId, organizationId, userId: user.id })
+    log('creating preparation', { preparationId, organizationId, userId: user.id })
     let preparationResult
     try {
-      const store = repository.getStore('governedReviewPreparations')
       const insertStart = Date.now()
       await store.upsertScoped(preparationId, preparation, tenantContext)
       log('upsert completed', { elapsedMs: Date.now() - insertStart })
       preparationResult = { preparation, created: true, existingId: null }
-      console.log('[governed-review-prepare] preparation created', { preparationId })
+      log('preparation created', { preparationId })
     } catch (err) {
       if (err?.message?.includes('idx_atlas_governed_review_preparations_active_unique') ||
           err?.message?.includes('unique constraint') ||
           err?.code === '23505') {
-        const records = await repository.getStore('governedReviewPreparations').listScoped({ organizationId, userId: user.id, limit: 10 })
+        const records = await store.listScoped({ organizationId, userId: user.id, limit: 10 })
         const now = Date.now()
         let existing = null
         for (const record of records) {
@@ -102,17 +113,13 @@ const handler = async (event, context) => {
 
     if (!created) {
       return {
-        statusCode: 200,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({
-          ok: true,
-          data: {
-            preparationId: existingId,
-            status: prep.status,
-            message: 'Governed review preparation already in progress',
-            reused: true,
-          },
-        }),
+        ok: true,
+        data: {
+          preparationId: existingId,
+          status: prep.status,
+          message: 'Governed review preparation already in progress',
+          reused: true,
+        },
       }
     }
 
@@ -135,42 +142,36 @@ const handler = async (event, context) => {
       clearTimeout(timeoutId)
       log('background worker triggered', { elapsedMs: Date.now() - fetchStart })
     } catch (triggerErr) {
-      console.warn('background trigger failed', { error: triggerErr?.message })
+      serverLogger.warn('background trigger failed', { error: triggerErr?.message })
     }
 
     log('returning success', { totalElapsedMs: Date.now() - now })
     return {
-      statusCode: 200,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        ok: true,
-        data: {
-          preparationId: prep.id,
-          status: 'pending',
-          message: 'Governed review preparation started',
-        },
-      }),
+      ok: true,
+      data: {
+        preparationId: prep.id,
+        status: 'pending',
+        message: 'Governed review preparation started',
+      },
     }
   } catch (err) {
-    console.error('governed review prepare error', { 
+    serverLogger.error('governed review prepare error', { 
       error: err?.message,
       stack: err?.stack,
       name: err?.name,
       code: err?.code
     })
     return {
-      statusCode: 500,
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({
-        ok: false,
-        error: {
-          code: 'preparation_start_failed',
-          message: 'Unable to start governed review preparation',
-          details: err?.message ?? 'Unknown error',
-        },
-      }),
+      ok: false,
+      error: {
+        code: 'preparation_start_failed',
+        message: 'Unable to start governed review preparation',
+        details: err?.message ?? 'Unknown error',
+      },
     }
   }
-}
-
-module.exports = { handler }
+}, {
+  requiredPermission: 'dashboard.read',
+  workspaceAction: 'read',
+  routeId: 'governed-review-prepare',
+})
