@@ -2,24 +2,24 @@
   "schemaVersion": 2,
   "generatedFrom": "netlify/functions/*.js",
   "summary": {
-    "total": 276,
+    "total": 280,
     "byWrapper": {
       "team-authenticated": 8,
-      "organization-authenticated": 245,
+      "organization-authenticated": 249,
       "authenticated": 21,
       "plain-api": 2,
       "unknown": 0
     },
     "byAccess": {
-      "read": 78,
+      "read": 81,
       "mutation": 57,
-      "read-and-mutation": 141
+      "read-and-mutation": 142
     },
     "byPriority": {
       "P0": 0,
       "P1": 0,
       "P2": 0,
-      "P3": 276
+      "P3": 280
     }
   },
   "functions": [
@@ -2324,6 +2324,79 @@
       "permission": "dashboard.read",
       "csrfRequired": true,
       "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "governed-review-diag",
+      "path": "netlify/functions/governed-review-diag.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "governed-review-prepare",
+      "path": "netlify/functions/governed-review-prepare.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "governed-review-prepare-background",
+      "path": "netlify/functions/governed-review-prepare-background.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "governed-review-status",
+      "path": "netlify/functions/governed-review-status.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "GET"
+      ],
+      "access": "read",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": false,
+      "endpointClassification": "AUTHENTICATED_READ",
       "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
