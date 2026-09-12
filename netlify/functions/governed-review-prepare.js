@@ -9,7 +9,7 @@ export function resolveBackgroundDispatchUrl(event = {}, env = process.env) {
 }
 
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
-  const { organizationId, user, tenantContext, session, event } = context
+  const { organizationId, user, tenantContext, token, event } = context
   const repository = context.repository
 
   const log = (...args) => serverLogger.debug('[governed-review-prepare]', ...args)
@@ -80,7 +80,6 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     // Stage: BACKGROUND_DISPATCH
     try {
       const backgroundUrl = resolveBackgroundDispatchUrl(event)
-      const accessToken = context.session?.token ?? context.session?.access_token
       const fetchController = new AbortController()
       const timeoutId = setTimeout(() => fetchController.abort(), 5000)
       const fetchStart = Date.now()
@@ -89,9 +88,11 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
         signal: fetchController.signal,
         headers: {
           'Content-Type': 'application/json',
-          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+          // A Netlify background function acknowledges enqueue with HTTP 202 before
+          // its authenticated handler runs, so it must receive the original bearer.
+          Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ preparationId: prep.id }),
+        body: JSON.stringify({ preparationId: prep.id, organizationId }),
       })
       clearTimeout(timeoutId)
       if (!bgResponse.ok) {
@@ -100,7 +101,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
           error: { code: 'BACKGROUND_DISPATCH_FAILED', message: 'Background worker dispatch failed', details: `HTTP ${bgResponse.status}` }
         }
       }
-      log('background worker triggered', { elapsedMs: Date.now() - fetchStart })
+      log('background worker enqueued', { elapsedMs: Date.now() - fetchStart, status: bgResponse.status })
     } catch (triggerErr) {
       return {
         ok: false,
