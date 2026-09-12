@@ -1,5 +1,3 @@
-const { runMigrations } = require('../../../lib/db/migrations.js')
-
 const PREPARATION_STORE = 'governedReviewPreparations'
 const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000
 
@@ -31,10 +29,6 @@ async function findActivePreparation(repository, organizationId, userId) {
   return null
 }
 
-async function savePreparation(store, preparation, tenantContext) {
-  return store.upsertScoped(preparation.id, preparation, preparation.tenantContext)
-}
-
 const handler = async (event, context) => {
   const { organizationId, user, tenantContext, requestId, session } = context
   const repository = context.repository
@@ -45,15 +39,6 @@ const handler = async (event, context) => {
   log('start', { organizationId, userId: user?.id })
 
   try {
-    // Check if repo is already initialized (avoid re-initializing on every request)
-    if (repository?.initialize && !repository._initialized) {
-      log('initializing repository')
-      const initStart = Date.now()
-      await repository.initialize()
-      repository._initialized = true
-      log('repository initialized', { elapsedMs: Date.now() - initStart })
-    }
-
     const store = repository.getStore('governedReviewPreparations')
     if (!store) {
       throw new Error('Preparation store governedReviewPreparations not available')
