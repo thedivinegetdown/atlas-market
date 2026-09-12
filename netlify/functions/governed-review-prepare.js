@@ -39,21 +39,40 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   const log = (...args) => serverLogger.debug('[governed-review-prepare]', ...args)
 
   const now = Date.now()
-  log('start', { organizationId, userId: user?.id })
+  log('start', { organizationId, userId: user?.id, hasOrg: !!organizationId, hasUser: !!user?.id })
 
   try {
-    // Ensure repository is initialized (idempotent)
+    // Stage: AUTH_CONTEXT_VALIDATED
+    if (!organizationId || !user?.id) {
+      return {
+        ok: false,
+        error: { code: 'AUTH_CONTEXT_FAILED', message: 'Missing organizationId or userId after auth' }
+      }
+    }
+
+    // Stage: REPOSITORY_INIT
     if (repository?.initialize && !repository._initialized) {
       log('initializing repository')
       const initStart = Date.now()
-      await repository.initialize()
-      repository._initialized = true
-      log('repository initialized', { elapsedMs: Date.now() - initStart })
+      try {
+        await repository.initialize()
+        repository._initialized = true
+        log('repository initialized', { elapsedMs: Date.now() - initStart })
+      } catch (initErr) {
+        return {
+          ok: false,
+          error: { code: 'MIGRATION_FAILED', message: 'Repository initialization failed', details: initErr?.message }
+        }
+      }
     }
 
+    // Stage: STORE_AVAILABILITY
     const store = repository.getStore('governedReviewPreparations')
     if (!store) {
-      throw new Error('Preparation store governedReviewPreparations not available')
+      return {
+        ok: false,
+        error: { code: 'STORE_UNAVAILABLE', message: 'governedReviewPreparations store not available' }
+      }
     }
 
     const preparationId = `prep_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`
@@ -105,7 +124,10 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
           throw err
         }
       } else {
-        throw err
+        return {
+          ok: false,
+          error: { code: 'PREPARATION_WRITE_FAILED', message: 'Failed to write preparation', details: err?.message }
+        }
       }
     }
 
@@ -123,14 +145,14 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
       }
     }
 
-    // Trigger background worker - fire and forget with timeout
+    // Stage: BACKGROUND_DISPATCH
     const backgroundUrl = `/.netlify/functions/governed-review-prepare-background`
     try {
       const accessToken = context.session?.token ?? context.session?.access_token
       const fetchController = new AbortController()
       const timeoutId = setTimeout(() => fetchController.abort(), 5000)
       const fetchStart = Date.now()
-      await fetch(`/.netlify/functions/governed-review-prepare-background`, {
+      const bgResponse = await fetch(`/.netlify/functions/governed-review-prepare-background`, {
         method: 'POST',
         signal: fetchController.signal,
         headers: {
@@ -140,9 +162,18 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
         body: JSON.stringify({ preparationId: prep.id }),
       })
       clearTimeout(timeoutId)
+      if (!bgResponse.ok) {
+        return {
+          ok: false,
+          error: { code: 'BACKGROUND_DISPATCH_FAILED', message: 'Background worker dispatch failed', details: `HTTP ${bgResponse.status}` }
+        }
+      }
       log('background worker triggered', { elapsedMs: Date.now() - fetchStart })
     } catch (triggerErr) {
-      serverLogger.warn('background trigger failed', { error: triggerErr?.message })
+      return {
+        ok: false,
+        error: { code: 'BACKGROUND_DISPATCH_FAILED', message: 'Background worker dispatch failed', details: triggerErr?.message }
+      }
     }
 
     log('returning success', { totalElapsedMs: Date.now() - now })
@@ -164,7 +195,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     return {
       ok: false,
       error: {
-        code: 'preparation_start_failed',
+        code: 'PREPARATION_START_FAILED',
         message: 'Unable to start governed review preparation',
         details: err?.message ?? 'Unknown error',
       },
