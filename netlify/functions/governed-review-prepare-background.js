@@ -228,7 +228,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     serverLogger.info('governed review background claim result', { preparationId, claimed: claimResult.claimed, reason: claimResult.reason })
 
     if (!claimResult.claimed) {
-      return { ok: true, data: { preparationId, claimed: false, reason: claimResult.reason } }
+      return { ok: false, error: { code: 'CLAIM_FAILED', message: 'Atomic claim failed', details: claimResult.reason }, status: 409 }
     }
 
     const workspaceDataService = createWorkspaceDataService()
