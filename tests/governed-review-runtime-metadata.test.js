@@ -11,5 +11,8 @@ describe('governed review runtime metadata', () => {
     expect(globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__).toEqual({
       preparationId: 'prep-1', status: 'running', attempt: 1, claimTokenPresent: true, reused: false,
     })
+    expect(JSON.parse(document.documentElement.getAttribute('data-atlas-governed-review-preparation'))).toEqual({
+      preparationId: 'prep-1', status: 'running', attempt: 1, claimTokenPresent: true, reused: false,
+    })
   })
 })

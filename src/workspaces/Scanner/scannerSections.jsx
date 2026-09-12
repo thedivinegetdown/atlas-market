@@ -24,7 +24,7 @@ function value(numberValue) {
 export function publishGovernedReviewRuntimeMetadata(data = {}) {
   if (typeof globalThis === 'undefined') return
   const current = globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ ?? {}
-  globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ = {
+  const metadata = {
     ...current,
     preparationId: data.preparationId ?? current.preparationId ?? null,
     status: data.status ?? current.status ?? null,
@@ -32,6 +32,8 @@ export function publishGovernedReviewRuntimeMetadata(data = {}) {
     claimTokenPresent: typeof data.claimTokenPresent === 'boolean' ? data.claimTokenPresent : (current.claimTokenPresent ?? false),
     ...(typeof data.reused === 'boolean' ? { reused: data.reused } : {}),
   }
+  globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ = metadata
+  globalThis.document?.documentElement?.setAttribute('data-atlas-governed-review-preparation', JSON.stringify(metadata))
 }
 
 export function QualifiedTradePlanCard({ evaluation }) {
