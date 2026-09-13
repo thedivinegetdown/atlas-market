@@ -11,8 +11,8 @@
       "unknown": 0
     },
     "byAccess": {
-      "read": 81,
-      "mutation": 57,
+      "read": 80,
+      "mutation": 58,
       "read-and-mutation": 142
     },
     "byPriority": {
@@ -2371,14 +2371,14 @@
       "path": "netlify/functions/governed-review-prepare-background.js",
       "wrapper": "organization-authenticated",
       "methods": [
-        "GET"
+        "POST"
       ],
-      "access": "read",
+      "access": "mutation",
       "authenticated": true,
       "boundary": "organization",
       "permission": "dashboard.read",
-      "csrfRequired": false,
-      "endpointClassification": "AUTHENTICATED_READ",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
       "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
       "risk": "controlled",
       "priority": "P3",
