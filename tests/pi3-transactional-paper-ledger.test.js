@@ -5,6 +5,7 @@ import {
   resolveCanonicalPaperLedgerRepository,
   DEFAULT_INITIAL_PAPER_BALANCE,
 } from '../lib/opportunities/persistence/canonicalPaperLedgerRepository.js'
+import { createIndexPullbackExitPolicy } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 
 const now = '2026-08-13T12:00:00.000Z'
 const scope = (overrides = {}) => ({
@@ -78,9 +79,17 @@ class PaperPgHarness {
       const rows = state.positions.filter(x => x.account_record_id === params[0] && (!text.includes("status='open'") || (x.status === 'open' && x.quantity > 0)))
       return { rows }
     }
+    if (text.startsWith('select * from atlas_paper_executions') && text.includes("payload->'forwardobservation'")) {
+      const [organization_id, team_workspace_id, account_id, user_id] = params
+      return { rows: state.executions.filter(x => x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id && x.execution_type === 'close' && x.payload?.forwardObservation?.experimentId) }
+    }
     if (text.startsWith('select * from atlas_paper_executions') && text.includes('organization_id=$1')) {
       const [organization_id, team_workspace_id, account_id, user_id, limit] = params
       return { rows: state.executions.filter(x => x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id).slice(0, limit) }
+    }
+    if (text.startsWith('select payload from atlas_paper_executions') && text.includes("execution_type='entry'")) {
+      const [account_record_id, position_id] = params
+      return { rows: state.executions.filter(x => x.account_record_id === account_record_id && x.position_id === position_id && x.execution_type === 'entry').map(x => ({ payload: x.payload })) }
     }
     if (text.startsWith('select * from atlas_paper_executions')) {
       const [account_record_id, idempotency_fingerprint] = params
@@ -192,6 +201,17 @@ describe('PI.3 durable paper account and immutable ledger', () => {
 })
 
 describe('PI.3 transactional reductions, closes, and realized performance evidence', () => {
+  it('persists EDGE.2 identity from one tagged entry into a qualifying full close', async () => {
+    const policy = createIndexPullbackExitPolicy({ strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', side: 'long', entryPrice: 100, stopPrice: 98, targetPrice: 104, enteredAt: now })
+    const cohort = { experimentId: 'EDGE.2', observationId: 'edge-a', manifestFingerprint: 'manifest-a' }
+    const { database, repository, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', exitPolicy: policy, forwardObservation: cohort } })
+    expect(committed.execution.payload.forwardObservation).toEqual(cohort)
+    const closed = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 98, updatedAt: now, liquidityScore: 80 }, exitPolicy: policy, paperModeEnabled: true, now })
+    expect(closed.execution.payload).toMatchObject({ executionType: 'close', forwardObservation: cohort, exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true } })
+    const durable = await createCanonicalPaperLedgerRepository({ database }).listExecutions(scope())
+    expect(durable.find((record) => record.executionType === 'close')?.payload?.forwardObservation).toEqual(cohort)
+    expect((await repository.listForwardObservationExecutions(scope())).map((record) => record.executionType)).toEqual(['close'])
+  })
   it('partially reduces, preserves cost basis, and records realized profit/cash/P&L', async () => {
     const { repository, committed } = await seeded()
     const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 4, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now })

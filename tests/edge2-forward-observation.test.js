@@ -34,6 +34,15 @@ function manifest(overrides = {}) {
   return createForwardObservationManifest(manifestInput(overrides))
 }
 
+function completedOutcomes(observation, count) {
+  return Array.from({ length: count }, (_, index) => ({
+    executionId: `close-${index}`,
+    executionType: 'close',
+    forwardObservation: { experimentId: 'EDGE.2', observationId: observation.observationId, manifestFingerprint: observation.manifestFingerprint },
+    exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true },
+  }))
+}
+
 function eligibleEvidence(overrides = {}) {
   return {
     forwardTestEligible: true,
@@ -131,7 +140,7 @@ describe('EDGE.2 fixed forward paper observation', () => {
   it('does not classify profitability before both minimums are satisfied', () => {
     const observation = manifest()
     const snapshots = Array.from({ length: 19 }, (_, index) => ({ timestamp: `2026-09-${String(index + 1).padStart(2, '0')}T14:00:00Z`, quoteFreshness: 'LIVE', provider: 'twelvedata' }))
-    const result = buildForwardObservationStatus({ manifest: observation, snapshots, performanceReview: { sample: { completedTrades: 29 }, performance: { expectancyPerTrade: 10, profitFactor: 2 } } })
+    const result = buildForwardObservationStatus({ manifest: observation, snapshots, outcomes: completedOutcomes(observation, 29), performanceReview: { sample: { completedTrades: 29 }, performance: { expectancyPerTrade: 10, profitFactor: 2 } } })
     expect(result).toMatchObject({ status: 'COLLECTING', sessionsElapsed: 19, completedOutcomes: 29, reviewClassification: null })
   })
 
@@ -139,8 +148,8 @@ describe('EDGE.2 fixed forward paper observation', () => {
     const observation = manifest()
     const nineteen = Array.from({ length: 19 }, (_, index) => ({ timestamp: `2026-09-${String(index + 1).padStart(2, '0')}T14:00:00Z`, quoteFreshness: 'LIVE', provider: 'twelvedata' }))
     const twenty = [...nineteen, { timestamp: '2026-09-20T14:00:00Z', quoteFreshness: 'LIVE', provider: 'twelvedata' }]
-    expect(buildForwardObservationStatus({ manifest: observation, snapshots: nineteen, performanceReview: { sample: { completedTrades: 30 } } }).status).toBe('MINIMUM_SESSIONS_PENDING')
-    expect(buildForwardObservationStatus({ manifest: observation, snapshots: twenty, performanceReview: { sample: { completedTrades: 29 } } }).status).toBe('MINIMUM_OUTCOMES_PENDING')
+    expect(buildForwardObservationStatus({ manifest: observation, snapshots: nineteen, outcomes: completedOutcomes(observation, 30), performanceReview: { sample: { completedTrades: 30 } } }).status).toBe('MINIMUM_SESSIONS_PENDING')
+    expect(buildForwardObservationStatus({ manifest: observation, snapshots: twenty, outcomes: completedOutcomes(observation, 29), performanceReview: { sample: { completedTrades: 29 } } }).status).toBe('MINIMUM_OUTCOMES_PENDING')
   })
 
   it('becomes review-ready deterministically and reuses PA.3/PA.5 analytics', () => {
@@ -148,10 +157,24 @@ describe('EDGE.2 fixed forward paper observation', () => {
     const snapshots = Array.from({ length: 20 }, (_, index) => ({ timestamp: `2026-09-${String(index + 1).padStart(2, '0')}T14:00:00Z`, quoteFreshness: 'LIVE', provider: 'twelvedata' }))
     const performanceReview = { sample: { completedTrades: 30 }, performance: { expectancyPerTrade: 12, profitFactor: 1.4, maximumDrawdownPct: 4 }, recentTrend: 'STABLE', strategies: [{ value: 'index-pullback-v1' }], trendRegimes: [{ value: 'BULL' }], symbols: [{ value: 'SPY' }] }
     const learningEvidence = { qualityCalibration: { status: 'CONSISTENT' } }
-    const first = buildForwardObservationStatus({ manifest: observation, snapshots, performanceReview, learningEvidence })
-    const second = buildForwardObservationStatus({ manifest: observation, snapshots, performanceReview, learningEvidence })
+    const outcomes = completedOutcomes(observation, 30)
+    const first = buildForwardObservationStatus({ manifest: observation, snapshots, outcomes, performanceReview, learningEvidence })
+    const second = buildForwardObservationStatus({ manifest: observation, snapshots, outcomes, performanceReview, learningEvidence })
     expect(first).toEqual(second)
     expect(first).toMatchObject({ status: 'READY_FOR_REVIEW', reviewClassification: 'PROMISING', metrics: performanceReview.performance, tradeQualityCalibration: { status: 'CONSISTENT' } })
+  })
+
+  it('counts only full policy-compliant closes linked to the exact cohort', () => {
+    const observation = manifest()
+    const valid = completedOutcomes(observation, 1)[0]
+    const records = [valid,
+      { ...valid, executionType: 'entry' },
+      { ...valid, executionType: 'reduction' },
+      { ...valid, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false } },
+      { ...valid, forwardObservation: { ...valid.forwardObservation, manifestFingerprint: 'other' } },
+      { ...valid, forwardObservation: null },
+    ]
+    expect(buildForwardObservationStatus({ manifest: observation, outcomes: records, performanceReview: { sample: { completedTrades: 30 } } }).completedOutcomes).toBe(1)
   })
 
   it('keeps the production cohort not started until an approved manifest is persisted', () => {

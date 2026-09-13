@@ -179,4 +179,11 @@ describe('forward observation production client', () => {
     expect(options).toMatchObject({ method: 'POST', headers: { authorization: 'Bearer identity-token', 'x-csrf-token': 'signed-csrf' } })
     expect(JSON.parse(options.body)).toEqual({ organizationId: 'org-atlas-local', accountId: 'paper-portfolio' })
   })
+
+  it('does not start EDGE.2 when the reviewed evaluation lacks durable linkage', async () => {
+    const evidence = evidenceRepository([evaluation('index-pullback-v1', { evidenceFingerprint: null })])
+    const result = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledgerRepository(), now: NOW })
+    expect(result.experiments[0]).toMatchObject({ statusAfter: 'NOT_STARTED', reason: 'durable_evaluation_linkage_missing' })
+    expect(evidence.saveForwardObservationManifest).not.toHaveBeenCalled()
+  })
 })
