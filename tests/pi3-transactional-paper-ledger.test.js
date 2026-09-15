@@ -282,7 +282,9 @@ describe('PI.3 migration and integration boundaries', () => {
 
   it('adds one ordered additive migration with tracking-safe constraints and indexes', () => {
     expect(migration).toContain('202608130069_pi3_transactional_paper_account_ledger')
-    const section = migration.slice(migration.indexOf('202608130069_pi3_transactional_paper_account_ledger'))
+    const start = migration.indexOf('202608130069_pi3_transactional_paper_account_ledger')
+    const next = migration.indexOf('Object.freeze({', start + 1)
+    const section = migration.slice(start, next === -1 ? undefined : next)
     expect(section).toMatch(/UNIQUE \(account_record_id, idempotency_fingerprint\)/)
     expect(section).toMatch(/revision BIGINT NOT NULL DEFAULT 0/)
     expect(section).toMatch(/CREATE INDEX IF NOT EXISTS/)

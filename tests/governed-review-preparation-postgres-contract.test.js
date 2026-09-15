@@ -7,7 +7,7 @@ import { MIGRATIONS, runMigrations } from '../lib/db/migrations.js'
 describe('governed review preparation PostgreSQL contract', () => {
   it('persists lifecycle fields, reuses the active record, and atomically claims it', async () => {
     const scope = { organizationId: 'org-1', teamWorkspaceId: 'team-1', userId: 'user-1' }
-    const createdAt = new Date('2026-09-12T12:00:00.000Z')
+    const createdAt = new Date()
     let saved
     let inserts = 0
     const query = vi.fn(async (sql, params) => {
