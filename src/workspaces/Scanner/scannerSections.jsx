@@ -356,6 +356,19 @@ export function TradeQualityPanel({ candidate, state }) {
       ) : null}
       {resolved.isLoading ? <p role="status">Evaluating trade quality…</p> : null}
       {resolved.error ? <p role="alert">Trade quality is unavailable.</p> : null}
+      {quality && !selectedStrategyId ? <>
+        <MarketDataStatus provenance={quality.marketData} />
+        <div className="metric-grid">
+          <MetricCard label="Symbol" value={quality.symbol} />
+          <MetricCard label="Score" value={quality.score == null ? 'Not scored' : `${quality.score}/100`} />
+          <MetricCard label="Band" value={display(quality.band)} />
+          <MetricCard label="Confidence" value={`${quality.confidence}%`} />
+          <MetricCard label="Coverage" value={`${quality.evidenceCoverage}%`} />
+          <MetricCard label="Freshness" value={display(quality.freshness)} />
+        </div>
+        {quality.missingInputs?.length || quality.blockingReasons?.length ? <details><summary>Evidence and blockers</summary>{quality.blockingReasons?.map((reason) => <p key={reason}>{reason}</p>)}{quality.missingInputs?.length ? <p>Missing: {quality.missingInputs.join(', ')}</p> : null}</details> : null}
+        <p>Advisory only. Paper trading remains mandatory; this score cannot rank scanners, activate strategies, place orders, or override risk controls.</p>
+      </> : null}
       {showStrategySelection && strategyAttribution.length > 0 && (
         <div className="strategy-selection">
           <h3>Attributed Strategies for {candidate.symbol}</h3>
