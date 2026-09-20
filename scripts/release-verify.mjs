@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { validateProductionConfiguration } from '../lib/system/productionConfigurationValidationEngine.js'
 
 export const LINT_WARNING_BASELINE = 26
+const FULL_TEST_FAILURE_OUTPUT_MAX_CHARS = 60000
 
 const releaseCriticalCommands = Object.freeze([
   { id: 'focused-security-release-tests', command: 'npm', args: ['test', '--', 'tests/phase80-security-accessibility-hardening.test.js', 'tests/phase82-release-closure-merge-readiness.test.js'] },
@@ -83,6 +84,10 @@ export function verifyGeneratedArtifacts({ root = '.', gitTrackedFiles = [] } = 
 
 export function createReleaseVerificationSummary({ stages, gitStatus = '', lintWarnings = 0, buildWarning = false, migrationSafety, sensitiveScan, artifactCheck }) {
   const failedStage = stages.find((stage) => stage.status === 'failed')?.stage ?? null
+  const fullTestFailure = stages.find((stage) => stage.stage === 'full-test-suite' && stage.status === 'failed')
+  const fullTestFailureOutput = fullTestFailure?.output
+    ? fullTestFailure.output.slice(-FULL_TEST_FAILURE_OUTPUT_MAX_CHARS)
+    : null
   const ok = !failedStage
     && lintWarnings <= LINT_WARNING_BASELINE
     && !buildWarning
@@ -105,6 +110,7 @@ export function createReleaseVerificationSummary({ stages, gitStatus = '', lintW
     sensitiveScan,
     artifactCheck,
     dirtyWorktree: String(gitStatus ?? '').trim().length > 0,
+    fullTestFailureOutput,
     stages: stages.map(({ output, ...stage }) => stage),
   }
 }
