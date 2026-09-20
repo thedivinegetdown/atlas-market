@@ -2,7 +2,7 @@ import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
 import { serverLogger } from '../../../lib/logging/logger.js'
 
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
-  const { organizationId, user, tenantContext, requestId } = context
+  const { organizationId, user } = context
   const repository = context.repository
 
   try {
@@ -38,7 +38,6 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     return {
       ok: false,
       error: { 
-        code: 'diag_failed', 
         message: 'Diagnostic failed', 
         details: err?.message ?? 'Unknown error',
         code: err?.code

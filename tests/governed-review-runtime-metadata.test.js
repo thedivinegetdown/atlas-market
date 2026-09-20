@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { publishGovernedReviewRuntimeMetadata } from '../src/workspaces/Scanner/scannerSections.jsx'
+import { publishGovernedReviewRuntimeMetadata } from '../src/workspaces/Scanner/governedReviewRuntimeMetadata.js'
 
 describe('governed review runtime metadata', () => {
   afterEach(() => { delete globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ })

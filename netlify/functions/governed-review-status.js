@@ -58,7 +58,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   if (expiresAt && expiresAt <= now) {
     // Mark as expired if not already
     if (payload.status !== 'expired' && payload.status !== 'completed' && payload.status !== 'failed') {
-      const { createOrganizationAuthenticatedApiHandler: _ } = await import('./_shared/authApi.js')
+      await import('./_shared/authApi.js')
       // Note: we can't easily update here without repository, but status check will catch it
       return {
         ok: true,

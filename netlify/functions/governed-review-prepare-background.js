@@ -41,15 +41,10 @@ const GOVERNED_STRATEGIES = Object.freeze([
 ])
 
 const PREPARATION_STORE = 'governedReviewPreparations'
-const PREPARATION_TTL_MS = 24 * 60 * 60 * 1000
 const STALE_THRESHOLD_MS = 5 * 60 * 1000
 
 function createClaimToken() {
   return `claim_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`
-}
-
-function getPreparationStore(repository) {
-  return repository.getStore(PREPARATION_STORE)
 }
 
 async function savePreparation(repository, preparation) {
@@ -130,7 +125,7 @@ export async function claimPreparation(repository, preparationId, tenantContext)
       logStage('claimSucceeded', preparationId, { attempt, claimToken: claimToken.slice(0, 8) + '...' })
       return { claimed: true, preparation: { ...prep, status: 'running', attempt, claimToken, startedAt: new Date(now).toISOString(), updatedAt: new Date(now).toISOString() } }
     }
-  } catch (err) {
+  } catch {
     return { claimed: false, reason: 'claimed_by_other', preparation: prep }
   }
   return { claimed: false, reason: 'claimed_by_other', preparation: prep }
@@ -138,7 +133,7 @@ export async function claimPreparation(repository, preparationId, tenantContext)
 const BREAKOUT_OBSERVATION_UNIVERSE = Object.freeze(['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'])
 
 async function runGovernedPreparation(preparation, context) {
-  const { workspaceDataService, creditBudget, now } = context
+  const { workspaceDataService, now } = context
 
   try {
     await savePreparation(preparation.repository, {

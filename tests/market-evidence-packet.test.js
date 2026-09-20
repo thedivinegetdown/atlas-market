@@ -1,12 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vitest'
 import { createMarketEvidencePacketBuilder, MARKET_EVIDENCE_PACKET_VERSION, GOVERNED_UNIVERSE } from '../lib/market/marketEvidencePacket.js'
-import { createMarketDataService } from '../lib/market/marketDataService.js'
-import { createMarketRegimeOrchestrator } from '../lib/market/regime/marketRegimeOrchestrator.js'
-import { createDailyIndicatorPipeline } from '../lib/market/indicators/dailyIndicatorPipeline.js'
+import '../lib/market/marketDataService.js'
+import '../lib/market/regime/marketRegimeOrchestrator.js'
+import '../lib/market/indicators/dailyIndicatorPipeline.js'
 import { createCreditBudget } from '../lib/market/creditBudget.js'
 import { buildBreakoutMomentumSignal } from '../lib/strategies/breakout/breakoutMomentumSignal.js'
-import { buildRangeMeanReversionSignal } from '../lib/strategies/range/rangeMeanReversionSignal.js'
-import { buildVolatilityExpansionSignal } from '../lib/strategies/volatility/volatilityExpansionSignal.js'
+import '../lib/strategies/range/rangeMeanReversionSignal.js'
+import '../lib/strategies/volatility/volatilityExpansionSignal.js'
 import { selectStrategiesForRegime } from '../lib/strategies/adaptive/index.js'
 import { scoreTradeQuality } from '../lib/opportunities/quality/index.js'
 import { serverLogger } from '../lib/logging/logger.js'
@@ -177,7 +177,7 @@ describe('Market Evidence Packet', () => {
     const packet = await packetBuilder.build(['SPY'])
     const ev = packet.symbols.SPY
 
-    const suitability = selectStrategiesForRegime({
+    selectStrategiesForRegime({
       regime: ev.regime.classification,
       strategies: [{ strategyId: 'breakout-momentum-v1', strategyName: 'Breakout Momentum', lifecycleState: 'paper_forward_observation', status: 'active', requiredIndicators: [], blockingPrerequisites: [] }],
       context: { symbol: 'SPY', timeframe: '1D' },

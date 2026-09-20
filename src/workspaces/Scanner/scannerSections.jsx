@@ -1,3 +1,4 @@
+import { publishGovernedReviewRuntimeMetadata } from './governedReviewRuntimeMetadata.js'
 import { Fragment, useState, useCallback, useEffect } from 'react'
 import { AlertsPanel, ScannerPanel, SignalPanel } from '../../components/panels.jsx'
 import { EmptyWorkspaceState, MetricCard, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
@@ -8,7 +9,7 @@ import { usePaperOrderSimulation } from '../../hooks/usePaperOrderSimulation.js'
 import { MarketDataStatus } from '../../components/MarketDataStatus.jsx'
 import { workspaceApiClient } from '../../api/workspaceApiClient.js'
 import { serverLogger } from '../../../lib/logging/logger.js'
-import { BREAKOUT_OBSERVATION_UNIVERSE } from '../../../lib/opportunities/forwardTest/forwardObservationEngine.js'
+import '../../../lib/opportunities/forwardTest/forwardObservationEngine.js'
 import { composeQualifiedTradePlan, rankQualifiedTradePlans } from '../../../lib/opportunities/qualifiedTradePlan/index.js'
 
 function display(value) {
@@ -17,36 +18,6 @@ function display(value) {
 
 function value(numberValue) {
   return Number.isFinite(Number(numberValue)) ? Number(numberValue) : 'Unavailable'
-}
-
-function safeClaimDiagnostics(value) {
-  if (!value || typeof value !== 'object') return null
-  return {
-    workerEntered: value.workerEntered === true,
-    scopedPreparationLoaded: value.scopedPreparationLoaded === true,
-    physicalStatusMatchesExpected: value.physicalStatusMatchesExpected === true,
-    physicalClaimTokenMatchesExpected: value.physicalClaimTokenMatchesExpected === true,
-    conditionalUpdateAttempted: value.conditionalUpdateAttempted === true,
-    claimSucceeded: value.claimSucceeded === true,
-  }
-}
-
-// Deliberately nonvisual: permits authenticated runtime verification without
-// rendering lifecycle internals or ever exposing the raw claim token.
-export function publishGovernedReviewRuntimeMetadata(data = {}) {
-  if (typeof globalThis === 'undefined') return
-  const current = globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ ?? {}
-  const metadata = {
-    ...current,
-    preparationId: data.preparationId ?? current.preparationId ?? null,
-    status: data.status ?? current.status ?? null,
-    attempt: Number.isInteger(data.attempt) ? data.attempt : (current.attempt ?? 0),
-    claimTokenPresent: typeof data.claimTokenPresent === 'boolean' ? data.claimTokenPresent : (current.claimTokenPresent ?? false),
-    ...(data.claimDiagnostics ? { claimDiagnostics: safeClaimDiagnostics(data.claimDiagnostics) } : {}),
-    ...(typeof data.reused === 'boolean' ? { reused: data.reused } : {}),
-  }
-  globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ = metadata
-  globalThis.document?.documentElement?.setAttribute('data-atlas-governed-review-preparation', JSON.stringify(metadata))
 }
 
 export function QualifiedTradePlanCard({ evaluation }) {
@@ -87,7 +58,7 @@ export function QualifiedOpportunityRankingPanel({ plans = [] }) {
 }
 
 export function GovernedReviewQueue() {
-  const [preparationId, setPreparationId] = useState(null)
+  const [, setPreparationId] = useState(null)
   const [preparationStatus, setPreparationStatus] = useState('idle')
   const [queueItems, setQueueItems] = useState([])
   const [error, setError] = useState(null)
@@ -132,7 +103,7 @@ export function GovernedReviewQueue() {
         try {
           const statusResponse = await workspaceApiClient.getGovernedReviewPreparationStatus(pid)
           if (statusResponse.ok && statusResponse.data) {
-            const { status, queueItems: items, error: prepError, providerCalls } = statusResponse.data
+            const { status, queueItems: items, error: prepError } = statusResponse.data
             setPreparationStatus(status)
             publishGovernedReviewRuntimeMetadata(statusResponse.data)
             if (status === 'completed') {
@@ -159,7 +130,7 @@ export function GovernedReviewQueue() {
     }
   }, [clearPolling])
 
-  const handleSelectStrategy = useCallback((symbol, strategyId) => {
+  useCallback((symbol, strategyId) => {
     setSelectedStrategies(prev => ({ ...prev, [symbol]: strategyId }))
   }, [])
 

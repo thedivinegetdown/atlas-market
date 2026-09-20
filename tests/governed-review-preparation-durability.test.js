@@ -1,13 +1,12 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
+import { describe, expect, it, beforeEach } from 'vitest'
 import { createCreditBudget } from '../lib/market/creditBudget.js'
 
 describe('Governed Review Preparation Durability', () => {
-  let mockRepository, mockStore, creditBudget, now, currentTime
+  let mockRepository, mockStore, currentTime
 
   beforeEach(() => {
     currentTime = Date.now()
-    now = () => new Date(currentTime)
-    creditBudget = createCreditBudget({ dailyLimit: 800, minuteLimit: 6, now: () => currentTime })
+    createCreditBudget({ dailyLimit: 800, minuteLimit: 6, now: () => currentTime })
 
     mockStore = {
       records: new Map(),
@@ -391,7 +390,7 @@ describe('Governed Review Preparation Durability', () => {
 
     // Simulate two concurrent start requests
     // First creates preparation
-    const prep1 = await savePreparation(mockRepository, {
+    await savePreparation(mockRepository, {
       id: 'prep-1',
       organizationId: 'org-test',
       userId: 'user-test',

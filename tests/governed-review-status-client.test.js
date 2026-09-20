@@ -3,7 +3,7 @@ import { createWorkspaceApiClient } from '../src/api/workspaceApiClient.js'
 
 describe('governed review status client', () => {
   it('sends the required organization scope while polling a preparation id', async () => {
-    const fetchImpl = vi.fn(async (url) => ({ ok: true, status: 200, json: async () => ({ ok: true, data: { preparationId: 'prep-1', status: 'running' } }) }))
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, data: { preparationId: 'prep-1', status: 'running' } }) }))
     const client = createWorkspaceApiClient({ fetchImpl, accessTokenProvider: () => 'token' })
 
     await client.getGovernedReviewPreparationStatus('prep-1')
@@ -26,7 +26,7 @@ describe('governed review status client', () => {
       queueItems: [],
       providerCalls: null,
     }
-    const fetchImpl = vi.fn(async (url) => ({ ok: true, status: 200, json: async () => ({ ok: true, data: mockResponse }) }))
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ ok: true, data: mockResponse }) }))
     const client = createWorkspaceApiClient({ fetchImpl, accessTokenProvider: () => 'token' })
 
     const result = await client.getGovernedReviewPreparationStatus('prep-1')
