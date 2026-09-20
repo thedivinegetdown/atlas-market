@@ -5,7 +5,6 @@ import { fileURLToPath } from 'node:url'
 import { validateProductionConfiguration } from '../lib/system/productionConfigurationValidationEngine.js'
 
 export const LINT_WARNING_BASELINE = 26
-const FULL_TEST_FAILURE_OUTPUT_MAX_CHARS = 60000
 
 const releaseCriticalCommands = Object.freeze([
   { id: 'focused-security-release-tests', command: 'npm', args: ['test', '--', 'tests/phase80-security-accessibility-hardening.test.js', 'tests/phase82-release-closure-merge-readiness.test.js'] },
@@ -84,10 +83,6 @@ export function verifyGeneratedArtifacts({ root = '.', gitTrackedFiles = [] } = 
 
 export function createReleaseVerificationSummary({ stages, gitStatus = '', lintWarnings = 0, buildWarning = false, migrationSafety, sensitiveScan, artifactCheck }) {
   const failedStage = stages.find((stage) => stage.status === 'failed')?.stage ?? null
-  const fullTestFailure = stages.find((stage) => stage.stage === 'full-test-suite' && stage.status === 'failed')
-  const fullTestFailureOutput = fullTestFailure?.output
-    ? fullTestFailure.output.slice(-FULL_TEST_FAILURE_OUTPUT_MAX_CHARS)
-    : null
   const ok = !failedStage
     && lintWarnings <= LINT_WARNING_BASELINE
     && !buildWarning
@@ -110,13 +105,12 @@ export function createReleaseVerificationSummary({ stages, gitStatus = '', lintW
     sensitiveScan,
     artifactCheck,
     dirtyWorktree: String(gitStatus ?? '').trim().length > 0,
-    fullTestFailureOutput,
     stages: stages.map(({ output, ...stage }) => stage),
   }
 }
 
 export function runReleaseVerification({
-  runner = (command, args) => spawnSync(command, args, { encoding: 'utf8', shell: process.platform === 'win32' }),
+  runner = (command, args) => spawnSync(command, args, { encoding: 'utf8', shell: process.platform === 'win32', maxBuffer: 10 * 1024 * 1024 }),
   readFile = readFileSync,
   root = '.',
   gitStatus = '',
@@ -204,11 +198,6 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const gitTrackedFiles = (spawnSync('git', ['ls-files'], { encoding: 'utf8', shell: process.platform === 'win32' }).stdout ?? '').split(/\r?\n/).filter(Boolean)
   const summary = runReleaseVerification({ gitStatus, gitTrackedFiles, ci: process.argv.includes('--ci') })
   for (const stage of summary.stages) console.log(`${stage.status === 'passed' ? 'PASS' : 'FAIL'} ${stage.stage}`)
-  if (summary.fullTestFailureOutput) {
-    console.error('Full test suite failure output:')
-    console.error(summary.fullTestFailureOutput)
-    delete summary.fullTestFailureOutput
-  }
   console.log(JSON.stringify(summary, null, 2))
   if (!summary.ok) process.exitCode = 1
 }
