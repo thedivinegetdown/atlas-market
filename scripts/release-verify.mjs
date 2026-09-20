@@ -204,6 +204,11 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   const gitTrackedFiles = (spawnSync('git', ['ls-files'], { encoding: 'utf8', shell: process.platform === 'win32' }).stdout ?? '').split(/\r?\n/).filter(Boolean)
   const summary = runReleaseVerification({ gitStatus, gitTrackedFiles, ci: process.argv.includes('--ci') })
   for (const stage of summary.stages) console.log(`${stage.status === 'passed' ? 'PASS' : 'FAIL'} ${stage.stage}`)
+  if (summary.fullTestFailureOutput) {
+    console.error('Full test suite failure output:')
+    console.error(summary.fullTestFailureOutput)
+    delete summary.fullTestFailureOutput
+  }
   console.log(JSON.stringify(summary, null, 2))
   if (!summary.ok) process.exitCode = 1
 }
