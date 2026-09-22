@@ -264,12 +264,18 @@ async function evaluate(session, expression) {
   return result.result?.value
 }
 
+export function classifyWorkspaceState(state, expectedLabel) {
+  if (state?.authenticated && state.label === expectedLabel && state.workspaceRendered && !state.routeError) return 'ready'
+  if (state?.unauthenticated) return 'unauthenticated'
+  return 'loading'
+}
+
 async function waitForWorkspace(session, expectedLabel, timeoutMs) {
   const deadline = Date.now() + timeoutMs
   while (Date.now() < deadline) {
-    const state = await evaluate(session, `(() => ({ authenticated: Boolean(document.querySelector('.trading-os-shell')), label: document.querySelector('.top-title-area h1')?.textContent?.trim() ?? null, routeError: Boolean(document.querySelector('.workspace-route-error')), loading: Boolean(document.querySelector('.workspace-route-content [role="status"]')) }))()`)
-    if (!state?.authenticated) return state
-    if (state.label === expectedLabel && !state.loading) return state
+    const state = await evaluate(session, `(() => ({ authenticated: Boolean(document.querySelector('.trading-os-shell')), unauthenticated: Boolean(document.querySelector('.auth-boundary form')), label: document.querySelector('.top-title-area h1')?.textContent?.trim() ?? null, routeError: Boolean(document.querySelector('.workspace-route-error')), workspaceRendered: Boolean(document.querySelector('.workspace-route-content .workspace-page')) }))()`)
+    const classification = classifyWorkspaceState(state, expectedLabel)
+    if (classification === 'ready' || classification === 'unauthenticated') return state
     await delay(100)
   }
   throw new Error(`workspace render timed out for ${expectedLabel}`)

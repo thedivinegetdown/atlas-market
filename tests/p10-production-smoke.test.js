@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs'
 import {
   READ_ONLY_METHODS,
   assertReadOnlyMethod,
+  classifyWorkspaceState,
   parseArguments,
   sanitizeEvidence,
   sanitizeUrl,
@@ -41,6 +42,13 @@ describe('P10 production smoke safety and evidence', () => {
     const options = parseArguments(['--base-url=https://example.test/path', '--cdp-url=http://127.0.0.1:9222', '--timeout-ms=5000'], {})
     expect(options).toMatchObject({ baseUrl: 'https://example.test', cdpUrl: 'http://127.0.0.1:9222', timeoutMs: 5000 })
     expect(() => parseArguments(['--unknown=value'], {})).toThrow('unknown production smoke option')
+  })
+
+  it('waits for identity restoration before deciding that workspace authentication is unavailable', () => {
+    expect(classifyWorkspaceState({ authenticated: false, unauthenticated: false }, 'Dashboard')).toBe('loading')
+    expect(classifyWorkspaceState({ authenticated: false, unauthenticated: true }, 'Dashboard')).toBe('unauthenticated')
+    expect(classifyWorkspaceState({ authenticated: true, unauthenticated: false, label: 'Dashboard', workspaceRendered: true, routeError: false }, 'Dashboard')).toBe('ready')
+    expect(classifyWorkspaceState({ authenticated: true, unauthenticated: false, label: 'Dashboard', workspaceRendered: false, routeError: false }, 'Dashboard')).toBe('loading')
   })
 
   it('requires every route, health boundary, authenticated access, asset, console, and network gate', () => {
