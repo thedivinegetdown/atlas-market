@@ -201,20 +201,67 @@ describe('PI.3 durable paper account and immutable ledger', () => {
 })
 
 describe('PI.3 transactional reductions, closes, and realized performance evidence', () => {
-  it('persists EDGE.2 identity from one tagged entry into a qualifying full close', async () => {
+  it.each([
+    { policyBar: { open: 100, high: 101, low: 97, close: 99, freshness: 'FRESH', observedAt: now } },
+    { policyBar: { open: 100, high: 105, low: 99, close: 104, freshness: 'FRESH', observedAt: now } },
+    { policyBar: { open: 100, high: 105, low: 97, close: 103, freshness: 'FRESH', observedAt: now } },
+    { policyBar: { open: 95, high: 96, low: 94, close: 95, freshness: 'FRESH', observedAt: now } },
+    { policyBar: { open: 106, high: 108, low: 105, close: 107, freshness: 'FRESH', observedAt: now } },
+    { sessionsHeld: 20 },
+    { sessionsHeld: 200, policyBar: { open: 100, high: 101, low: 99, close: 100, freshness: 'FRESH', observedAt: now } },
+    { policyBar: { freshness: 'STALE' } },
+    { exitPolicy: null },
+    { exitPolicy: { version: 'forged' }, policyEvidence: { authoritative: true, complete: true } },
+  ])('fails closed without durable mutation when a caller asserts chronology: %j', async (assertions) => {
+    const policy = createIndexPullbackExitPolicy({ strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', side: 'long', entryPrice: 100, stopPrice: 98, targetPrice: 104, enteredAt: now })
+    const { database, repository, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', exitPolicy: policy } })
+    const before = structuredClone(database.state)
+    const blocked = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 110, updatedAt: now }, confirmed: true, paperModeEnabled: true, now, ...assertions })
+    expect(blocked).toMatchObject({ ok: false, result: { status: 'REJECTED', blockers: ['authoritative_exit_chronology_unavailable'], exitPolicy: policy, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false } } })
+    expect(database.state).toEqual(before)
+  })
+
+  it('fails closed for missing durable policy/entry linkage instead of treating it as discretionary authority', async () => {
+    const { database, repository, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1' } })
+    database.state.executions = []
+    const before = structuredClone(database.state)
+    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 110, updatedAt: now }, confirmed: true, paperModeEnabled: true, now })
+    expect(result.result.blockers).toEqual(['authoritative_exit_chronology_unavailable'])
+    expect(database.state).toEqual(before)
+  })
+
+  it('requires explicit human confirmation even for emergency closes at the ledger boundary', async () => {
+    const { database, repository, committed } = await seeded()
+    const before = structuredClone(database.state)
+    await expect(repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, exitReason: 'manual_emergency', quote: { price: 110, updatedAt: now }, paperModeEnabled: true, now })).rejects.toThrow('Explicit human')
+    expect(database.state).toEqual(before)
+  })
+
+  it('preserves EDGE.2 identity on an emergency close without making it qualifying', async () => {
     const policy = createIndexPullbackExitPolicy({ strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', side: 'long', entryPrice: 100, stopPrice: 98, targetPrice: 104, enteredAt: now })
     const cohort = { experimentId: 'EDGE.2', observationId: 'edge-a', manifestFingerprint: 'manifest-a' }
     const { database, repository, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', exitPolicy: policy, forwardObservation: cohort } })
     expect(committed.execution.payload.forwardObservation).toEqual(cohort)
-    const closed = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 98, updatedAt: now, liquidityScore: 80 }, exitPolicy: policy, paperModeEnabled: true, now })
-    expect(closed.execution.payload).toMatchObject({ executionType: 'close', forwardObservation: cohort, exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true } })
+    const closed = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 98, updatedAt: now, liquidityScore: 80 }, exitPolicy: { ...policy, fingerprint: 'caller-forgery' }, exitReason: 'manual_emergency', paperModeEnabled: true, confirmed: true, now })
+    expect(closed.execution.payload).toMatchObject({ executionType: 'close', forwardObservation: cohort, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false }, exitPolicy: policy, evaluationEvidenceFingerprint: 'eval-evidence-1' })
+    expect(closed.execution.payload.entryEvidence).toEqual([{
+      executionId: committed.execution.executionId, strategyId: 'index-pullback-v1', evaluationId: 'eval-1',
+      evaluationEvidenceFingerprint: 'eval-evidence-1', executionIntentFingerprint: 'entry-fp-1', exitPolicy: policy, forwardObservation: cohort,
+    }])
+    expect(database.state.executions[0].payload).toEqual(committed.execution.payload)
+    expect(closed.execution.fillPrice).toBe(97.95)
+    expect(closed.execution.fees).toBe(0.49)
+    expect(closed.execution.realizedPnlDelta).toBe(-20.99)
+    expect(closed.account.cash).toBe(99978.01)
+    expect(closed.account.realizedPnl).toBe(-20.99)
+    expect(closed.position).toMatchObject({ quantity: 0, realizedPnl: -20.99, status: 'closed' })
     const durable = await createCanonicalPaperLedgerRepository({ database }).listExecutions(scope())
     expect(durable.find((record) => record.executionType === 'close')?.payload?.forwardObservation).toEqual(cohort)
     expect((await repository.listForwardObservationExecutions(scope())).map((record) => record.executionType)).toEqual(['close'])
   })
   it('partially reduces, preserves cost basis, and records realized profit/cash/P&L', async () => {
     const { repository, committed } = await seeded()
-    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 4, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now })
+    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 4, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })
     expect(result.result.status).toBe('POSITION_REDUCED')
     expect(result.position).toMatchObject({ quantity: 6, averagePrice: 100 })
     expect(result.execution.realizedPnlDelta).toBeGreaterThan(0)
@@ -224,7 +271,7 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
 
   it('fully closes without reversal and survives repository re-instantiation', async () => {
     const { database, repository, committed } = await seeded()
-    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 90, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now })
+    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 90, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })
     expect(result.result.status).toBe('POSITION_CLOSED')
     expect(result.position).toMatchObject({ quantity: 0, status: 'closed' })
     expect(result.execution.realizedPnlDelta).toBeLessThan(0)
@@ -235,14 +282,14 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
     const { database, repository, committed } = await seeded()
     const before = structuredClone(database.state)
     database.failPattern = 'update atlas_paper_accounts'
-    await expect(repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 4, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now })).rejects.toThrow('injected database failure')
+    await expect(repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 4, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })).rejects.toThrow('injected database failure')
     expect(database.state).toEqual(before)
   })
 
   it('suppresses duplicate exit after restart and concurrent over-close', async () => {
     const { database, committed } = await seeded()
     const one = createCanonicalPaperLedgerRepository({ database }), two = createCanonicalPaperLedgerRepository({ database })
-    const request = { ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now }
+    const request = { ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now }
     const [a, b] = await Promise.all([one.commitExit(request), two.commitExit(request)])
     expect([a.duplicate, b.duplicate].sort()).toEqual([false, true])
     expect(database.state.executions.filter(x => x.execution_type === 'close')).toHaveLength(1)
@@ -251,7 +298,7 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
 
   it('rejects an over-close before mutation', async () => {
     const { database, repository, committed } = await seeded()
-    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 11, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now })
+    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 11, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })
     expect(result.result.status).toBe('REJECTED')
     expect(database.state.executions).toHaveLength(1)
     expect(database.state.positions[0].quantity).toBe(10)
@@ -259,14 +306,14 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
 
   it('preserves short accounting semantics', async () => {
     const { repository, committed } = await seeded({ entry: { symbol: 'MSFT', fingerprint: 'short-entry', executionFill: { symbol: 'MSFT', assetType: 'equity', side: 'short', quantity: 5, fillPrice: 120, fees: 1, slippageBps: 2, cashImpact: 599 } } })
-    const exit = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 5, quote: { price: 100, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now })
+    const exit = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 5, quote: { price: 100, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })
     expect(exit.result.status).toBe('POSITION_CLOSED')
     expect(exit.execution.realizedPnlDelta).toBeGreaterThan(0)
   })
 
   it('returns tenant-scoped immutable realized executions for deterministic PA.3/PA.5 input', async () => {
     const { repository, committed } = await seeded()
-    await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 5, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, now })
+    await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 5, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })
     const executions = await repository.listExecutions(scope())
     expect(executions.map(x => x.executionType)).toEqual(['entry', 'reduction'])
     expect(executions[1]).toMatchObject({ paperTradingOnly: true, realizedPnlDelta: expect.any(Number) })

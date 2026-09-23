@@ -18,4 +18,37 @@ describe('guarded paper exit lifecycle',()=>{
  it('has no broker AI strategy scanner or unattended dependency',()=>{const spy=vi.fn();run({broker:spy,ai:spy,strategy:spy,scanner:spy,scheduler:spy});expect(spy).not.toHaveBeenCalled()})
 })
 describe('paper exit endpoint security',()=>{it('requires authentication',async()=>{const handler=createPaperPositionExitHandler();const r=await handler({httpMethod:'GET',headers:{},queryStringParameters:{organizationId:'org-a'}});expect(r.statusCode).toBe(401)});it('requires CSRF for mutation',async()=>{const handler=createPaperPositionExitHandler();const r=await handler({httpMethod:'POST',headers:auth2Headers({csrf:false}),body:JSON.stringify(auth2Body())});expect(r.statusCode).toBe(403)})})
+describe('PA.4 request evidence boundary', () => {
+  function endpoint() {
+    const commitExit = vi.fn(async () => ({ result: { status: 'REJECTED', blockers: ['authoritative_exit_chronology_unavailable'] } }))
+    const getMarketOverview = vi.fn(async () => ({ quote }))
+    const handler = createPaperPositionExitHandler({
+      repositoryFactory: () => ({ connected: false }),
+      organizationMembershipRepository: { getMembership: async (organizationId, userId) => ({ organizationId, userId, role: 'owner', status: 'active' }) },
+      ledgerRepository: { listOpenPositions: async () => [position()], listExecutions: async () => [], commitExit },
+      serviceFactory: () => ({ getMarketOverview }),
+    })
+    return { handler, commitExit, getMarketOverview }
+  }
+  it('never forwards client bars, sessions, policy, price, or claimed provenance to the ledger', async () => {
+    const { handler, commitExit } = endpoint()
+    const response = await handler({ httpMethod: 'POST', headers: auth2Headers(), body: JSON.stringify(auth2Body({
+      positionId: 'pos-1', quantity: 100, confirmed: true, paperTrading: true,
+      policyBar: { low: 1, high: 1000 }, sessionsHeld: 999, exitPolicy: { fingerprint: 'forged' },
+      quote: { price: 500 }, policyEvidence: { authoritative: true }, exitReason: 'manual_emergency',
+    })) })
+    expect(response.statusCode).toBe(200)
+    expect(commitExit).toHaveBeenCalledOnce()
+    const input = commitExit.mock.calls[0][0]
+    expect(input).toMatchObject({ confirmed: true, paperModeEnabled: true, exitReason: 'manual_emergency', quote })
+    for (const key of ['policyBar', 'sessionsHeld', 'exitPolicy', 'policyEvidence']) expect(input).not.toHaveProperty(key)
+  })
+  it('requires confirmation before requesting a quote or executing an emergency close', async () => {
+    const { handler, commitExit, getMarketOverview } = endpoint()
+    const response = await handler({ httpMethod: 'POST', headers: auth2Headers(), body: JSON.stringify(auth2Body({ positionId: 'pos-1', quantity: 100, paperTrading: true, exitReason: 'manual_emergency' })) })
+    expect(response.statusCode).toBe(400)
+    expect(commitExit).not.toHaveBeenCalled()
+    expect(getMarketOverview).not.toHaveBeenCalled()
+  })
+})
 describe('paper position persistence boundary',()=>{it('filters aggregates by tenant and user',async()=>{const rows=[{payload:{kind:'paper-position-lifecycle-v1',ownerUserId:'u1',tenantScope:{organizationId:'o1'},position:position()}},{payload:{kind:'paper-position-lifecycle-v1',ownerUserId:'u2',tenantScope:{organizationId:'o1'},position:position({positionId:'other'})}}];const repository={getStore:()=>({listScoped:vi.fn(async()=>rows)})};const result=await listPaperPositionAggregates(repository,{organizationId:'o1',userId:'u1'});expect(result).toHaveLength(1);expect(result[0].ownerUserId).toBe('u1')});it('writes position accounting exit and journal as one aggregate upsert',async()=>{const upsertScoped=vi.fn(async()=>({ok:true}));const repository={getStore:()=>({upsertScoped})};const aggregate={kind:'paper-position-lifecycle-v1',ownerUserId:'u1',tenantScope:{organizationId:'o1',userId:'u1'},position:position(),account,exits:[]};const exit=run();await savePaperExitAggregate(repository,aggregate,exit,{organizationId:'o1',userId:'u1'});expect(upsertScoped).toHaveBeenCalledTimes(1);expect(upsertScoped.mock.calls[0][1]).toMatchObject({position:null,account:expect.objectContaining({realizedPnl:expect.any(Number)}),exits:[expect.objectContaining({journal:expect.objectContaining({journalStatus:'recorded'})})]})})})
