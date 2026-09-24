@@ -22,18 +22,26 @@ export function createPaperOrderSimulationHandler({repository:providedRepository
   const ledger=resolveCanonicalPaperLedgerRepository({persistenceRepository,ledgerRepository:providedLedgerRepository,env})
   const accountId=requireAccountContext(body.accountId??'paper-portfolio')
   const context={tenantContext,accountId,userId:tenantContext.userId??user.id}
-  const [evaluations,existing,portfolioResult]=await Promise.all([repository.listPaperEvaluations(context),repository.listPaperSimulations(context),serviceFactory().getPortfolioSummary()])
-  const summary=portfolioResult.summary??{}
+  const enabled=String(env.PAPER_AUTOMATION_ENABLED??'false').toLowerCase()==='true'
+  const [evaluations,existing,openPositions]=await Promise.all([repository.listPaperEvaluations(context),repository.listPaperSimulations(context),ledger.listOpenPositions(context)])
+  const service=serviceFactory()
+  const eligibleSymbols=evaluations.filter(evaluation=>evaluation.status==='APPROVED_FOR_PAPER_REVIEW').slice(0,3).map(evaluation=>evaluation.symbol)
+  const markSymbols=enabled?[...new Set([...openPositions.map(position=>position.symbol),...eligibleSymbols].filter(Boolean))]:[]
+  const marks=[]
+  for(const symbol of markSymbols){
+   const market=await service.getMarketOverview(symbol)
+   marks.push({symbol,price:market.quote?.price,updatedAt:market.quote?.updatedAt,liquidityScore:market.quote?.liquidityScore})
+  }
   const today=new Date().toISOString().slice(0,10)
   const dailyCount=existing.filter(x=>x.status==='SIMULATED_FILLED'&&String(x.simulatedAt).startsWith(today)).length
   const results=[]
-  let envelope={status:'EMPTY',killSwitchEnabled:String(env.PAPER_AUTOMATION_ENABLED??'false').toLowerCase()==='true',cycleLimit:3,dailyLimit:10,dailyRemaining:Math.max(0,10-dailyCount),paperTradingOnly:true,automaticExecution:false}
-  for(const evaluation of evaluations){
+  let envelope={status:enabled?'EMPTY':'BLOCKED',killSwitchEnabled:enabled,cycleLimit:3,dailyLimit:10,dailyRemaining:Math.max(0,10-dailyCount),paperTradingOnly:true,automaticExecution:false,...(!enabled?{blocker:'Paper automation kill switch is disabled'}:{})}
+  for(const evaluation of enabled?evaluations:[]){
    if(results.length>=envelope.cycleLimit)break
-   const durable=await ledger.getOrCreateAccount(context)
+   const durable=await ledger.getCanonicalState({...context,marks,requireKnownRisk:true})
    const portfolio={id:accountId,cash:durable.account.cash,equity:durable.account.equity,buyingPower:durable.account.buyingPower,realizedPnl:durable.account.realizedPnl,positions:durable.positions}
-   const portfolioRisk={account:{accountValue:durable.account.equity,cash:durable.account.cash,buyingPower:durable.account.buyingPower},summary:{openRisk:summary.openRisk??0,openRiskPct:durable.account.equity?Number(summary.openRisk??0)/durable.account.equity*100:0,drawdownPct:summary.maxDrawdown??0}}
-   const cycle=simulateApprovedPaperEvaluations({evaluations:[evaluation],existingSimulations:[...existing,...results],portfolio,portfolioRisk,enabled:String(env.PAPER_AUTOMATION_ENABLED??'false').toLowerCase()==='true',dailyCount:dailyCount+results.filter(x=>x.status==='SIMULATED_FILLED').length})
+   const portfolioRisk=durable.risk
+   const cycle=simulateApprovedPaperEvaluations({evaluations:[evaluation],existingSimulations:[...existing,...results],portfolio,portfolioRisk,enabled,dailyCount:dailyCount+results.filter(x=>x.status==='SIMULATED_FILLED').length})
    envelope={...cycle,results:undefined}
    const simulation=cycle.results[0]
    if(!simulation)continue
@@ -45,12 +53,12 @@ export function createPaperOrderSimulationHandler({repository:providedRepository
    }
    // A prior intent may outlive a failed ledger transaction. The immutable ledger remains the accounting idempotency authority.
    const cohort=await edge2CohortFor(repository,context,evaluation,simulation)
-   const committed=await ledger.commitEntry({...context,simulation:cohort?{...simulation,forwardObservation:cohort}:simulation})
+   const committed=await ledger.commitEntry({...context,marks,simulation:cohort?{...simulation,forwardObservation:cohort}:simulation})
    if(committed.duplicate){results.push({...simulation,status:'DUPLICATE_SUPPRESSED',blockers:['Identical durable paper execution already exists']});continue}
    results.push({...simulation,accountSnapshot:committed.account,positionSnapshot:committed.position,executionId:committed.execution.executionId,canonicalLedger:true})
   }
   const filled=results.filter(x=>x.status==='SIMULATED_FILLED').length
-  return {...envelope,status:filled?'COMPLETE':results.length?'CAUTION':envelope.status,results,dailyRemaining:Math.max(0,(envelope.dailyLimit??10)-dailyCount-filled),manualTrigger:true,authenticated:true,durableExecutionIntent:true,accountingProjection:'canonical-postgresql-pi3',processLocalDailyLimit:true}
+  return {...envelope,status:filled?'COMPLETE':results.length?'CAUTION':envelope.status,results,dailyRemaining:Math.max(0,(envelope.dailyLimit??10)-dailyCount-filled),manualTrigger:true,authenticated:true,durableExecutionIntent:true,accountingProjection:'canonical-postgresql-pi3',riskStateSource:'canonical-postgresql-account-revision',processLocalDailyLimit:true}
  },{allowedMethods:['POST'],requiredPermission:'dashboard.read',workspaceAction:'read',routeId:'paper-order-simulation',maxRequestBytes:8*1024,env,...options})
 }
 export const handler=createPaperOrderSimulationHandler()

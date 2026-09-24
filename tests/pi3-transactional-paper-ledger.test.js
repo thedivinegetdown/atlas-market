@@ -20,7 +20,7 @@ function entry(overrides = {}) {
     status: 'SIMULATED_FILLED', fingerprint: 'entry-fp-1', evaluationId: 'eval-1',
     evaluationEvidenceFingerprint: 'eval-evidence-1', candidateId: 'candidate-1',
     symbol: 'AAPL', strategyId: 'momentum', simulatedAt: now,
-    orderPlan: { evidenceTimestamp: now }, engineVersion: 'guarded-paper-simulation-v1',
+    orderPlan: { evidenceTimestamp: now, side: 'buy', entryType: 'market', referencePrice: 100, stopReference: 98, maximumRisk: 20 }, engineVersion: 'guarded-paper-simulation-v1',
     executionFill: { symbol: 'AAPL', assetType: 'equity', side: 'buy', quantity: 10, fillPrice: 100, fees: 1, slippageBps: 2, cashImpact: -1001 },
     journal: { journalStatus: 'recorded' }, tradeQuality: { score: 85, band: 'STRONG' },
     regime: { trendRegime: 'BULL' }, evaluationStatus: 'APPROVED_FOR_PAPER_REVIEW',
@@ -112,17 +112,24 @@ class PaperPgHarness {
       return { rows: [row] }
     }
     if (text.startsWith('insert into atlas_paper_positions')) {
-      const [id, account_record_id, organization_id, team_workspace_id, account_id, user_id, symbol, asset_type, side, quantity, average_cost, current_price, realized_pnl, originating_candidate_id, originating_evaluation_id, originating_intent_fingerprint, strategy_id] = params
+      const [id, account_record_id, organization_id, team_workspace_id, account_id, user_id, symbol, asset_type, side, quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, realized_pnl, originating_candidate_id, originating_evaluation_id, originating_intent_fingerprint, strategy_id] = params
       let row = state.positions.find(x => x.account_record_id === account_record_id && x.symbol === symbol && x.asset_type === asset_type && x.side === side)
-      if (row) Object.assign(row, { quantity, average_cost, current_price, strategy_id, status: 'open', revision: row.revision + 1, updated_at: now })
-      else { row = { id, account_record_id, organization_id, team_workspace_id, account_id, user_id, symbol, asset_type, side, quantity, average_cost, current_price, realized_pnl, originating_candidate_id, originating_evaluation_id, originating_intent_fingerprint, strategy_id, status: 'open', revision: 0, created_at: now, updated_at: now }; state.positions.push(row) }
+      if (row) Object.assign(row, { quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, strategy_id, status: 'open', revision: row.revision + 1, updated_at: now })
+      else { row = { id, account_record_id, organization_id, team_workspace_id, account_id, user_id, symbol, asset_type, side, quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, realized_pnl, originating_candidate_id, originating_evaluation_id, originating_intent_fingerprint, strategy_id, status: 'open', revision: 0, created_at: now, updated_at: now }; state.positions.push(row) }
+      return { rows: [row] }
+    }
+    if (text.startsWith('update atlas_paper_positions set current_price=$2')) {
+      const [id, current_price, mark_evidence_timestamp, revision] = params
+      const row = state.positions.find(x => x.id === id && x.revision === revision)
+      if (!row) return { rows: [] }
+      Object.assign(row, { current_price, mark_evidence_timestamp, revision: row.revision + 1, updated_at: now })
       return { rows: [row] }
     }
     if (text.startsWith('update atlas_paper_positions')) {
-      const [id, quantity, average_cost, current_price, realized_delta, status, revision] = params
+      const [id, quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, realized_delta, status, revision] = params
       const row = state.positions.find(x => x.id === id && x.revision === revision)
       if (!row) return { rows: [] }
-      Object.assign(row, { quantity, average_cost, current_price, realized_pnl: row.realized_pnl + realized_delta, status, revision: row.revision + 1, updated_at: now })
+      Object.assign(row, { quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, realized_pnl: row.realized_pnl + realized_delta, status, revision: row.revision + 1, updated_at: now })
       return { rows: [row] }
     }
     throw new Error(`Unhandled test SQL: ${text}`)
@@ -134,6 +141,20 @@ async function seeded(options = {}) {
   const repository = createCanonicalPaperLedgerRepository({ database })
   const committed = await repository.commitEntry({ ...scope(), simulation: entry(options.entry) })
   return { database, repository, committed }
+}
+
+function entryFor({ symbol, fingerprint, evaluationId, side = 'buy', quantity = 10, price = 100, stopPrice = side === 'short' ? 102 : 98, fees = 1 } = {}) {
+  const notional = quantity * price
+  const cashImpact = side === 'short' ? notional - fees : -(notional + fees)
+  return entry({
+    fingerprint,
+    evaluationId,
+    evaluationEvidenceFingerprint: `${evaluationId}-evidence`,
+    candidateId: `${evaluationId}-candidate`,
+    symbol,
+    orderPlan: { evidenceTimestamp: now, side, entryType: 'market', referencePrice: price, stopReference: stopPrice, maximumRisk: Math.abs(price - stopPrice) * quantity },
+    executionFill: { symbol, assetType: 'equity', side, quantity, fillPrice: price, fees, slippageBps: 2, cashImpact },
+  })
 }
 
 describe('PI.3 durable paper account and immutable ledger', () => {
@@ -197,6 +218,72 @@ describe('PI.3 durable paper account and immutable ledger', () => {
     database.evidenceAvailable = false
     await expect(repository.commitEntry({ ...scope(), simulation: entry() })).rejects.toMatchObject({ code: 'paper_ledger_evidence_missing' })
     expect(() => resolveCanonicalPaperLedgerRepository({ persistenceRepository: { connected: false } })).toThrow('Canonical PostgreSQL')
+  })
+})
+
+describe('canonical paper valuation and risk-state contract', () => {
+  it('reconciles one marked long position as cash plus signed marked value', async () => {
+    const { repository } = await seeded()
+    const state = await repository.getCanonicalState({ ...scope(), marks: [{ symbol: 'AAPL', price: 105, updatedAt: now }], now, requireKnownRisk: true })
+    expect(state.valuation).toMatchObject({ status: 'RECONCILED', cash: 98999, signedMarkedValue: 1050, equity: 100049 })
+    expect(state.riskState.status).toBe('KNOWN')
+    expect(state.risk.summary.openRisk).toBe(20)
+  })
+
+  it('preserves another long position and reconciles equity after a full close', async () => {
+    const { repository, committed } = await seeded()
+    await repository.commitEntry({ ...scope(), simulation: entryFor({ symbol: 'MSFT', fingerprint: 'entry-msft', evaluationId: 'eval-msft', quantity: 5, price: 200, stopPrice: 196 }) })
+    const closed = await repository.commitExit({
+      ...scope(), positionId: committed.position.positionId, quantity: 10,
+      quote: { price: 110, updatedAt: now, liquidityScore: 80 },
+      marks: [{ symbol: 'MSFT', price: 205, updatedAt: now }],
+      paperModeEnabled: true, confirmed: true, now,
+    })
+    const remaining = await repository.listOpenPositions(scope())
+    expect(remaining).toHaveLength(1)
+    expect(remaining[0]).toMatchObject({ symbol: 'MSFT', quantity: 5, currentPrice: 205 })
+    expect(closed.account.equity).toBeCloseTo(closed.account.cash + (5 * 205), 2)
+  })
+
+  it('reconciles mixed long/short exposure and scales risk on a partial close', async () => {
+    const { repository, committed } = await seeded()
+    await repository.commitEntry({ ...scope(), simulation: entryFor({ symbol: 'MSFT', fingerprint: 'entry-short', evaluationId: 'eval-short', side: 'short', quantity: 5, price: 120, stopPrice: 122 }) })
+    const before = await repository.getCanonicalState({ ...scope(), marks: [{ symbol: 'AAPL', price: 100, updatedAt: now }, { symbol: 'MSFT', price: 100, updatedAt: now }], now, requireKnownRisk: true })
+    expect(before.account.equity).toBeCloseTo(before.account.cash + 1000 - 500, 2)
+    const reduced = await repository.commitExit({
+      ...scope(), positionId: committed.position.positionId, quantity: 4,
+      quote: { price: 110, updatedAt: now, liquidityScore: 80 },
+      marks: [{ symbol: 'MSFT', price: 100, updatedAt: now }],
+      paperModeEnabled: true, confirmed: true, now,
+    })
+    expect(reduced.position).toMatchObject({ quantity: 6, riskState: { status: 'KNOWN', openRisk: 12 } })
+    expect(reduced.account.equity).toBeCloseTo(reduced.account.cash + (6 * reduced.position.currentPrice) - 500, 2)
+  })
+
+  it('fails closed for missing or stale marks and explicit unknown open risk', async () => {
+    const { database, repository } = await seeded()
+    const later = '2026-08-13T12:10:00.000Z'
+    await expect(repository.getCanonicalState({ ...scope(), now: later, requireKnownRisk: true })).rejects.toMatchObject({ code: 'paper_ledger_marks_unavailable' })
+    database.state.positions[0].risk_state = null
+    const unknown = await repository.getCanonicalState({ ...scope(), marks: [{ symbol: 'AAPL', price: 101, updatedAt: later }], now: later })
+    expect(unknown).toMatchObject({ riskState: { status: 'UNKNOWN' }, risk: { state: 'UNKNOWN', summary: { openRisk: null, openRiskPct: null } } })
+    await expect(repository.getCanonicalState({ ...scope(), marks: [{ symbol: 'AAPL', price: 101, updatedAt: later }], now: later, requireKnownRisk: true })).rejects.toMatchObject({ code: 'paper_ledger_risk_state_unknown' })
+  })
+
+  it('serializes concurrent admissions so portfolio heat cannot cross the existing limit', async () => {
+    const database = new PaperPgHarness()
+    const symbols = ['AAPL', 'MSFT', 'GOOG', 'AMZN', 'META', 'NVDA', 'TSLA']
+    const marks = symbols.map(symbol => ({ symbol, price: 100, updatedAt: now }))
+    const attempts = symbols.map((symbol, index) => createCanonicalPaperLedgerRepository({ database }).commitEntry({
+      ...scope(), marks, now,
+      simulation: entryFor({ symbol, fingerprint: `heat-${index}`, evaluationId: `heat-eval-${index}`, quantity: 100, price: 100, stopPrice: 91, fees: 0 }),
+    }))
+    const settled = await Promise.allSettled(attempts)
+    expect(settled.filter(item => item.status === 'fulfilled')).toHaveLength(6)
+    expect(settled.filter(item => item.status === 'rejected')).toHaveLength(1)
+    expect(settled.find(item => item.status === 'rejected').reason).toMatchObject({ code: 'paper_ledger_conflict' })
+    expect(database.state.positions).toHaveLength(6)
+    expect(database.state.executions).toHaveLength(6)
   })
 })
 
@@ -341,8 +428,16 @@ describe('PI.3 migration and integration boundaries', () => {
   it('routes PA.2 and PA.4 through the canonical ledger while retaining the legacy module', () => {
     expect(pa2).toContain('ledger.commitEntry')
     expect(pa4).toContain('ledger.commitExit')
+    expect(pa2).toContain('ledger.getCanonicalState')
+    expect(pa2).not.toContain('getPortfolioSummary')
     expect(pa2 + pa4).not.toContain('paperPositionStore')
     expect(readFileSync('lib/opportunities/paperExit/paperPositionStore.js', 'utf8')).toContain('paper-position-lifecycle-v1')
+  })
+
+  it('adds mark-evidence and explicit risk-state columns without rewriting the PI.3 migration', () => {
+    expect(migration).toContain('202609230001_canonical_paper_position_valuation_risk_state')
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS mark_evidence_timestamp TIMESTAMPTZ')
+    expect(migration).toContain('ADD COLUMN IF NOT EXISTS risk_state JSONB')
   })
 
   it('routes PA.3 and PA.5 to immutable realized executions without changing formulas', () => {

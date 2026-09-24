@@ -66,7 +66,7 @@ describe('governed review preparation PostgreSQL contract', () => {
       return statements
     }
     const cleanStatements = await apply(new Set())
-    const upgradeStatements = await apply(new Set(MIGRATIONS.slice(0, -1).map(({ id }) => id)))
+    const upgradeStatements = await apply(new Set(MIGRATIONS.filter(({ id }) => id !== repair.id).map(({ id }) => id)))
 
     expect(cleanStatements).toContain(repair.statements[0])
     expect(upgradeStatements.slice(0, repair.statements.length)).toEqual(repair.statements)
