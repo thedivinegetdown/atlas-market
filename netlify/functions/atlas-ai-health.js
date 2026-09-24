@@ -1,5 +1,5 @@
 import { AppError, ERROR_CODES } from '../../lib/errors/appError.js'
-import { createAtlasAiGateway } from '../../lib/ai/atlasAiGateway.js'
+import { createGroundedBaseline, ADVISORY_CONTRACT } from '../../lib/ai/atlasGroundedAdvisory.js'
 import { requireAccountContext } from '../../lib/security/securityPolicyEngine.js'
 import { apiFoundationEvent } from './_shared/persistenceApi.js'
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
@@ -10,11 +10,12 @@ function assertAccess(membership) {
 }
 
 export function createAtlasAiHealthHandler(options = {}) {
-  return createOrganizationAuthenticatedApiHandler(async ({ requestId, query, membership, tenantContext }) => {
+  return createOrganizationAuthenticatedApiHandler(async ({ requestId, query, membership }) => {
     assertAccess(membership)
     const accountId = requireAccountContext(query.accountId ?? options.accountId)
-    const gateway = options.atlasAiGateway ?? createAtlasAiGateway(options)
-    const health = await gateway.health({ tenantContext, accountId })
+    const provider = options.groundedProvider ?? createGroundedBaseline()
+    const enabled = options.aiConfig?.enabled !== false
+    const health = { contract: ADVISORY_CONTRACT, accountId, providerHealth: { provider: enabled ? provider.provider : 'disabled', model: enabled ? provider.model : null, status: enabled ? 'configured_not_probed' : 'disabled', source: 'server configuration', externalModelQualified: false } }
     return {
       event: apiFoundationEvent({ requestId, endpoint: 'atlas-ai-health', status: health.providerHealth.status }),
       atlasAiHealth: health,

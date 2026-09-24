@@ -87,17 +87,11 @@ describe('Phase 85A streaming response foundation', () => {
     expect(error.metadata.incompletePersistedAsCompleted).toBe(false)
   })
 
-  it('does not persist incomplete streamed responses through the chat API', async () => {
+  it('does not release or persist partial model text as completed through the grounded chat API', async () => {
     const repository = { createRequest: vi.fn(async () => ({ ok: true })), upsertHealth: vi.fn(async () => ({ ok: true })) }
-    const atlasAiGateway = {
-      async *stream() {
-        yield { streamEventType: 'started', sequence: 1, metadata: {} }
-        yield { streamEventType: 'chunk', sequence: 2, chunk: 'partial', metadata: {} }
-        yield { streamEventType: 'cancelled', sequence: 3, cancelled: true, metadata: { incompletePersistedAsCompleted: false } }
-      },
-    }
+    const groundedProvider = { provider: 'controlled', model: 'partial-model', generateStructured: async () => ({ summary: 'partial unchecked text' }) }
     const handler = createAtlasAiChatHandler({
-      atlasAiGateway,
+      groundedProvider,
       atlasAiRepository: repository,
       organizationMembershipRepository: { getMembership: vi.fn(async () => ({ id: 'membership-1', organizationId: 'org-atlas-local', userId: 'local-development:user-1', role: 'owner', status: 'active' })) },
       accountId: 'paper-portfolio',
@@ -105,9 +99,11 @@ describe('Phase 85A streaming response foundation', () => {
     const response = await handler(authEvent({ ...runInput(), stream: true }))
     const payload = JSON.parse(response.body)
     expect(response.statusCode).toBe(200)
-    expect(payload.data.atlasAiStream.persisted).toBe(false)
+    expect(payload.data.atlasAiStream.persisted).toBe(true)
     expect(payload.data.atlasAiStream.incompletePersistedAsCompleted).toBe(false)
-    expect(repository.createRequest).not.toHaveBeenCalled()
+    expect(repository.createRequest.mock.calls[0][0].status).toBe('degraded')
+    expect(JSON.stringify(payload)).not.toContain('partial unchecked text')
+    expect(payload.data.atlasAiStream.streamEvents.some((event) => event.streamEventType === 'chunk')).toBe(false)
   })
 })
 

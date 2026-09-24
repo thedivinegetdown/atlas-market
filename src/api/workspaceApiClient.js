@@ -146,6 +146,13 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
 
   return {
     clearCsrfState,
+    async askAtlasCopilot({ question, requestCategory }) {
+      const response = await request('atlas-ai-chat', {}, 'Unable to load Atlas Copilot', {
+        method: 'POST',
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', question, requestCategory },
+      })
+      return response.atlasAi
+    },
     getWatchlist() {
       return request('watchlist', {}, 'Unable to load watchlist')
     },
