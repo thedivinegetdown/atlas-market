@@ -1,4 +1,5 @@
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
+import { governedObservationAttention } from '../../lib/workspace/governedObservationCoverage.js'
 
 const PREPARATION_STORE = 'governedReviewPreparations'
 
@@ -72,6 +73,8 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
           error: 'Preparation expired',
           queueItems: [],
           providerCalls: null,
+          observationCoverage: payload.observationCoverage ?? null,
+          observationAttention: governedObservationAttention(payload.observationCoverage),
           expired: true,
         },
       }
@@ -93,6 +96,8 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
       error: payload.error,
       queueItems: payload.queueItems ?? [],
       providerCalls: payload.providerCalls ?? null,
+      observationCoverage: payload.observationCoverage ?? null,
+      observationAttention: governedObservationAttention(payload.observationCoverage),
     },
   }
 }, {

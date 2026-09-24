@@ -16,6 +16,7 @@
     "audit:api-controls:check": "node scripts/generate-api-control-inventory.mjs --check",
     "smoke:production": "node scripts/production-smoke.mjs",
     "performance:check": "node scripts/check-build-performance.mjs",
+    "recovery:verify:gap5": "node scripts/verify-gap5-restored-database.mjs",
     "ci:verify": "node scripts/release-verify.mjs --ci",
     "release:verify": "node scripts/release-verify.mjs"
   },

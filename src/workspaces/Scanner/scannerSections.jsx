@@ -61,6 +61,7 @@ export function GovernedReviewQueue() {
   const [, setPreparationId] = useState(null)
   const [preparationStatus, setPreparationStatus] = useState('idle')
   const [queueItems, setQueueItems] = useState([])
+  const [observationAttention, setObservationAttention] = useState(null)
   const [error, setError] = useState(null)
   const [selectedStrategies, setSelectedStrategies] = useState({})
   const [pollInterval, setPollInterval] = useState(null)
@@ -85,6 +86,7 @@ export function GovernedReviewQueue() {
     clearPolling()
     setError(null)
     setQueueItems([])
+    setObservationAttention(null)
     setSelectedStrategies({})
     setPreparationStatus('preparing')
 
@@ -103,8 +105,9 @@ export function GovernedReviewQueue() {
         try {
           const statusResponse = await workspaceApiClient.getGovernedReviewPreparationStatus(pid)
           if (statusResponse.ok && statusResponse.data) {
-            const { status, queueItems: items, error: prepError } = statusResponse.data
+            const { status, queueItems: items, error: prepError, observationAttention: coverageAttention } = statusResponse.data
             setPreparationStatus(status)
+            setObservationAttention(coverageAttention ?? null)
             publishGovernedReviewRuntimeMetadata(statusResponse.data)
             if (status === 'completed') {
               clearPolling()
@@ -114,6 +117,10 @@ export function GovernedReviewQueue() {
               const diagnosticCode = prepError ? ` [${prepError}]` : ''
               setError(prepError ? `Preparation failed: ${prepError}${diagnosticCode}` : 'Preparation failed')
               setPreparationStatus('failed')
+            } else if (status === 'expired') {
+              clearPolling()
+              setError('Preparation expired before every governed observation check completed')
+              setPreparationStatus('expired')
             }
           }
         } catch (err) {
@@ -177,15 +184,32 @@ export function GovernedReviewQueue() {
         {preparationStatus === 'preparing' && <span style={{ color: '#666', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
           Acquiring evidence & evaluating strategies… (may take ≥60s cold)
         </span>}
-        {preparationStatus === 'completed' && <span style={{ color: 'green', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+        {preparationStatus === 'completed' && !observationAttention?.required && <span style={{ color: 'green', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
           Ready — {queueItems.length} governed match{queueItems.length === 1 ? '' : 'es'}
+        </span>}
+        {preparationStatus === 'completed' && observationAttention?.required && <span style={{ color: 'var(--color-error, #c00)', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+          Completed with observation coverage gaps
         </span>}
         {preparationStatus === 'failed' && <span style={{ color: 'var(--color-error, #c00)', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
           Failed — click to retry
         </span>}
+        {preparationStatus === 'expired' && <span style={{ color: 'var(--color-error, #c00)', fontSize: '0.875rem', marginLeft: '0.5rem' }}>
+          Expired — missed checks require review
+        </span>}
       </div>
 
       {error && <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>{error}</p>}
+
+      {observationAttention?.required && ['completed', 'failed', 'expired'].includes(preparationStatus) && (
+        <section role="alert" aria-label="Governed observation coverage attention" style={{ color: 'var(--color-error, #c00)', marginBottom: '1rem' }}>
+          <strong>Observation coverage {String(observationAttention.status ?? 'incomplete').toLowerCase()} — {observationAttention.count} check{observationAttention.count === 1 ? '' : 's'} require attention.</strong>
+          <ul>
+            {(observationAttention.checks ?? []).map((check) => (
+              <li key={check.checkId}>{check.symbol} · {check.experimentId} · {check.status} · {check.reason ?? 'reason unavailable'}</li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {preparationStatus === 'idle' && (
         <EmptyWorkspaceState>Click "Prepare Governed Review" to evaluate BREAKOUT.1, RANGE.1, and VOL.1 strategies across the governed universe.</EmptyWorkspaceState>
@@ -195,7 +219,7 @@ export function GovernedReviewQueue() {
         <p role="status">Acquiring shared market evidence and evaluating governed strategies…</p>
       )}
 
-      {preparationStatus === 'completed' && queueItems.length === 0 && (
+      {preparationStatus === 'completed' && queueItems.length === 0 && !observationAttention?.required && (
         <EmptyWorkspaceState>
           <strong>No governed strategy opportunities currently have deterministic evidence.</strong>
           <br />The governed strategies (BREAKOUT.1, RANGE.1, VOL.1) found no legitimate matches in the current market regime.

@@ -2,7 +2,7 @@
 
 Status: **NOT VERIFIED / OWNER ACTION REQUIRED**
 Scope: provider-neutral production PostgreSQL recovery specification
-Last repository review: 2026-08-11
+Last repository review: 2026-09-24
 
 ## Current evidence
 
@@ -101,6 +101,38 @@ The private acceptance record must include:
 - approval or rejection decision;
 - restored-copy retention/disposal decision.
 
+## Executable Gap 5 restore acceptance
+
+Repository command `npm run recovery:verify:gap5` validates an already-restored, explicitly isolated PostgreSQL target. It never selects `DATABASE_URL`, creates a target, downloads a backup, changes production configuration, or performs cutover. The command fails closed unless all of these are supplied by the authorized recovery owner:
+
+- `ATLAS_RESTORE_TARGET_CONFIRMED_ISOLATED=true`;
+- `ATLAS_RESTORE_DATABASE_URL` for the isolated target;
+- `ATLAS_BACKUP_EVIDENCE_MANIFEST_PATH` for the private, secret-free baseline captured at the selected recovery point;
+- `ATLAS_RECOVERY_INCIDENT_AT`, the timestamp through which recovery is requested;
+- `ATLAS_RESTORE_STARTED_AT`, the timestamp when the authorized restore began.
+
+The private baseline is JSON with this bounded shape. Counts and migration ids must be captured at backup/recovery-point time; they must not be guessed after restore.
+
+```json
+{
+  "recoveryPointId": "provider-reference-without-secret",
+  "recoveryPointAt": "2026-09-24T13:00:00.000Z",
+  "migrationIds": ["tracked-migration-id"],
+  "counts": {
+    "manifests": 0,
+    "snapshots": 0,
+    "executions": 0,
+    "closeExecutions": 0,
+    "canonicalOutcomes": 0,
+    "governedPreparations": 0
+  }
+}
+```
+
+Acceptance requires all baseline counts and migration ids to match; required tables to exist; tenant/account/user and fingerprint fields to be populated; execution fingerprints to remain unique per account; account, position, and active-claim uniqueness constraints to exist; positions and executions to retain account parents; restored governed coverage to contain no EDGE.2 checks; canonical outcomes to reconstruct from immutable executions without quantity or P&L reconciliation failure; and a transaction rollback probe to leave no probe relation. Output contains only aggregate results and elapsed recovery metrics, never the connection string or row data.
+
+Actual RPO is measured as `ATLAS_RECOVERY_INCIDENT_AT - recoveryPointAt`. Actual RTO is measured as verifier completion time minus `ATLAS_RESTORE_STARTED_AT`. A documented target without these measured timestamps is not accepted.
+
 ## Exit criteria
 
-Backup/restore can be marked verified only after a complete isolated restore succeeds, tenant isolation and rollback are demonstrated, measured RPO/RTO are recorded, owners accept the result, and evidence contains no secrets. Until then the production-readiness status remains **NOT VERIFIED / OWNER ACTION REQUIRED**.
+Backup/restore can be marked verified only after a complete isolated restore succeeds, the executable Gap 5 verifier passes, application tenant-query tests pass against the restored schema, measured RPO/RTO are recorded, owners accept the result, and evidence contains no secrets. Until then the production-readiness status remains **NOT VERIFIED / OWNER ACTION REQUIRED**.

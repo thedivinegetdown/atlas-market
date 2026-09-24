@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
@@ -8,6 +8,7 @@ export default defineConfig({
     globals: true,
     maxWorkers: 2,
     pool: 'threads',
+    exclude: [...configDefaults.exclude, '**/.ci-divergence/**', '**/.ci-runtime/**'],
     setupFiles: ['./src/test/setup.js'],
   },
 })

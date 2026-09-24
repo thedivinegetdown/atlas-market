@@ -7,6 +7,12 @@ import { scoreTradeQuality } from '../../lib/opportunities/quality/index.js'
 import { selectStrategiesForRegime } from '../../lib/strategies/adaptive/index.js'
 import { EXISTING_ADAPTIVE_STRATEGY_RECORDS } from '../../lib/strategies/adaptive/index.js'
 import { serverLogger } from '../../lib/logging/logger.js'
+import {
+  createGovernedObservationCoverage,
+  GOVERNED_OBSERVATION_CHECK_STATUSES,
+  GOVERNED_OBSERVATION_UNIVERSE,
+  recordGovernedObservationCheck,
+} from '../../lib/workspace/governedObservationCoverage.js'
 
 const OBSERVABILITY_STAGES = Object.freeze([
   'dispatchAccepted',
@@ -130,26 +136,55 @@ export async function claimPreparation(repository, preparationId, tenantContext)
   }
   return { claimed: false, reason: 'claimed_by_other', preparation: prep }
 }
-const BREAKOUT_OBSERVATION_UNIVERSE = Object.freeze(['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'])
-
-async function runGovernedPreparation(preparation, context) {
+export async function runGovernedPreparation(preparation, context) {
   const { workspaceDataService, now } = context
+  const { repository, ...durablePreparation } = preparation
+  let observationCoverage = preparation.observationCoverage
+    ?? createGovernedObservationCoverage({ preparationId: preparation.id, createdAt: preparation.createdAt })
+  let queueItems = Array.isArray(preparation.queueItems) ? preparation.queueItems : []
+
+  const checkpoint = async ({ symbol, strategy, status, reason, signal = null, quality = null, queueItem = null }) => {
+    const evaluatedAt = now().toISOString()
+    observationCoverage = recordGovernedObservationCheck(observationCoverage, {
+      symbol,
+      strategyId: strategy.id,
+      experimentId: strategy.experiment,
+      status,
+      reason,
+      evaluatedAt,
+      strategyFingerprint: signal?.strategyFingerprint ?? null,
+      evidenceFingerprint: quality?.evidenceFingerprint ?? null,
+    })
+    queueItems = queueItems.filter((item) => item.symbol !== symbol || item.strategyId !== strategy.id)
+    if (queueItem) queueItems.push(queueItem)
+    await savePreparation(repository, {
+      ...durablePreparation,
+      status: 'running',
+      updatedAt: evaluatedAt,
+      queueItems,
+      observationCoverage,
+    })
+  }
 
   try {
-    await savePreparation(preparation.repository, {
-      ...preparation,
+    await savePreparation(repository, {
+      ...durablePreparation,
       status: 'running',
       startedAt: now().toISOString(),
       updatedAt: new Date().toISOString(),
     })
 
-    const packet = await workspaceDataService.buildMarketEvidencePacket(BREAKOUT_OBSERVATION_UNIVERSE, { now: now() })
+    const packet = await workspaceDataService.buildMarketEvidencePacket(GOVERNED_OBSERVATION_UNIVERSE, { now: now() })
 
-    const queueItems = []
-
-    for (const symbol of packet.universe) {
-      const evidence = packet.symbols[symbol]
-      if (!evidence || !evidence.quote || !evidence.candles.length) continue
+    for (const symbol of GOVERNED_OBSERVATION_UNIVERSE) {
+      const evidence = packet.symbols?.[symbol]
+      if (!evidence || !evidence.quote || !Array.isArray(evidence.candles) || evidence.candles.length === 0) {
+        const reason = !evidence ? 'symbol_evidence_missing' : !evidence.quote ? 'quote_evidence_missing' : 'candle_evidence_missing'
+        for (const strategy of GOVERNED_STRATEGIES) {
+          await checkpoint({ symbol, strategy, status: GOVERNED_OBSERVATION_CHECK_STATUSES.degraded, reason })
+        }
+        continue
+      }
 
       for (const strategy of GOVERNED_STRATEGIES) {
         try {
@@ -168,7 +203,18 @@ async function runGovernedPreparation(preparation, context) {
             generatedAt: packet.asOf,
           })
 
-          if (!signal || signal.suitabilityStatus === 'REJECTED' || signal.suitabilityStatus === 'INSUFFICIENT_DATA' || signal.suitabilityStatus === 'STALE') continue
+          if (!signal) {
+            await checkpoint({ symbol, strategy, status: GOVERNED_OBSERVATION_CHECK_STATUSES.degraded, reason: 'signal_not_returned' })
+            continue
+          }
+          if (signal.suitabilityStatus === 'INSUFFICIENT_DATA' || signal.suitabilityStatus === 'STALE') {
+            await checkpoint({ symbol, strategy, signal, status: GOVERNED_OBSERVATION_CHECK_STATUSES.degraded, reason: `signal_${signal.suitabilityStatus.toLowerCase()}` })
+            continue
+          }
+          if (signal.suitabilityStatus === 'REJECTED') {
+            await checkpoint({ symbol, strategy, signal, status: GOVERNED_OBSERVATION_CHECK_STATUSES.noCandidate, reason: 'signal_rejected' })
+            continue
+          }
 
           const suitability = selectStrategiesForRegime({
             regime: evidence.regime?.classification ?? {},
@@ -177,7 +223,14 @@ async function runGovernedPreparation(preparation, context) {
           }, { logger: serverLogger })
 
           const strategySuitability = suitability.strategies.find(s => s.strategyId === strategy.id)
-          if (!strategySuitability || strategySuitability.decision === 'DISABLED') continue
+          if (!strategySuitability) {
+            await checkpoint({ symbol, strategy, signal, status: GOVERNED_OBSERVATION_CHECK_STATUSES.degraded, reason: 'strategy_suitability_missing' })
+            continue
+          }
+          if (strategySuitability.decision === 'DISABLED') {
+            await checkpoint({ symbol, strategy, signal, status: GOVERNED_OBSERVATION_CHECK_STATUSES.noCandidate, reason: 'strategy_disabled_for_regime' })
+            continue
+          }
 
           const candidate = {
             symbol,
@@ -199,7 +252,7 @@ async function runGovernedPreparation(preparation, context) {
 
           const quality = scoreTradeQuality({ candidate, regime: evidence.regime?.classification ?? {}, strategySuitability: suitability }, { logger: serverLogger })
 
-          queueItems.push({
+          const queueItem = {
             symbol,
             strategyId: strategy.id,
             strategyName: strategy.name,
@@ -242,30 +295,43 @@ async function runGovernedPreparation(preparation, context) {
             },
             missingInputs: quality.missingInputs ?? [],
             blockingReasons: quality.blockingReasons ?? [],
+          }
+          await checkpoint({
+            symbol,
+            strategy,
+            signal,
+            quality,
+            queueItem,
+            status: GOVERNED_OBSERVATION_CHECK_STATUSES.candidate,
+            reason: 'candidate_created',
           })
         } catch (err) {
           serverLogger.warn('governed strategy evaluation failed', { symbol, strategy: strategy.id, error: err?.message })
+          await checkpoint({ symbol, strategy, status: GOVERNED_OBSERVATION_CHECK_STATUSES.degraded, reason: 'strategy_evaluation_failed' })
         }
       }
     }
 
-    await savePreparation(preparation.repository, {
-      ...preparation,
+    await savePreparation(repository, {
+      ...durablePreparation,
       status: 'completed',
       completedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       queueItems,
       providerCalls: packet.providerCalls,
+      observationCoverage,
     })
 
   } catch (err) {
     serverLogger.error('governed preparation failed', { preparationId: preparation.id, error: err?.message })
-    await savePreparation(preparation.repository, {
-      ...preparation,
+    await savePreparation(repository, {
+      ...durablePreparation,
       status: 'failed',
       failedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       error: err?.message ?? 'Preparation failed',
+      queueItems,
+      observationCoverage,
     })
   }
 }

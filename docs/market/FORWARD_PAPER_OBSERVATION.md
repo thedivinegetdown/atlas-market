@@ -92,3 +92,16 @@ The Reports workspace exposes a compact read-only panel with session/outcome pro
 No provider, paid tier, Netlify upgrade, database vendor, broker, queue, or recurring service was added. Scanner quality review reuses existing server-side paths and remains operator-triggered. The bounded five-symbol production check remains within the EDGE.1 free-tier budget.
 
 The market-hours production check remains pending when no authenticated owner browser session is available. Atlas must not bypass the authentication boundary or copy provider secrets locally to perform that check.
+
+## Governed discovery coverage
+
+The operator-triggered Governed Review worker freezes 15 intended discovery checks before dispatch: five governed symbols multiplied by BREAKOUT.1, RANGE.1, and VOL.1. EDGE.2 is not in this matrix and remains manual/evidence-gated. Creating or updating these coverage rows never creates a forward-evidence snapshot, paper execution, outcome, or EDGE.2 session count.
+
+Each tenant/user/team-scoped preparation durably checkpoints every check as one of:
+
+- `COMPLETED_CANDIDATE` — deterministic discovery produced a governed queue item;
+- `COMPLETED_NO_CANDIDATE` — the strategy was evaluated and validly rejected or disabled for the regime;
+- `BLOCKED_DEGRADED` — required quote, candle, freshness, suitability, or evaluation evidence was unavailable or failed;
+- `MISSED_NOT_EVALUATED` — the intended check was frozen but the worker never reached a terminal evaluation.
+
+The full matrix is persisted before background dispatch, then updated after each check. A cold start or stale-worker retry therefore reloads explicit prior state rather than reconstructing success from the presence or absence of candidates. Completed preparations with degraded checks and failed preparations with missed checks are returned by the governed-review status endpoint and shown as operator attention; an empty candidate queue is described as a valid no-candidate result only when coverage has no degraded or missed checks. This adds no scheduler, provider call, provider retry, distributed coordinator, or change to strategy, Trade Quality, risk, eligibility, or execution rules.
