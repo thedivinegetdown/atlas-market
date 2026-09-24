@@ -1,5 +1,6 @@
 import { normalizeAssetType } from '../../../lib/assets/index.js'
 import { eventBus as defaultEventBus } from '../../../lib/core/eventBus.js'
+import { historicalEvidenceUnavailable } from './historicalEvidenceContract.js'
 
 export const STRATEGY_BACKTEST_INPUT_PREPARED_EVENT = 'strategy.backtestInput.prepared'
 
@@ -213,6 +214,7 @@ export function prepareStrategyBacktestInput(input = {}, options = {}) {
     marketDataAdapterCompatibilityCheck,
   })
   const normalizedBacktestRequest = {
+    historicalEvidence: historicalEvidenceUnavailable(),
     requestId: `${selectedStrategySnapshot.strategyId}-${timeframeSelection.timeframe}-${dateRangeValidation.startDate}-${dateRangeValidation.endDate}`,
     selectedStrategySnapshot,
     selectedAssetUniverse,
@@ -229,6 +231,8 @@ export function prepareStrategyBacktestInput(input = {}, options = {}) {
     paperTrading: true,
   }
   const result = {
+    evidenceStatus: 'UNAVAILABLE',
+    historicalEvidence: historicalEvidenceUnavailable(),
     eventType: STRATEGY_BACKTEST_INPUT_PREPARED_EVENT,
     paperTrading: true,
     timestamp,
@@ -243,7 +247,7 @@ export function prepareStrategyBacktestInput(input = {}, options = {}) {
     readinessStatus: readiness.readinessStatus,
     blockers: readiness.blockers,
     cautions: readiness.cautions,
-    summary: `${selectedStrategySnapshot.strategyName} backtest input is ${readiness.readinessStatus} for future paper backtesting.`,
+    summary: `${selectedStrategySnapshot.strategyName} input configuration is ${readiness.readinessStatus}; historical execution evidence is UNAVAILABLE.`,
     sourceEvents: {
       strategyBlueprint: input.strategyBlueprintValidation?.eventType ?? null,
       strategyLifecycle: input.strategyLifecycle?.eventType ?? null,

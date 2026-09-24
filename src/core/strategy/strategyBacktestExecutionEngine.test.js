@@ -164,60 +164,63 @@ function buildExecutionInput(overrides = {}) {
   }
 }
 
-describe('strategy backtest execution engine', () => {
-  it('runs strategy rules and signal composition across consumed replay candles', () => {
-    const result = executeStrategyBacktest(buildExecutionInput(), {
-      emitEvent: false,
-      timestamp: '2026-07-08T00:00:00.000Z',
-    })
-
-    expect(result.eventType).toBe(STRATEGY_BACKTEST_EXECUTED_EVENT)
-    expect(result.paperTrading).toBe(true)
-    expect(result.backtestExecutionStatus).toBe('running')
-    expect(result.replayStepConsumption).toHaveLength(2)
-    expect(result.strategyRuleEvaluations).toHaveLength(2)
-    expect(result.strategySignalCompositions).toHaveLength(2)
-    expect(result.simulatedPaperTrades).toHaveLength(2)
-    expect(result.simulatedPaperTrades[0].executionSimulation.finalStatus).toBe('filled')
-    expect(result.executionSummary.filledTrades).toBe(2)
+describe('historical execution capability boundary', () => {
+  it('rejects a previously executable blueprint instead of sharing future research/risk context', () => {
+    const result = executeStrategyBacktest(buildExecutionInput(), { emitEvent: false })
+    expect(result.backtestExecutionStatus).toBe('blocked')
+    expect(result.evidenceStatus).toBe('UNAVAILABLE')
+    expect(result.strategyRuleEvaluations).toEqual([])
+    expect(result.strategySignalCompositions).toEqual([])
+    expect(result.simulatedPaperTrades).toEqual([])
+    expect(result.historicalEvidence.blockers).toContain('POINT_IN_TIME_CONTEXT_UNAVAILABLE')
   })
 
-  it('marks the session completed when the replay cursor reaches the end', () => {
+  it('future candle and shared-context mutations cannot create earlier decisions or fills', () => {
+    const first = executeStrategyBacktest(buildExecutionInput(), { emitEvent: false })
+    const changed = structuredClone(candles)
+    changed[2] = { ...changed[2], open: 1000, high: 3000, low: 1, close: 2000, volume: 999999999 }
+    const second = executeStrategyBacktest(buildExecutionInput({
+      historicalReplay: buildHistoricalReplay(1, changed),
+      researchSignalScore: { finalResearchScore: 100 },
+      portfolioRisk: { summary: { riskLevel: 'low' } },
+    }), { emitEvent: false })
+    for (const key of ['replayStepConsumption', 'strategyRuleEvaluations', 'strategySignalCompositions', 'simulatedPaperTrades', 'historicalEvidence']) expect(second[key]).toEqual(first[key])
+    // This proves rejection invariance, not a successful prefix-only strategy run.
+    expect(first.replayStepConsumption).toEqual([])
+  })
+
+  it('does not use the signal close or invent an executable timestamp from a daily label', () => {
+    const result = executeStrategyBacktest(buildExecutionInput({ historicalReplay: buildHistoricalReplay(2) }), { emitEvent: false })
+    expect(result.historicalEvidence).toMatchObject({ signalTimestamp: null, executionTimestamp: null, executionPrice: null })
+    expect(result.historicalEvidence.blockers).toContain('EXECUTABLE_SESSION_TIMESTAMPS_UNAVAILABLE')
+    expect(result.simulatedPaperTrades).toEqual([])
+  })
+
+  it.each(['BREAKOUT.1', 'RANGE.1', 'VOL.1', 'EDGE.2', 'index-pullback-v1', 'breakout-momentum-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1', 'unknown'])('rejects unsupported historical %s without generic stops', (strategyId) => {
     const result = executeStrategyBacktest(buildExecutionInput({
-      historicalReplay: buildHistoricalReplay(2),
+      strategyBacktestInput: { selectedStrategySnapshot: { strategyId }, readinessStatus: 'ready' },
+      historicalEvidence: { status: 'AVAILABLE' },
+      strategyPolicy: { supported: true },
     }), { emitEvent: false })
-
-    expect(result.backtestExecutionStatus).toBe('completed')
-    expect(result.session.consumedCandles).toBe(3)
-    expect(result.executionSummary.generatedTrades).toBe(3)
+    expect(result.session.strategyId).toBe(strategyId)
+    expect(result.evidenceStatus).toBe('UNAVAILABLE')
+    expect(result.simulatedPaperTrades).toEqual([])
   })
 
-  it('blocks execution when backtest input or replay output is blocked', () => {
-    const inputBlocked = executeStrategyBacktest(buildExecutionInput({
-      strategyBacktestInput: {
-        ...buildBacktestInput(),
-        readinessStatus: 'blocked',
-      },
-    }), { emitEvent: false })
-    const replayBlocked = executeStrategyBacktest(buildExecutionInput({
-      historicalReplay: buildHistoricalReplay(0, []),
-    }), { emitEvent: false })
-
-    expect(inputBlocked.backtestExecutionStatus).toBe('blocked')
-    expect(inputBlocked.reason).toBe('Backtest input readiness is blocked')
-    expect(replayBlocked.backtestExecutionStatus).toBe('blocked')
-    expect(replayBlocked.reason).toBe('Historical replay step is blocked')
+  it('fails closed with missing candles, missing costs, or caller-attested split/dividend semantics', () => {
+    for (const input of [{}, buildExecutionInput({ historicalReplay: buildHistoricalReplay(0, []) }), buildExecutionInput({ corporateActions: { splits: 'adjusted', dividends: 'reinvested' }, costs: { fees: 0, slippageBps: 0 } })]) {
+      const result = executeStrategyBacktest(input, { emitEvent: false })
+      expect(result.historicalEvidence.blockers).toContain('CORPORATE_ACTION_ACCOUNTING_UNAVAILABLE')
+      expect(result.historicalEvidence.costs).toBeNull()
+      expect(result.evidenceStatus).toBe('UNAVAILABLE')
+    }
   })
 
-  it('emits strategy backtest executed events', () => {
+  it('emits unavailable status through the existing API', () => {
     const eventBus = createEventBus()
     const events = []
-    eventBus.subscribe(STRATEGY_BACKTEST_EXECUTED_EVENT, (payload) => events.push(payload))
-
+    eventBus.subscribe(STRATEGY_BACKTEST_EXECUTED_EVENT, (event) => events.push(event))
     const result = createStrategyBacktestExecutionEngine({ eventBus }).execute(buildExecutionInput())
-
-    expect(events).toHaveLength(1)
-    expect(events[0]).toBe(result)
-    expect(events[0].eventType).toBe(STRATEGY_BACKTEST_EXECUTED_EVENT)
+    expect(events).toEqual([result])
   })
 })

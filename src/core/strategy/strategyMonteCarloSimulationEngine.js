@@ -1,4 +1,6 @@
 import { eventBus as defaultEventBus } from '../../../lib/core/eventBus.js'
+import { canonicalMonteCarloEvidence } from './canonicalMonteCarloEvidence.js'
+import { historicalContentFingerprint } from './historicalEvidenceContract.js'
 
 export const STRATEGY_MONTE_CARLO_SIMULATED_EVENT = 'strategy.monteCarlo.simulated'
 
@@ -22,38 +24,6 @@ function createSeededRandom(seed = 42) {
     state = (state * 16807) % 2147483647
     return (state - 1) / 2147483646
   }
-}
-
-function getBacktestPerformance(input = {}) {
-  return input.strategyBacktestPerformance ?? input.backtestPerformance ?? {}
-}
-
-function getWalkForward(input = {}) {
-  return input.strategyWalkForward ?? input.walkForward ?? {}
-}
-
-function getTradeOutcomes(performance = {}) {
-  const points = performance.returnCurveSummary?.points ?? []
-  const startingEquity = numberValue(performance.returnCurveSummary?.startingEquity, 100000)
-
-  if (points.length > 0) {
-    let previousEquity = startingEquity
-    return points.map((point) => {
-      const endingEquity = numberValue(point.endingEquity, previousEquity)
-      const pnl = round(endingEquity - previousEquity)
-      previousEquity = endingEquity
-      return pnl
-    })
-  }
-
-  const metrics = performance.metrics ?? {}
-  const totalTrades = Math.max(1, Math.floor(numberValue(metrics.totalIncludedTrades, 1)))
-  const wins = Math.round((numberValue(metrics.winRate) / 100) * totalTrades)
-  const losses = Math.max(0, totalTrades - wins)
-  return [
-    ...Array.from({ length: wins }, () => numberValue(metrics.averageWin)),
-    ...Array.from({ length: losses }, () => numberValue(metrics.averageLoss)),
-  ].filter((value) => value !== 0)
 }
 
 function calculateMaxDrawdown(equityCurve = []) {
@@ -137,20 +107,39 @@ export function simulateMonteCarloStrategy(input = {}, options = {}) {
   const eventBus = options.eventBus ?? defaultEventBus
   const emitEvent = options.emitEvent !== false
   const timestamp = options.timestamp ?? getNowIso()
-  const backtestPerformance = getBacktestPerformance(input)
-  const walkForward = getWalkForward(input)
-  const simulationCount = Math.max(1, Math.floor(numberValue(input.simulationCount ?? options.simulationCount, 100)))
-  const startingEquity = numberValue(input.startingEquity ?? backtestPerformance.returnCurveSummary?.startingEquity, 100000)
-  const drawdownThreshold = numberValue(
-    input.drawdownThreshold
-      ?? input.drawdownProtection?.maxDrawdownThreshold
-      ?? input.drawdownProtection?.riskAdjustedMaxDrawdown
-      ?? 10,
-    10,
-  )
-  const outcomes = getTradeOutcomes(backtestPerformance)
-  const tradesPerPath = Math.max(1, Math.floor(numberValue(input.tradesPerPath, outcomes.length || 1)))
-  const random = createSeededRandom(input.seed ?? options.seed ?? 42)
+  const evidence = canonicalMonteCarloEvidence(input, input.outcomeCutoff)
+  const simulationCount = input.simulationCount ?? options.simulationCount ?? 100
+  const startingEquity = input.startingEquity
+  const drawdownThreshold = input.drawdownThreshold
+    ?? input.drawdownProtection?.maxDrawdownThreshold
+    ?? input.drawdownProtection?.riskAdjustedMaxDrawdown
+    ?? 10
+  const seed = input.seed ?? options.seed ?? 42
+  const outcomes = evidence.outcomes.map((outcome) => outcome.netPnl)
+  const tradesPerPath = input.tradesPerPath ?? outcomes.length
+  const validConfiguration = Number.isSafeInteger(simulationCount) && simulationCount > 0
+    && Number.isSafeInteger(tradesPerPath) && tradesPerPath > 0
+    && Number.isInteger(seed) && seed > 0 && seed < 2147483647
+    && typeof startingEquity === 'number' && Number.isFinite(startingEquity) && startingEquity > 0
+    && typeof drawdownThreshold === 'number' && Number.isFinite(drawdownThreshold) && drawdownThreshold > 0
+  if (evidence.status !== 'AVAILABLE' || !validConfiguration) {
+    const result = {
+      eventType: STRATEGY_MONTE_CARLO_SIMULATED_EVENT, paperTrading: true, timestamp,
+      evidenceStatus: 'UNAVAILABLE', simulationStatus: 'UNAVAILABLE',
+      reason: evidence.status !== 'AVAILABLE' ? evidence.reason : 'INVALID_MONTE_CARLO_CONFIGURATION',
+      simulationCount: 0, tradesPerPath: 0,
+      tradeOutcomeSampling: { sourceTradeCount: 0, sampledOutcomes: [], averageOutcome: null },
+      randomizedEquityCurves: [], confidenceIntervalSummary: null,
+      probabilityOfDrawdownBreach: null, probabilityOfProfitability: null,
+      worstCasePathSummary: null, medianPathSummary: null,
+      robustnessClassification: 'UNAVAILABLE', sourceFingerprint: null, configurationFingerprint: null,
+      summary: 'Monte Carlo UNAVAILABLE: complete canonical outcomes and explicit simulation configuration are required.',
+    }
+    if (emitEvent && eventBus?.emit) eventBus.emit(STRATEGY_MONTE_CARLO_SIMULATED_EVENT, result)
+    return result
+  }
+  const configuration = { version: 'canonical-monte-carlo-v1', startingEquity, drawdownThreshold, seed, simulationCount, tradesPerPath, outcomeCutoff: input.outcomeCutoff, sourceFingerprint: evidence.sourceFingerprint }
+  const random = createSeededRandom(seed)
   const randomizedEquityCurves = Array.from({ length: simulationCount }, (_, index) => generateSimulationPath({
     outcomes,
     startingEquity,
@@ -167,15 +156,29 @@ export function simulateMonteCarloStrategy(input = {}, options = {}) {
   const robustnessClassification = classifyRobustness({
     probabilityOfProfitability,
     probabilityOfDrawdownBreach,
-    walkForwardStatus: walkForward.finalWalkForwardStatus,
+    // Legacy walk-forward labels cannot establish independently executed OOS evidence.
+    walkForwardStatus: 'UNAVAILABLE',
   })
   const result = {
     eventType: STRATEGY_MONTE_CARLO_SIMULATED_EVENT,
     paperTrading: true,
     timestamp,
+    evidenceStatus: 'AVAILABLE',
+    simulationStatus: 'AVAILABLE',
+    historicalValidationStatus: 'UNAVAILABLE',
+    evidenceScope: 'CANONICAL_PAPER_OUTCOME_RESAMPLING_ONLY',
+    configuration,
+    configurationFingerprint: historicalContentFingerprint(configuration),
+    sourceFingerprint: evidence.sourceFingerprint,
+    costTreatment: evidence.costTreatment,
     simulationCount,
     tradesPerPath,
     tradeOutcomeSampling: {
+      outcomeSource: evidence.outcomeSource,
+      sourceOutcomeIds: evidence.outcomes.map((outcome) => outcome.id),
+      cohortKey: evidence.cohortKey,
+      minimumSample: evidence.minimumSample,
+      excludedOpenLifecycles: evidence.excludedOpenLifecycles,
       sourceTradeCount: outcomes.length,
       sampledOutcomes: outcomes,
       averageOutcome: round(outcomes.reduce((sum, value) => sum + value, 0) / Math.max(1, outcomes.length)),
@@ -188,12 +191,9 @@ export function simulateMonteCarloStrategy(input = {}, options = {}) {
     worstCasePathSummary: pathSummaries.worstCasePathSummary,
     medianPathSummary: pathSummaries.medianPathSummary,
     robustnessClassification,
-    summary: `Monte Carlo simulation ${robustnessClassification}: ${probabilityOfProfitability}% profitable paths, ${probabilityOfDrawdownBreach}% drawdown breach probability.`,
+    summary: `Canonical paper outcome resampling ${robustnessClassification}: ${probabilityOfProfitability}% profitable bootstrap paths, ${probabilityOfDrawdownBreach}% drawdown breach frequency. Historical strategy validation remains UNAVAILABLE.`,
     sourceEvents: {
-      strategyBacktestPerformance: backtestPerformance.eventType ?? null,
-      strategyWalkForward: walkForward.eventType ?? null,
-      drawdownProtection: input.drawdownProtection?.eventType ?? null,
-      riskAdjustedPerformance: input.riskAdjustedPerformance?.eventType ?? backtestPerformance.riskAdjustedPerformanceSnapshot?.eventType ?? null,
+      canonicalPaperOutcomes: evidence.outcomeSource,
     },
   }
 

@@ -45,72 +45,34 @@ function buildExecution(overrides = {}) {
   }
 }
 
-describe('strategy backtest performance analytics engine', () => {
-  it('evaluates completed backtest performance and excludes rejected or non-filled trades', () => {
+describe('historical performance evidence boundary', () => {
+  it.each(['completed', 'running', 'blocked'])('does not treat %s legacy fills as canonical historical outcomes', (status) => {
     const result = evaluateBacktestPerformance({
-      strategyBacktestExecution: buildExecution(),
+      strategyBacktestExecution: buildExecution({ backtestExecutionStatus: status }),
       startingEquity: 100000,
-    }, {
-      emitEvent: false,
-      timestamp: '2026-07-08T00:30:00.000Z',
-    })
-
-    expect(result.eventType).toBe(STRATEGY_BACKTEST_PERFORMANCE_EVALUATED_EVENT)
-    expect(result.paperTrading).toBe(true)
-    expect(result.analyticsStatus).toBe('evaluated')
-    expect(result.totalSimulatedTrades).toBe(5)
-    expect(result.includedTrades).toBe(3)
-    expect(result.excludedTrades).toBe(2)
-    expect(result.metrics).toMatchObject({
-      totalSimulatedTrades: 5,
-      totalIncludedTrades: 3,
-      winRate: 66.67,
-      netRealizedPnl: 140,
-      averageWin: 90,
-      averageLoss: -40,
-      profitFactor: 4.5,
-      expectancy: 46.67,
-    })
-    expect(result.returnCurveSummary.points).toHaveLength(3)
-    expect(result.paperPerformanceSnapshot.includedTradeIds).toEqual(['win-1', 'loss-1', 'win-2'])
-  })
-
-  it('returns caution while a backtest session is still running', () => {
-    const result = evaluateBacktestPerformance({
-      strategyBacktestExecution: buildExecution({ backtestExecutionStatus: 'running' }),
-      startingEquity: 100000,
+      paperPerformanceSnapshot: { metrics: { netRealizedPnl: 999999 } },
+      riskAdjustedPerformanceSnapshot: { returnSeries: [{ endingEquity: 999999 }] },
     }, { emitEvent: false })
-
-    expect(result.analyticsStatus).toBe('caution')
-    expect(result.backtestExecutionStatus).toBe('running')
-    expect(result.metrics.totalIncludedTrades).toBe(3)
-  })
-
-  it('blocks analytics when backtest execution is blocked', () => {
-    const result = evaluateBacktestPerformance({
-      strategyBacktestExecution: buildExecution({
-        backtestExecutionStatus: 'blocked',
-        simulatedPaperTrades: [],
-      }),
-    }, { emitEvent: false })
-
     expect(result.analyticsStatus).toBe('blocked')
-    expect(result.reason).toBe('Backtest execution is blocked')
-    expect(result.metrics.totalIncludedTrades).toBe(0)
+    expect(result.evidenceStatus).toBe('UNAVAILABLE')
+    expect(result.includedTrades).toBe(0)
+    expect(result.excludedTrades).toBe(5)
+    expect(result.metrics).toBeNull()
+    expect(result.returnCurveSummary).toBeNull()
+    expect(result.paperPerformanceSnapshot).toBeNull()
   })
 
-  it('emits strategy backtest performance evaluated events', () => {
+  it('does not emit zero performance as evidence for missing inputs', () => {
+    const result = evaluateBacktestPerformance({}, { emitEvent: false })
+    expect(result.evidenceStatus).toBe('UNAVAILABLE')
+    expect(result.metrics).toBeNull()
+  })
+
+  it('emits unavailable analytics through the existing API', () => {
     const eventBus = createEventBus()
     const events = []
-    eventBus.subscribe(STRATEGY_BACKTEST_PERFORMANCE_EVALUATED_EVENT, (payload) => events.push(payload))
-
-    const result = createStrategyBacktestPerformanceAnalyticsEngine({ eventBus }).evaluate({
-      strategyBacktestExecution: buildExecution(),
-      startingEquity: 100000,
-    })
-
-    expect(events).toHaveLength(1)
-    expect(events[0]).toBe(result)
-    expect(events[0].eventType).toBe(STRATEGY_BACKTEST_PERFORMANCE_EVALUATED_EVENT)
+    eventBus.subscribe(STRATEGY_BACKTEST_PERFORMANCE_EVALUATED_EVENT, (event) => events.push(event))
+    const result = createStrategyBacktestPerformanceAnalyticsEngine({ eventBus }).evaluate({ strategyBacktestExecution: buildExecution() })
+    expect(events).toEqual([result])
   })
 })
