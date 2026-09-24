@@ -6,6 +6,7 @@ import {
   DEFAULT_INITIAL_PAPER_BALANCE,
 } from '../lib/opportunities/persistence/canonicalPaperLedgerRepository.js'
 import { createIndexPullbackExitPolicy } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
+import { buildCanonicalPaperOutcomes } from '../lib/analytics/canonicalPaperOutcomes.js'
 
 const now = '2026-08-13T12:00:00.000Z'
 const scope = (overrides = {}) => ({
@@ -85,11 +86,16 @@ class PaperPgHarness {
     }
     if (text.startsWith('select * from atlas_paper_executions') && text.includes('organization_id=$1')) {
       const [organization_id, team_workspace_id, account_id, user_id, limit] = params
-      return { rows: state.executions.filter(x => x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id).slice(0, limit) }
+      const rows = state.executions.filter(x => x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id)
+      return { rows: limit == null ? rows : rows.slice(-limit) }
     }
     if (text.startsWith('select payload from atlas_paper_executions') && text.includes("execution_type='entry'")) {
       const [account_record_id, position_id] = params
       return { rows: state.executions.filter(x => x.account_record_id === account_record_id && x.position_id === position_id && x.execution_type === 'entry').map(x => ({ payload: x.payload })) }
+    }
+    if (text.startsWith('select * from atlas_paper_executions') && text.includes('position_id=$2') && text.includes('order by created_at')) {
+      const [account_record_id, position_id] = params
+      return { rows: state.executions.filter(x => x.account_record_id === account_record_id && x.position_id === position_id) }
     }
     if (text.startsWith('select * from atlas_paper_executions')) {
       const [account_record_id, idempotency_fingerprint] = params
@@ -114,7 +120,11 @@ class PaperPgHarness {
     if (text.startsWith('insert into atlas_paper_positions')) {
       const [id, account_record_id, organization_id, team_workspace_id, account_id, user_id, symbol, asset_type, side, quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, realized_pnl, originating_candidate_id, originating_evaluation_id, originating_intent_fingerprint, strategy_id] = params
       let row = state.positions.find(x => x.account_record_id === account_record_id && x.symbol === symbol && x.asset_type === asset_type && x.side === side)
-      if (row) Object.assign(row, { quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, strategy_id, status: 'open', revision: row.revision + 1, updated_at: now })
+      if (row) {
+        const reopening = row.status === 'closed'
+        Object.assign(row, { quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, strategy_id, status: 'open', revision: row.revision + 1, updated_at: now })
+        if (reopening) Object.assign(row, { originating_candidate_id, originating_evaluation_id, originating_intent_fingerprint })
+      }
       else { row = { id, account_record_id, organization_id, team_workspace_id, account_id, user_id, symbol, asset_type, side, quantity, average_cost, current_price, mark_evidence_timestamp, risk_state, realized_pnl, originating_candidate_id, originating_evaluation_id, originating_intent_fingerprint, strategy_id, status: 'open', revision: 0, created_at: now, updated_at: now }; state.positions.push(row) }
       return { rows: [row] }
     }
@@ -327,21 +337,21 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
   it('preserves EDGE.2 identity on an emergency close without making it qualifying', async () => {
     const policy = createIndexPullbackExitPolicy({ strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', side: 'long', entryPrice: 100, stopPrice: 98, targetPrice: 104, enteredAt: now })
     const cohort = { experimentId: 'EDGE.2', observationId: 'edge-a', manifestFingerprint: 'manifest-a' }
-    const { database, repository, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', exitPolicy: policy, forwardObservation: cohort } })
+    const { database, repository, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', strategyFingerprint: 'strategy-a', exitPolicy: policy, forwardObservation: cohort } })
     expect(committed.execution.payload.forwardObservation).toEqual(cohort)
     const closed = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 98, updatedAt: now, liquidityScore: 80 }, exitPolicy: { ...policy, fingerprint: 'caller-forgery' }, exitReason: 'manual_emergency', paperModeEnabled: true, confirmed: true, now })
     expect(closed.execution.payload).toMatchObject({ executionType: 'close', forwardObservation: cohort, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false }, exitPolicy: policy, evaluationEvidenceFingerprint: 'eval-evidence-1' })
-    expect(closed.execution.payload.entryEvidence).toEqual([{
+    expect(closed.execution.payload.entryEvidence).toMatchObject([{
       executionId: committed.execution.executionId, strategyId: 'index-pullback-v1', evaluationId: 'eval-1',
       evaluationEvidenceFingerprint: 'eval-evidence-1', executionIntentFingerprint: 'entry-fp-1', exitPolicy: policy, forwardObservation: cohort,
     }])
     expect(database.state.executions[0].payload).toEqual(committed.execution.payload)
     expect(closed.execution.fillPrice).toBe(97.95)
     expect(closed.execution.fees).toBe(0.49)
-    expect(closed.execution.realizedPnlDelta).toBe(-20.99)
+    expect(closed.execution.realizedPnlDelta).toBe(-21.99)
     expect(closed.account.cash).toBe(99978.01)
-    expect(closed.account.realizedPnl).toBe(-20.99)
-    expect(closed.position).toMatchObject({ quantity: 0, realizedPnl: -20.99, status: 'closed' })
+    expect(closed.account.realizedPnl).toBe(-21.99)
+    expect(closed.position).toMatchObject({ quantity: 0, realizedPnl: -21.99, status: 'closed' })
     const durable = await createCanonicalPaperLedgerRepository({ database }).listExecutions(scope())
     expect(durable.find((record) => record.executionType === 'close')?.payload?.forwardObservation).toEqual(cohort)
     expect((await repository.listForwardObservationExecutions(scope())).map((record) => record.executionType)).toEqual(['close'])
@@ -354,6 +364,19 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
     expect(result.execution.realizedPnlDelta).toBeGreaterThan(0)
     expect(result.account.cash).toBeGreaterThan(98999)
     expect(result.account.realizedPnl).toBeCloseTo(result.execution.realizedPnlDelta, 2)
+  })
+
+  it('allocates entry cost across a reduction and final close into one reconciled outcome', async () => {
+    const { repository, committed } = await seeded({ entry: { strategyFingerprint: 'strategy-a', policyFingerprint: 'policy-a' } })
+    const reduced = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 4, quote: { price: 110, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })
+    const closed = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 6, quote: { price: 110, updatedAt: '2026-08-13T12:00:01.000Z', liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now: '2026-08-13T12:00:01.000Z' })
+    expect(reduced.execution.payload.entryFeeAllocation).toBe(0.4)
+    expect(closed.execution.payload.entryFeeAllocation).toBe(0.6)
+    const executions = await repository.listExecutions(scope())
+    const measurement = buildCanonicalPaperOutcomes(executions)
+    expect(measurement.outcomes).toHaveLength(1)
+    expect(measurement.outcomes[0]).toMatchObject({ reductionExecutionIds: [reduced.execution.executionId], pnlReconciliation: { status: 'RECONCILED' }, quantityReconciliation: { status: 'RECONCILED' } })
+    expect(closed.account.realizedPnl).toBeCloseTo(measurement.outcomes[0].netPnl, 2)
   })
 
   it('fully closes without reversal and survives repository re-instantiation', async () => {

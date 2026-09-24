@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { buildDecisionQualityMonitor } from '../lib/analytics/decisionQualityMonitor.js'
 
 function outcome(pnl, index, extra = {}) {
-  return { id: `outcome-${index}`, status: 'SIMULATED_FILLED', accountingStatus: 'position_closed', realizedPnl: pnl, paperTradingOnly: true, strategyId: 'index-pullback-v1', simulatedAt: `2026-08-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`, tradeQuality: { band: 'STRONG', score: 85 }, regime: { trendRegime: 'BULL' }, evaluationStatus: 'APPROVED_FOR_PAPER_REVIEW', qualifiedTradePlan: { risk: { maximumPlannedLoss: 100 }, integrity: { strategyFingerprint: 'strategy-a', policyFingerprint: 'policy-a' } }, ...extra }
+  const qualifiedTradePlan = extra.qualifiedTradePlan ?? { risk: { maximumPlannedLoss: 100 }, integrity: { strategyFingerprint: 'strategy-a', policyFingerprint: 'policy-a' } }
+  const strategyFingerprint = qualifiedTradePlan.integrity?.strategyFingerprint ?? 'strategy-a'
+  const policyFingerprint = qualifiedTradePlan.integrity?.policyFingerprint ?? 'policy-a'
+  const experimentId = extra.experimentId ?? null
+  const observationId = experimentId ? `${experimentId}-observation` : null
+  const manifestFingerprint = experimentId ? `${experimentId}-manifest` : null
+  const attribution = { status: 'COMPLETE', strategyFingerprint, policyFingerprint, evaluationFingerprints: [`evaluation-${index}`], experimentId, observationId, manifestFingerprint }
+  const cohortKey = JSON.stringify([strategyFingerprint, policyFingerprint, experimentId, observationId, manifestFingerprint])
+  return { id: `outcome-${index}`, status: 'SIMULATED_FILLED', accountingStatus: 'position_closed', realizedPnl: pnl, netPnl: pnl, immutablePlannedRisk: qualifiedTradePlan.risk?.maximumPlannedLoss ?? null, attribution, cohortKey, paperTradingOnly: true, strategyId: 'index-pullback-v1', simulatedAt: `2026-08-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`, tradeQuality: { band: 'STRONG', score: 85 }, regime: { trendRegime: 'BULL' }, evaluationStatus: 'APPROVED_FOR_PAPER_REVIEW', qualifiedTradePlan, ...extra }
 }
 
 describe('decision quality monitor', () => {
@@ -13,7 +21,7 @@ describe('decision quality monitor', () => {
     expect(monitor.groupings.byStrategyFamily[0].familyId).toBe('trend-pullback')
   })
   it('keeps R unavailable and trend conservative without complete immutable risk evidence', () => {
-    const monitor = buildDecisionQualityMonitor({ outcomes: [outcome(100, 0, { qualifiedTradePlan: {} })], generatedAt: '2026-08-27T00:00:00.000Z' })
+    const monitor = buildDecisionQualityMonitor({ outcomes: [outcome(100, 0, { qualifiedTradePlan: {}, immutablePlannedRisk: null })], generatedAt: '2026-08-27T00:00:00.000Z' })
     expect(monitor.status).toBe('INSUFFICIENT_SAMPLE'); expect(monitor.rNormalized.status).toBe('UNAVAILABLE'); expect(monitor.recentTrend).toBe('INSUFFICIENT_DATA')
   })
   it('does not silently merge incompatible fingerprints or mutate outcomes', () => {

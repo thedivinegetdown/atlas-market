@@ -43,6 +43,17 @@ function completedOutcomes(observation, count) {
   }))
 }
 
+function completedSnapshots(observation, count) {
+  return Array.from({ length: count }, (_, index) => ({
+    experimentId: 'EDGE.2',
+    observationId: observation.observationId,
+    manifestFingerprint: observation.manifestFingerprint,
+    timestamp: `2026-09-${String(index + 1).padStart(2, '0')}T14:00:00Z`,
+    quoteFreshness: 'LIVE',
+    provider: 'twelvedata',
+  }))
+}
+
 function eligibleEvidence(overrides = {}) {
   return {
     forwardTestEligible: true,
@@ -139,22 +150,22 @@ describe('EDGE.2 fixed forward paper observation', () => {
 
   it('does not classify profitability before both minimums are satisfied', () => {
     const observation = manifest()
-    const snapshots = Array.from({ length: 19 }, (_, index) => ({ timestamp: `2026-09-${String(index + 1).padStart(2, '0')}T14:00:00Z`, quoteFreshness: 'LIVE', provider: 'twelvedata' }))
+    const snapshots = completedSnapshots(observation, 19)
     const result = buildForwardObservationStatus({ manifest: observation, snapshots, outcomes: completedOutcomes(observation, 29), performanceReview: { sample: { completedTrades: 29 }, performance: { expectancyPerTrade: 10, profitFactor: 2 } } })
     expect(result).toMatchObject({ status: 'COLLECTING', sessionsElapsed: 19, completedOutcomes: 29, reviewClassification: null })
   })
 
   it('uses the separate session and outcome pending states', () => {
     const observation = manifest()
-    const nineteen = Array.from({ length: 19 }, (_, index) => ({ timestamp: `2026-09-${String(index + 1).padStart(2, '0')}T14:00:00Z`, quoteFreshness: 'LIVE', provider: 'twelvedata' }))
-    const twenty = [...nineteen, { timestamp: '2026-09-20T14:00:00Z', quoteFreshness: 'LIVE', provider: 'twelvedata' }]
+    const nineteen = completedSnapshots(observation, 19)
+    const twenty = completedSnapshots(observation, 20)
     expect(buildForwardObservationStatus({ manifest: observation, snapshots: nineteen, outcomes: completedOutcomes(observation, 30), performanceReview: { sample: { completedTrades: 30 } } }).status).toBe('MINIMUM_SESSIONS_PENDING')
     expect(buildForwardObservationStatus({ manifest: observation, snapshots: twenty, outcomes: completedOutcomes(observation, 29), performanceReview: { sample: { completedTrades: 29 } } }).status).toBe('MINIMUM_OUTCOMES_PENDING')
   })
 
   it('becomes review-ready deterministically and reuses PA.3/PA.5 analytics', () => {
     const observation = manifest()
-    const snapshots = Array.from({ length: 20 }, (_, index) => ({ timestamp: `2026-09-${String(index + 1).padStart(2, '0')}T14:00:00Z`, quoteFreshness: 'LIVE', provider: 'twelvedata' }))
+    const snapshots = completedSnapshots(observation, 20)
     const performanceReview = { sample: { completedTrades: 30 }, performance: { expectancyPerTrade: 12, profitFactor: 1.4, maximumDrawdownPct: 4 }, recentTrend: 'STABLE', strategies: [{ value: 'index-pullback-v1' }], trendRegimes: [{ value: 'BULL' }], symbols: [{ value: 'SPY' }] }
     const learningEvidence = { qualityCalibration: { status: 'CONSISTENT' } }
     const outcomes = completedOutcomes(observation, 30)

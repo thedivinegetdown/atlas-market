@@ -1,4 +1,44 @@
-import{reviewPaperPerformance}from'../../lib/analytics/paperPerformanceReview.js';import{buildPaperLearningEvidence}from'../../lib/analytics/paperLearning/index.js';import{buildForwardObservationStatus}from'../../lib/opportunities/forwardTest/forwardObservationEngine.js';import{resolveCanonicalPaperEvidenceRepository}from'../../lib/opportunities/persistence/canonicalPaperEvidenceRepository.js';import{resolveCanonicalPaperLedgerRepository}from'../../lib/opportunities/persistence/canonicalPaperLedgerRepository.js';import{requireAccountContext}from'../../lib/security/securityPolicyEngine.js';import{createOrganizationAuthenticatedApiHandler}from'./_shared/authApi.js'
-function executionRecord(x={}){const p=x.payload??{};return{id:x.executionId??x.fingerprint,status:'SIMULATED_FILLED',symbol:x.symbol,strategyId:x.strategyId,assetType:p.assetType,closedAt:x.evidenceTimestamp??x.createdAt,executionType:x.executionType,accountingStatus:x.executionType==='close'?'position_closed':'position_reduced',realizedPnl:x.realizedPnlDelta,tradeQuality:p.tradeQuality,regime:p.regime,evaluationStatus:p.evaluationStatus,exitPolicy:p.exitPolicy,exitAttribution:p.exitAttribution,forwardObservation:p.forwardObservation,paperTradingOnly:true}}
-export function createPaperLearningHandler({ledgerRepository:providedLedgerRepository,opportunityRepository,env=process.env,...options}={}){return createOrganizationAuthenticatedApiHandler(async({query,tenantContext,user,repository})=>{const accountId=requireAccountContext(query.accountId??'paper-portfolio'),context={tenantContext,accountId,userId:tenantContext.userId??user.id},ledger=resolveCanonicalPaperLedgerRepository({persistenceRepository:repository,ledgerRepository:providedLedgerRepository,env}),evidenceRepository=opportunityRepository??(env.NODE_ENV==='test'?null:resolveCanonicalPaperEvidenceRepository({persistenceRepository:repository,env})),executions=await ledger.listExecutions(context),outcomes=executions.filter(x=>x.executionType==='reduction'||x.executionType==='close').map(executionRecord),review=reviewPaperPerformance(outcomes,{asOf:query.asOf}),learning=buildPaperLearningEvidence(review),observation=evidenceRepository?await evidenceRepository.getForwardObservationManifest({...context,experimentId:'EDGE.2'}):null,snapshots=observation?await evidenceRepository.listForwardEvidenceSnapshots({...context,observationId:observation.manifest.observationId}):[],cohortExecutions=await ledger.listForwardObservationExecutions?.(context)??executions,cohortOutcomes=cohortExecutions.map(executionRecord);return{...learning,forwardObservation:buildForwardObservationStatus({manifest:observation?.manifest,manifestStatus:observation?.status,snapshots,outcomes:cohortOutcomes,performanceReview:review,learningEvidence:learning})}},{allowedMethods:['GET'],requiredPermission:'dashboard.read',workspaceAction:'read',routeId:'paper-learning',env,...options})}
-export const handler=createPaperLearningHandler()
+import { buildCanonicalPaperOutcomes } from '../../lib/analytics/canonicalPaperOutcomes.js'
+import { reviewPaperPerformance } from '../../lib/analytics/paperPerformanceReview.js'
+import { buildPaperLearningEvidence } from '../../lib/analytics/paperLearning/index.js'
+import { buildForwardObservationStatus } from '../../lib/opportunities/forwardTest/forwardObservationEngine.js'
+import { resolveCanonicalPaperEvidenceRepository } from '../../lib/opportunities/persistence/canonicalPaperEvidenceRepository.js'
+import { resolveCanonicalPaperLedgerRepository } from '../../lib/opportunities/persistence/canonicalPaperLedgerRepository.js'
+import { requireAccountContext } from '../../lib/security/securityPolicyEngine.js'
+import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
+
+function matchesManifest(outcome, manifest) {
+  return outcome.forwardObservation?.experimentId === (manifest?.experiment?.experimentId ?? 'EDGE.2')
+    && outcome.forwardObservation?.observationId === manifest?.observationId
+    && outcome.forwardObservation?.manifestFingerprint === manifest?.manifestFingerprint
+    && outcome.exitAttribution?.policyCompliant === true
+    && outcome.exitAttribution?.countsTowardObservationMinimum === true
+}
+
+export function createPaperLearningHandler({ ledgerRepository: providedLedgerRepository, opportunityRepository, env = process.env, ...options } = {}) {
+  return createOrganizationAuthenticatedApiHandler(async ({ query, tenantContext, user, repository }) => {
+    const accountId = requireAccountContext(query.accountId ?? 'paper-portfolio')
+    const context = { tenantContext, accountId, userId: tenantContext.userId ?? user.id }
+    const ledger = resolveCanonicalPaperLedgerRepository({ persistenceRepository: repository, ledgerRepository: providedLedgerRepository, env })
+    const evidenceRepository = opportunityRepository ?? (env.NODE_ENV === 'test' ? null : resolveCanonicalPaperEvidenceRepository({ persistenceRepository: repository, env }))
+    const executionHistory = typeof ledger.readExecutionHistory === 'function'
+      ? await ledger.readExecutionHistory(context)
+      : { executions: await ledger.listExecutions(context), history: { status: 'UNKNOWN', latest: null } }
+    const measurement = buildCanonicalPaperOutcomes(executionHistory.executions, { history: executionHistory.history })
+    const review = reviewPaperPerformance(measurement.outcomes, { asOf: query.asOf, cohortIsolation: true, equityChronology: measurement.equityChronology })
+    const learning = buildPaperLearningEvidence(review)
+    const observation = evidenceRepository ? await evidenceRepository.getForwardObservationManifest({ ...context, experimentId: 'EDGE.2' }) : null
+    const snapshots = observation ? await evidenceRepository.listForwardEvidenceSnapshots({ ...context, observationId: observation.manifest.observationId }) : []
+    const cohortOutcomes = observation ? measurement.outcomes.filter((outcome) => matchesManifest(outcome, observation.manifest)) : []
+    const cohortReview = reviewPaperPerformance(cohortOutcomes, { asOf: query.asOf, cohortIsolation: true, equityChronology: measurement.equityChronology })
+    const cohortLearning = buildPaperLearningEvidence(cohortReview)
+    return {
+      ...learning,
+      history: measurement.history,
+      outcomeContract: { version: measurement.version, excludedOutcomes: measurement.excludedOutcomes, equityChronology: measurement.equityChronology, boundaries: measurement.boundaries },
+      forwardObservation: buildForwardObservationStatus({ manifest: observation?.manifest, manifestStatus: observation?.status, snapshots, outcomes: cohortOutcomes, performanceReview: cohortReview, learningEvidence: cohortLearning }),
+    }
+  }, { allowedMethods: ['GET'], requiredPermission: 'dashboard.read', workspaceAction: 'read', routeId: 'paper-learning', env, ...options })
+}
+
+export const handler = createPaperLearningHandler()

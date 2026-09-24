@@ -3,6 +3,14 @@ import { buildDecisionIntelligence } from '../lib/intelligence/decisionIntellige
 
 const evaluation = { evaluationId: 'eval-aapl', opportunityId: 'opp-aapl', symbol: 'AAPL', strategyId: 'index-pullback-v1', status: 'APPROVED_FOR_PAPER_REVIEW', freshness: 'FRESH', evaluatedAt: '2026-08-27T00:00:00.000Z', orderContext: { side: 'buy', price: 100, stopPrice: 98, targetPrice: 104, quantity: 10 }, tradeQuality: { score: 85, band: 'QUALIFIED', confidence: 80 }, regime: { status: 'COMPLETE', trendRegime: 'BULL' }, strategySuitability: { decision: 'ENABLED' }, evidenceFingerprint: 'evidence', reasons: [], blockers: [], missingEvidence: [] }
 const input = (overrides = {}) => ({ tenantContext: { organizationId: 'org-a', userId: 'user-a' }, accountId: 'paper-a', evaluations: [evaluation], positions: [], account: { accountId: 'paper-a', equity: 100000 }, executions: [], generatedAt: '2026-08-27T00:00:00.000Z', ...overrides })
+const outcomeExecutions = (id, experimentId, strategyId, pnl, day) => {
+  const forwardObservation = { experimentId, observationId: `${id}-observation`, manifestFingerprint: `${id}-manifest` }
+  const attribution = { strategyFingerprint: `${id}-strategy`, policyFingerprint: `${id}-policy`, evaluationFingerprint: `${id}-evaluation`, ...forwardObservation }
+  return [
+    { executionId: `${id}-entry`, positionId: `${id}-position`, executionType: 'entry', symbol: id.toUpperCase(), strategyId, quantity: 1, fees: 0, cashImpact: -100, evidenceTimestamp: `2026-08-${day}T10:00:00.000Z`, payload: { attribution, forwardObservation, plannedRisk: 10, valuation: { equity: 100000 }, accountEquityAfter: 100000 } },
+    { executionId: `${id}-close`, positionId: `${id}-position`, executionType: 'close', symbol: id.toUpperCase(), strategyId, quantity: 1, fees: 0, cashImpact: 100 + pnl, realizedPnlDelta: pnl, evidenceTimestamp: `2026-08-${day}T11:00:00.000Z`, payload: { attribution, forwardObservation, exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true }, valuation: { equity: 100000 }, accountEquityAfter: 100000 + pnl } },
+  ]
+}
 
 describe('decision intelligence orchestration', () => {
   it('composes bounded immutable tenant-scoped deterministic evidence', async () => {
@@ -43,7 +51,7 @@ describe('decision intelligence orchestration', () => {
     expect(result.opportunities.noTradeReasons).toEqual([{ strategyId: 'index-pullback-v1', reason: 'Risk sizing allowed zero quantity.' }])
   })
   it('keeps completed outcomes grouped by their persisted experiment identity', async () => {
-    const result = await buildDecisionIntelligence(input({ executions: [{ executionId: 'edge-exit', executionType: 'close', experimentId: 'EDGE.2', symbol: 'SPY', strategyId: 'index-pullback-v1', realizedPnlDelta: 10 }, { executionId: 'breakout-exit', executionType: 'close', experimentId: 'BREAKOUT.1', symbol: 'AAPL', strategyId: 'breakout-momentum-v1', realizedPnlDelta: 5 }] }))
+    const result = await buildDecisionIntelligence(input({ executions: [...outcomeExecutions('edge', 'EDGE.2', 'index-pullback-v1', 10, '01'), ...outcomeExecutions('breakout', 'BREAKOUT.1', 'breakout-momentum-v1', 5, '02')] }))
     expect(result.decisionQuality.groupings.byExperimentId).toEqual(expect.arrayContaining([{ experimentId: 'EDGE.2', compatibilityStatus: 'SEPARATE_COHORT' }, { experimentId: 'BREAKOUT.1', compatibilityStatus: 'SEPARATE_COHORT' }]))
   })
 })
