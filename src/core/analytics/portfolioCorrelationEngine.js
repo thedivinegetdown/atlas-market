@@ -7,6 +7,12 @@ function numberValue(value, fallback = 0) {
   return Number.isFinite(Number(value)) ? Number(value) : fallback
 }
 
+function finiteNumber(value) {
+  if (value === null || value === undefined || value === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
 function round(value, decimals = 4) {
   return Number(numberValue(value).toFixed(decimals))
 }
@@ -165,10 +171,16 @@ function flattenPairs(matrix = []) {
 function summarizeStrategyCorrelation(strategyAttribution = {}, backtestPerformance = {}) {
   const strategies = strategyAttribution.strategies ?? []
   const backtestMetrics = backtestPerformance.metrics ?? {}
+  const explicitlyUnavailable = [backtestPerformance.evidenceStatus, backtestPerformance.analyticsStatus]
+    .some((status) => ['UNAVAILABLE', 'BLOCKED'].includes(String(status ?? '').toUpperCase()))
+  const backtestPnl = explicitlyUnavailable ? null : finiteNumber(backtestMetrics.netRealizedPnl)
+  const historicalEvidenceStatus = explicitlyUnavailable || backtestPnl === null ? 'UNAVAILABLE' : 'AVAILABLE'
   const summaries = strategies.map((strategy) => {
-    const pnlAlignment = numberValue(backtestMetrics.netRealizedPnl) === 0
+    const pnlAlignment = historicalEvidenceStatus === 'UNAVAILABLE'
+      ? 'UNAVAILABLE'
+      : backtestPnl === 0
       ? 'neutral'
-      : Math.sign(numberValue(strategy.netRealizedPnl)) === Math.sign(numberValue(backtestMetrics.netRealizedPnl))
+      : Math.sign(numberValue(strategy.netRealizedPnl)) === Math.sign(backtestPnl)
         ? 'aligned'
         : 'divergent'
     const qualityScore = Math.max(0, Math.min(100,
@@ -184,16 +196,22 @@ function summarizeStrategyCorrelation(strategyAttribution = {}, backtestPerforma
       netRealizedPnl: round(strategy.netRealizedPnl, 2),
       profitFactor: round(strategy.profitFactor, 2),
       pnlAlignment,
+      historicalEvidenceStatus,
       qualityScore: round(qualityScore, 2),
     }
   })
   const alignedStrategies = summaries.filter((strategy) => strategy.pnlAlignment === 'aligned').length
   const divergentStrategies = summaries.filter((strategy) => strategy.pnlAlignment === 'divergent').length
+  const unavailableStrategies = summaries.filter((strategy) => strategy.pnlAlignment === 'UNAVAILABLE').length
 
   return {
+    historicalEvidenceStatus,
+    historicalNetPnl: backtestPnl,
+    historicalEvidenceContributed: historicalEvidenceStatus === 'AVAILABLE',
     strategyCount: summaries.length,
     alignedStrategies,
     divergentStrategies,
+    unavailableStrategies,
     averageQualityScore: summaries.length
       ? round(summaries.reduce((sum, strategy) => sum + strategy.qualityScore, 0) / summaries.length, 2)
       : 0,

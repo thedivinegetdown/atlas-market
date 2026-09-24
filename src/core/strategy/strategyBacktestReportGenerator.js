@@ -3,9 +3,31 @@ import { historicalEvidenceUnavailable } from './historicalEvidenceContract.js'
 
 export const STRATEGY_BACKTEST_REPORT_GENERATED_EVENT = 'strategy.backtestReport.generated'
 
+function canonicalMonteCarloSummary(input = {}) {
+  const monteCarlo = input.strategyMonteCarlo ?? input.monteCarloSimulation ?? input.monteCarlo ?? {}
+  const available = monteCarlo.evidenceStatus === 'AVAILABLE'
+    && monteCarlo.simulationStatus === 'AVAILABLE'
+    && monteCarlo.evidenceScope === 'CANONICAL_PAPER_OUTCOME_RESAMPLING_ONLY'
+  if (!available) {
+    return { evidenceStatus: 'UNAVAILABLE', evidenceScope: null, robustnessClassification: 'UNAVAILABLE', probabilityOfProfitability: null, probabilityOfDrawdownBreach: null, sourceTradeCount: 0, sourceFingerprint: null, configurationFingerprint: null }
+  }
+  return {
+    evidenceStatus: 'AVAILABLE',
+    evidenceScope: monteCarlo.evidenceScope,
+    historicalValidationStatus: monteCarlo.historicalValidationStatus ?? 'UNAVAILABLE',
+    robustnessClassification: monteCarlo.robustnessClassification,
+    probabilityOfProfitability: monteCarlo.probabilityOfProfitability,
+    probabilityOfDrawdownBreach: monteCarlo.probabilityOfDrawdownBreach,
+    sourceTradeCount: monteCarlo.tradeOutcomeSampling?.sourceTradeCount ?? 0,
+    sourceFingerprint: monteCarlo.sourceFingerprint ?? null,
+    configurationFingerprint: monteCarlo.configurationFingerprint ?? null,
+  }
+}
+
 export function generateBacktestReport(input = {}, options = {}) {
   const execution = input.strategyBacktestExecution ?? input.backtestExecution ?? {}
   const evidence = historicalEvidenceUnavailable()
+  const monteCarloRiskSummary = canonicalMonteCarloSummary(input)
   // Do not allow persisted pre-contract reports or injected robust summaries to
   // become historical approval. Monte Carlo resampling alone is not validation.
   const result = {
@@ -17,12 +39,13 @@ export function generateBacktestReport(input = {}, options = {}) {
     strategySummary: { strategyId: execution.session?.strategyId ?? null, backtestExecutionStatus: 'blocked', paperTrading: true },
     backtestPerformanceSummary: { analyticsStatus: 'UNAVAILABLE', netRealizedPnl: null, winRate: null, maxDrawdown: null },
     walkForwardRobustnessSummary: { status: 'UNAVAILABLE', robustnessScore: null, windowCount: 0 },
-    monteCarloRiskSummary: { robustnessClassification: 'UNAVAILABLE', probabilityOfProfitability: null, probabilityOfDrawdownBreach: null },
+    monteCarloRiskSummary,
     keyStrengths: [],
     keyWeaknesses: [...evidence.blockers],
     releaseResearchRecommendation: 'UNAVAILABLE',
     normalizedStrategyResearchReport: {
       evidenceStatus: 'UNAVAILABLE',
+      monteCarloRiskSummary,
       releaseResearchRecommendation: 'UNAVAILABLE',
       paperTrading: true,
       liveOrders: false,

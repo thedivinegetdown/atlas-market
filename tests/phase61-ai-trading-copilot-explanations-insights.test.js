@@ -151,6 +151,29 @@ describe('Phase 61B AI trading copilot strategy and portfolio insights', () => {
     expect(denied.statusCode).toBe(403)
   })
 
+  it('does not expose unavailable historical performance as a scored ready API insight', async () => {
+    const options = {
+      repositoryFactory,
+      organizationMembershipRepository: membershipRepository('analyst'),
+      ...upstream(),
+      strategyBacktestPerformance: {
+        eventType: 'strategy.backtestPerformance.evaluated',
+        evidenceStatus: 'UNAVAILABLE',
+        analyticsStatus: 'blocked',
+        metrics: null,
+      },
+      env: { TRADING_MODE: 'paper' },
+    }
+    const response = parseResponse(await createAiTradingCopilotPortfolioInsightsHandler(options)(authEvent('GET')))
+    const insight = response.json.data.aiTradingCopilotPortfolioInsight.aiTradingCopilotPortfolioInsights[0]
+
+    expect(response.statusCode).toBe(200)
+    expect(insight).toMatchObject({ insightStatus: 'caution', historicalEvidenceStatus: 'UNAVAILABLE', historicalEvidenceScore: null, historicalEvidenceContributed: false })
+    expect(insight.strategyComparisonSummary).not.toMatch(/backtest performance score \d/)
+    expect(response.json.data.liveOrders).toBe(false)
+    expect(response.json.data.brokerExecution).toBe(false)
+  })
+
   it('keeps public portfolio insight responses free of sensitive materials and execution flags', async () => {
     const options = { repositoryFactory, organizationMembershipRepository: membershipRepository('analyst'), ...upstream(), env: { TRADING_MODE: 'paper' } }
     const response = parseResponse(await createAiTradingCopilotPortfolioInsightsHandler(options)(authEvent('GET')))

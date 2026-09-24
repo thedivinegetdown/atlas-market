@@ -7,6 +7,12 @@ function numberValue(value, fallback = 0) {
   return Number.isFinite(Number(value)) ? Number(value) : fallback
 }
 
+function finiteNumber(value) {
+  if (value === null || value === undefined || value === '') return null
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
 function round(value, decimals = 2) {
   return Number(numberValue(value).toFixed(decimals))
 }
@@ -202,21 +208,26 @@ function summarizeAssetClassFactorExposure(portfolioAnalytics = {}) {
 }
 
 function summarizeStrategyFactorExposure(strategyAttribution = {}, backtestPerformance = {}) {
-  const backtestPnl = numberValue(backtestPerformance.metrics?.netRealizedPnl)
+  const explicitlyUnavailable = [backtestPerformance.evidenceStatus, backtestPerformance.analyticsStatus]
+    .some((status) => ['UNAVAILABLE', 'BLOCKED'].includes(String(status ?? '').toUpperCase()))
+  const backtestPnl = explicitlyUnavailable ? null : finiteNumber(backtestPerformance.metrics?.netRealizedPnl)
+  const historicalEvidenceStatus = explicitlyUnavailable || backtestPnl === null ? 'UNAVAILABLE' : 'AVAILABLE'
   const strategies = (strategyAttribution.strategies ?? []).map((strategy) => {
     const qualityScore = clamp(
       (numberValue(strategy.winRate) * 0.35)
       + (Math.min(3, Math.max(0, numberValue(strategy.profitFactor))) / 3 * 35)
       + (numberValue(strategy.expectancy) > 0 ? 30 : 0),
     )
-    const pnlAlignment = backtestPnl === 0
+    const pnlAlignment = historicalEvidenceStatus === 'UNAVAILABLE'
+      ? 'UNAVAILABLE'
+      : backtestPnl === 0
       ? 'neutral'
       : Math.sign(numberValue(strategy.netRealizedPnl)) === Math.sign(backtestPnl)
         ? 'aligned'
         : 'divergent'
     const riskContribution = strategy.profitFactor > 0 && strategy.profitFactor < 1
       ? 70
-      : pnlAlignment === 'divergent'
+      : historicalEvidenceStatus === 'AVAILABLE' && pnlAlignment === 'divergent'
         ? 60
         : Math.max(0, 100 - qualityScore)
 
@@ -226,6 +237,7 @@ function summarizeStrategyFactorExposure(strategyAttribution = {}, backtestPerfo
       trades: numberValue(strategy.trades),
       qualityScore: round(qualityScore),
       pnlAlignment,
+      historicalEvidenceStatus,
       riskContribution: round(riskContribution),
     }
   })
@@ -235,6 +247,9 @@ function summarizeStrategyFactorExposure(strategyAttribution = {}, backtestPerfo
   const dominantStrategy = [...strategies].sort((left, right) => right.riskContribution - left.riskContribution)[0] ?? null
 
   return {
+    historicalEvidenceStatus,
+    historicalNetPnl: backtestPnl,
+    historicalEvidenceContributed: historicalEvidenceStatus === 'AVAILABLE',
     strategyCount: strategies.length,
     averageRiskContribution,
     dominantStrategy,
