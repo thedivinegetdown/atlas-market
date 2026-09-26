@@ -18,17 +18,28 @@ const scope = (overrides = {}) => ({
 })
 
 function entry(overrides = {}) {
-  return {
+  const simulation = {
     status: 'SIMULATED_FILLED', fingerprint: 'entry-fp-1', evaluationId: 'eval-1',
     evaluationEvidenceFingerprint: 'eval-evidence-1', candidateId: 'candidate-1',
     symbol: 'AAPL', strategyId: 'momentum', simulatedAt: now,
-    orderPlan: { evidenceTimestamp: now, side: 'buy', entryType: 'market', referencePrice: 100, stopReference: 98, maximumRisk: 20 }, engineVersion: 'guarded-paper-simulation-v1',
-    executionFill: { symbol: 'AAPL', assetType: 'equity', side: 'buy', quantity: 10, fillPrice: 100, fees: 1, slippageBps: 2, cashImpact: -1001 },
+    orderPlan: { evidenceTimestamp: now, side: 'buy', entryType: 'market', referencePrice: 100, stopReference: 98, maximumRisk: 20 }, engineVersion: 'guarded-paper-simulation-v3',
+    executionFill: { symbol: 'AAPL', assetType: 'equity', side: 'buy', quantity: 10, referencePrice: 100, fillPrice: 100, fees: 1, slippageBps: 2, cashImpact: -1001 },
     journal: { journalStatus: 'recorded' }, tradeQuality: { score: 85, band: 'STRONG' },
     regime: { trendRegime: 'BULL' }, evaluationStatus: 'APPROVED_FOR_PAPER_REVIEW',
-    paperTradingOnly: true, liveOrders: false, brokerExecution: false,
+    executionCalibrationStatus: 'PAPER_ONLY_NOT_LIVE_CALIBRATED', paperTradingOnly: true, liveOrders: false, brokerExecution: false,
     ...overrides,
   }
+  const fill = simulation.executionFill
+  const referencePrice = fill.referencePrice ?? fill.fillPrice
+  const executableSide = fill.side === 'buy' || fill.side === 'cover' ? 'ask' : 'bid'
+  return { ...simulation, executionFill: { ...fill, referencePrice }, executionRealism: simulation.executionRealism ?? {
+    version: 'paper-execution-realism-v2', executionCalibrationStatus: 'PAPER_ONLY_NOT_LIVE_CALIBRATED',
+    paperSimulationAdmissibility: { status: 'ADMISSIBLE' }, liveExecutionCalibration: { status: 'NOT_CALIBRATED', liveMoneyReady: false },
+    chronology: { decisionAt: now, confirmedAt: now, submittedAt: now, decisionToConfirmationMs: 0, confirmationToSubmissionMs: 0 },
+    quoteEvidence: { bid: executableSide === 'bid' ? referencePrice : referencePrice - 0.02, ask: executableSide === 'ask' ? referencePrice : referencePrice + 0.02, observedAt: now },
+    quantityEvidence: { requestedQuantity: fill.quantity, executableSide, displayedSize: fill.quantity, fullQuantityDisplayed: true },
+    fillEvidence: { status: 'PAPER_FILLED', requestedQuantity: fill.quantity, filledQuantity: fill.quantity, referencePrice, fillPrice: fill.fillPrice, slippageBps: fill.slippageBps, fees: fill.fees, costApplications: { spread: 1, slippage: 1, fees: 1 } },
+  } }
 }
 
 class PaperPgHarness {
@@ -196,7 +207,7 @@ describe('PI.3 durable paper account and immutable ledger', () => {
     const { database, committed } = await seeded()
     expect(committed).toMatchObject({ duplicate: false, account: { cash: 98999, revision: 1 }, position: { quantity: 10, averagePrice: 100 } })
     expect(database.state.executions).toHaveLength(1)
-    expect(committed.execution.payload).toMatchObject({ evaluationId: 'eval-1', executionIntentFingerprint: 'entry-fp-1', paperTradingOnly: true, liveOrders: false, brokerExecution: false })
+    expect(committed.execution.payload).toMatchObject({ evaluationId: 'eval-1', executionIntentFingerprint: 'entry-fp-1', executionCalibrationStatus: 'PAPER_ONLY_NOT_LIVE_CALIBRATED', executionRealism: { paperSimulationAdmissibility: { status: 'ADMISSIBLE' }, liveExecutionCalibration: { status: 'NOT_CALIBRATED', liveMoneyReady: false }, chronology: { decisionAt: now, confirmedAt: now, submittedAt: now }, fillEvidence: { costApplications: { spread: 1, slippage: 1, fees: 1 } } }, entryChronology: { version: 'paper-entry-ledger-clock-v1', timeBasis: 'execution_created_at' }, paperTradingOnly: true, liveOrders: false, brokerExecution: false })
     expect(JSON.stringify(committed.execution.payload)).not.toMatch(/rawCandles|apiKey|providerPayload|credential/i)
   })
 

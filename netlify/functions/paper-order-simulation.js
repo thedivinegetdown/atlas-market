@@ -59,7 +59,7 @@ export function createPaperOrderSimulationHandler({repository:providedRepository
    const cohort=await edge2CohortFor(repository,context,evaluation,simulation)
    const committed=await ledger.commitEntry({...context,marks,simulation:cohort?{...simulation,forwardObservation:cohort}:simulation})
    if(committed.duplicate){results.push({...simulation,status:'DUPLICATE_SUPPRESSED',blockers:['Identical durable paper execution already exists']});continue}
-   results.push({...simulation,accountSnapshot:committed.account,positionSnapshot:committed.position,executionId:committed.execution.executionId,canonicalLedger:true})
+   results.push({...simulation,accountSnapshot:committed.account,positionSnapshot:committed.position,executionId:committed.execution.executionId,canonicalLedger:true,canonicalLedgerOutcome:{status:'COMMITTED',executionId:committed.execution.executionId}})
   }
   const filled=results.filter(x=>x.status==='SIMULATED_FILLED').length
   return {...envelope,status:filled?'COMPLETE':results.length?'CAUTION':envelope.status,results,dailyRemaining:Math.max(0,(envelope.dailyLimit??10)-dailyCount-filled),manualTrigger:true,authenticated:true,durableExecutionIntent:true,accountingProjection:'canonical-postgresql-pi3',riskStateSource:'canonical-postgresql-account-revision',processLocalDailyLimit:true}
