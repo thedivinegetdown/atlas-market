@@ -2,24 +2,24 @@
   "schemaVersion": 2,
   "generatedFrom": "netlify/functions/*.js",
   "summary": {
-    "total": 280,
+    "total": 281,
     "byWrapper": {
       "team-authenticated": 8,
-      "organization-authenticated": 249,
+      "organization-authenticated": 250,
       "authenticated": 21,
       "plain-api": 2,
       "unknown": 0
     },
     "byAccess": {
       "read": 80,
-      "mutation": 58,
+      "mutation": 59,
       "read-and-mutation": 142
     },
     "byPriority": {
       "P0": 0,
       "P1": 0,
       "P2": 0,
-      "P3": 280
+      "P3": 281
     }
   },
   "functions": [
@@ -3594,6 +3594,24 @@
         "POST"
       ],
       "access": "read-and-mutation",
+      "authenticated": true,
+      "boundary": "organization",
+      "permission": "dashboard.read",
+      "csrfRequired": true,
+      "endpointClassification": "AUTHENTICATED_MUTATION",
+      "classificationReason": "Protected by the existing authenticated control and authorization boundary.",
+      "risk": "controlled",
+      "priority": "P3",
+      "remediation": "Retain wrapper coverage and verify production identity/provider configuration."
+    },
+    {
+      "function": "paper-risk-latch-action",
+      "path": "netlify/functions/paper-risk-latch-action.js",
+      "wrapper": "organization-authenticated",
+      "methods": [
+        "POST"
+      ],
+      "access": "mutation",
       "authenticated": true,
       "boundary": "organization",
       "permission": "dashboard.read",

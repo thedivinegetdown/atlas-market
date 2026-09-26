@@ -10,19 +10,19 @@ This inventory reports source-level controls. It does not prove production ident
 
 | Classification | Count |
 | --- | ---: |
-| Total functions | 280 |
+| Total functions | 281 |
 | Wrapper: team-authenticated | 8 |
-| Wrapper: organization-authenticated | 249 |
+| Wrapper: organization-authenticated | 250 |
 | Wrapper: authenticated | 21 |
 | Wrapper: plain-api | 2 |
 | Wrapper: unknown | 0 |
 | Access: read | 80 |
-| Access: mutation | 58 |
+| Access: mutation | 59 |
 | Access: read-and-mutation | 142 |
 | Priority: P0 | 0 |
 | Priority: P1 | 0 |
 | Priority: P2 | 0 |
-| Priority: P3 | 280 |
+| Priority: P3 | 281 |
 
 ## Control semantics
 
@@ -228,6 +228,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `paper-report-schedules` | `netlify/functions/paper-report-schedules.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `paper-report-worker` | `netlify/functions/paper-report-worker.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `paper-reports` | `netlify/functions/paper-reports.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
+| `paper-risk-latch-action` | `netlify/functions/paper-risk-latch-action.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `paper-workspace-projection` | `netlify/functions/paper-workspace-projection.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `policy-attestations` | `netlify/functions/policy-attestations.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `policy-control-assurance-health` | `netlify/functions/policy-control-assurance-health.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
