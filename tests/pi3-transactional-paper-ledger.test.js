@@ -49,7 +49,7 @@ function entry(overrides = {}) {
 class PaperPgHarness {
   constructor() {
     this.connected = true
-    this.state = { accounts: [], positions: [], executions: [], riskLatches: [], riskLatchAudit: [] }
+    this.state = { accounts: [], positions: [], executions: [], accountingEvidence: [], riskLatches: [], riskLatchAudit: [] }
     this.failPattern = null
     this.evidenceAvailable = true
     this.queue = Promise.resolve()
@@ -75,13 +75,19 @@ class PaperPgHarness {
       throw new Error(`injected database failure at ${pattern}`)
     }
     if (text.startsWith('insert into atlas_paper_accounts')) {
-      const [id, organization_id, team_workspace_id, account_id, user_id, balance] = params
+      const [id, organization_id, team_workspace_id, account_id, user_id, accounting_origin_id, balance] = params
       let inserted = null
       if (!state.accounts.some(x => x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id)) {
-        inserted = { id, organization_id, team_workspace_id, account_id, user_id, cash: balance, buying_power: balance, equity: balance, realized_pnl: 0, revision: 0, created_at: now, updated_at: now }
+        inserted = { id, organization_id, team_workspace_id, account_id, user_id, accounting_origin_id, cash: balance, buying_power: balance, equity: balance, realized_pnl: 0, revision: 0, created_at: now, updated_at: now }
         state.accounts.push(inserted)
       }
-      return { rows: inserted ? [{ id }] : [] }
+      return { rows: inserted ? [inserted] : [] }
+    }
+    if (text.startsWith('insert into atlas_paper_accounting_evidence')) {
+      const [id, account_record_id, organization_id, team_workspace_id, account_id, user_id, accounting_origin_id, event_kind, amount, cash_before, cash_after, account_revision_before, account_revision_after, linked_evidence_id, execution_id, operation_idempotency_key, operation_index, actor_user_id, actor_role, authority_source] = params
+      const row = { id, account_record_id, organization_id, team_workspace_id, account_id, user_id, accounting_origin_id, event_kind, amount, cash_before, cash_after, account_revision_before, account_revision_after, linked_evidence_id, execution_id, operation_idempotency_key, operation_index, actor_user_id, actor_role, authority_source, created_at: now }
+      state.accountingEvidence.push(row)
+      return { rows: [row] }
     }
     if (text.startsWith('insert into atlas_paper_risk_latches')) {
       const [account_record_id, organization_id, team_workspace_id, account_id, user_id] = params
@@ -252,7 +258,7 @@ describe('PI.3 durable paper account and immutable ledger', () => {
     const database = new PaperPgHarness(), repository = createCanonicalPaperLedgerRepository({ database })
     database.failPattern = 'update atlas_paper_accounts'
     await expect(repository.commitEntry({ ...scope(), simulation: entry() })).rejects.toThrow('injected database failure')
-    expect(database.state).toEqual({ accounts: [], positions: [], executions: [], riskLatches: [], riskLatchAudit: [] })
+    expect(database.state).toEqual({ accounts: [], positions: [], executions: [], accountingEvidence: [], riskLatches: [], riskLatchAudit: [] })
   })
 
   it('suppresses retry after restart and concurrent duplicate entry without double debit', async () => {
