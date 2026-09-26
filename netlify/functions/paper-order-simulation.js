@@ -18,6 +18,7 @@ export async function edge2CohortFor(repository, context, evaluation, simulation
 
 export function createPaperOrderSimulationHandler({repository:providedRepository,ledgerRepository:providedLedgerRepository,serviceFactory=createWorkspaceDataService,env=process.env,...options}={}) {
  return createOrganizationAuthenticatedApiHandler(async({body,tenantContext,user,repository:persistenceRepository})=>{
+  const confirmationAt=new Date().toISOString()
   const repository=resolveCanonicalPaperEvidenceRepository({opportunityRepository:providedRepository,persistenceRepository,env})
   const ledger=resolveCanonicalPaperLedgerRepository({persistenceRepository,ledgerRepository:providedLedgerRepository,env})
   const accountId=requireAccountContext(body.accountId??'paper-portfolio')
@@ -30,7 +31,9 @@ export function createPaperOrderSimulationHandler({repository:providedRepository
   const marks=[]
   for(const symbol of markSymbols){
    const market=await service.getMarketOverview(symbol)
-   marks.push({symbol,price:market.quote?.price,updatedAt:market.quote?.updatedAt,liquidityScore:market.quote?.liquidityScore})
+   const quote=market.quote??{}
+   const provenance=quote.provenance??{}
+   marks.push({symbol,price:quote.price,last:quote.price,bid:quote.bid,ask:quote.ask,bidSize:quote.bidSize??quote.bid_size,askSize:quote.askSize??quote.ask_size,updatedAt:quote.updatedAt,receivedAt:quote.receivedAt??provenance.receivedAt,provider:quote.provider??provenance.provider,dataStatus:provenance.dataStatus??quote.dataStatus,fallbackUsed:provenance.fallbackUsed??quote.fallbackUsed,liquidityScore:quote.liquidityScore})
   }
   const today=new Date().toISOString().slice(0,10)
   const dailyCount=existing.filter(x=>x.status==='SIMULATED_FILLED'&&String(x.simulatedAt).startsWith(today)).length
@@ -41,7 +44,8 @@ export function createPaperOrderSimulationHandler({repository:providedRepository
    const durable=await ledger.getCanonicalState({...context,marks,requireKnownRisk:true})
    const portfolio={id:accountId,cash:durable.account.cash,equity:durable.account.equity,buyingPower:durable.account.buyingPower,realizedPnl:durable.account.realizedPnl,positions:durable.positions}
    const portfolioRisk=durable.risk
-   const cycle=simulateApprovedPaperEvaluations({evaluations:[evaluation],existingSimulations:[...existing,...results],portfolio,portfolioRisk,enabled,dailyCount:dailyCount+results.filter(x=>x.status==='SIMULATED_FILLED').length})
+   const submittedAt=new Date().toISOString()
+   const cycle=simulateApprovedPaperEvaluations({evaluations:[evaluation],existingSimulations:[...existing,...results],portfolio,portfolioRisk,enabled,dailyCount:dailyCount+results.filter(x=>x.status==='SIMULATED_FILLED').length,executionQuotes:marks},{now:submittedAt,confirmedAt:confirmationAt,confirmationSource:'authenticated_manual_request'})
    envelope={...cycle,results:undefined}
    const simulation=cycle.results[0]
    if(!simulation)continue
