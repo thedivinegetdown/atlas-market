@@ -69,7 +69,8 @@ describe('index-pullback-v1 deterministic paper observation exits', () => {
 
   it('attaches the immutable policy at PA.2 entry without automatic or live execution', () => {
     const evaluation = { evaluationId: 'eval-1', candidateId: 'candidate-1', symbol: 'SPY', strategyId: 'index-pullback-v1', status: 'APPROVED_FOR_PAPER_REVIEW', freshness: 'FRESH', evaluatedAt: NOW, orderContext: { assetType: 'equity', side: 'buy', price: 100, stopPrice: 98, targetPrice: 104 } }
-    const result = simulateApprovedPaperEvaluations({ evaluations: [evaluation], portfolio: { cash: 100000, equity: 100000, buyingPower: 100000, positions: [] }, enabled: true }, { now: NOW })
+    const executionQuote = { symbol: 'SPY', price: 100, bid: 99.98, ask: 100.02, bidSize: 10000, askSize: 10000, liquidityScore: 80, updatedAt: NOW, receivedAt: NOW, provider: 'controlled-test-top-of-book', dataStatus: 'LIVE', fallbackUsed: false }
+    const result = simulateApprovedPaperEvaluations({ evaluations: [evaluation], executionQuotes: [executionQuote], portfolio: { cash: 100000, equity: 100000, buyingPower: 100000, positions: [] }, enabled: true }, { now: NOW, confirmedAt: NOW, confirmationSource: 'authenticated_manual_request' })
     expect(result.results[0]).toMatchObject({ status: 'SIMULATED_FILLED', exitPolicy: { version: INDEX_PULLBACK_EXIT_POLICY_VERSION, liveTradingApproved: false }, automaticExecution: false, liveOrders: false })
     expect(result.results[0].orderPlan.exitPolicy.fingerprint).toBe(result.results[0].exitPolicy.fingerprint)
   })
