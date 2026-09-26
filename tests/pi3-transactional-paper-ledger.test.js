@@ -1,10 +1,14 @@
-import { describe, expect, it } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
+import pg from 'pg'
 import {
   createCanonicalPaperLedgerRepository,
   resolveCanonicalPaperLedgerRepository,
   DEFAULT_INITIAL_PAPER_BALANCE,
 } from '../lib/opportunities/persistence/canonicalPaperLedgerRepository.js'
+import { createDatabaseAdapter } from '../lib/db/postgresRepository.js'
+import { runMigrations } from '../lib/db/migrations.js'
+import { createPaperRiskLatchActionHandler } from '../netlify/functions/paper-risk-latch-action.js'
 import { createIndexPullbackExitPolicy } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 import { buildCanonicalPaperOutcomes } from '../lib/analytics/canonicalPaperOutcomes.js'
 import { exitEvidenceFixture } from './helpers/exitEvidenceFixtures.js'
@@ -45,7 +49,7 @@ function entry(overrides = {}) {
 class PaperPgHarness {
   constructor() {
     this.connected = true
-    this.state = { accounts: [], positions: [], executions: [] }
+    this.state = { accounts: [], positions: [], executions: [], riskLatches: [], riskLatchAudit: [] }
     this.failPattern = null
     this.evidenceAvailable = true
     this.queue = Promise.resolve()
@@ -72,10 +76,43 @@ class PaperPgHarness {
     }
     if (text.startsWith('insert into atlas_paper_accounts')) {
       const [id, organization_id, team_workspace_id, account_id, user_id, balance] = params
+      let inserted = null
       if (!state.accounts.some(x => x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id)) {
-        state.accounts.push({ id, organization_id, team_workspace_id, account_id, user_id, cash: balance, buying_power: balance, equity: balance, realized_pnl: 0, revision: 0, created_at: now, updated_at: now })
+        inserted = { id, organization_id, team_workspace_id, account_id, user_id, cash: balance, buying_power: balance, equity: balance, realized_pnl: 0, revision: 0, created_at: now, updated_at: now }
+        state.accounts.push(inserted)
       }
-      return { rows: [] }
+      return { rows: inserted ? [{ id }] : [] }
+    }
+    if (text.startsWith('insert into atlas_paper_risk_latches')) {
+      const [account_record_id, organization_id, team_workspace_id, account_id, user_id] = params
+      const actionInsert = params.length > 5
+      const row = {
+        account_record_id, organization_id, team_workspace_id, account_id, user_id,
+        latch_state: actionInsert ? 'BLOCKED' : 'CLEAR',
+        reason: actionInsert ? params[5] : 'canonical_account_initialization',
+        changed_by_user_id: actionInsert ? params[6] : 'system',
+        changed_by_role: actionInsert ? params[7] : 'system',
+        revision: 0, created_at: now, updated_at: now,
+      }
+      state.riskLatches.push(row)
+      return { rows: actionInsert ? [row] : [] }
+    }
+    if (text.startsWith('select * from atlas_paper_risk_latches')) {
+      const [account_record_id, organization_id, team_workspace_id, account_id, user_id] = params
+      return { rows: state.riskLatches.filter(x => x.account_record_id === account_record_id && x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id) }
+    }
+    if (text.startsWith('update atlas_paper_risk_latches')) {
+      const [account_record_id, latch_state, reason, changed_by_user_id, changed_by_role, revision, expectedRevision] = params
+      const row = state.riskLatches.find(x => x.account_record_id === account_record_id && x.revision === expectedRevision)
+      if (!row) return { rows: [] }
+      Object.assign(row, { latch_state, reason, changed_by_user_id, changed_by_role, revision, updated_at: now })
+      return { rows: [row] }
+    }
+    if (text.startsWith('insert into atlas_paper_risk_latch_audit')) {
+      const [id, account_record_id, organization_id, team_workspace_id, account_id, user_id, action, previous_state, next_state, reason, actor_user_id, actor_role, latch_revision, evidence] = params
+      const row = { id, account_record_id, organization_id, team_workspace_id, account_id, user_id, action, previous_state, next_state, reason, actor_user_id, actor_role, latch_revision, evidence, created_at: now }
+      state.riskLatchAudit.push(row)
+      return { rows: [row] }
     }
     if (text.startsWith('select * from atlas_paper_accounts')) {
       const [organization_id, team_workspace_id, account_id, user_id] = params
@@ -215,7 +252,7 @@ describe('PI.3 durable paper account and immutable ledger', () => {
     const database = new PaperPgHarness(), repository = createCanonicalPaperLedgerRepository({ database })
     database.failPattern = 'update atlas_paper_accounts'
     await expect(repository.commitEntry({ ...scope(), simulation: entry() })).rejects.toThrow('injected database failure')
-    expect(database.state).toEqual({ accounts: [], positions: [], executions: [] })
+    expect(database.state).toEqual({ accounts: [], positions: [], executions: [], riskLatches: [], riskLatchAudit: [] })
   })
 
   it('suppresses retry after restart and concurrent duplicate entry without double debit', async () => {
@@ -534,4 +571,252 @@ describe('PI.3 migration and integration boundaries', () => {
     expect(source).not.toMatch(/placeLiveOrder|brokerClient|providerCredential|authenticateUser|scoreOpportunity|detectMarketRegime/)
     expect(source).toContain('brokerExecution: false')
   })
+})
+
+const configuredDatabaseUrl = process.env.DATABASE_URL
+const localPostgresAvailable = (() => {
+  try {
+    return ['localhost', '127.0.0.1', '::1'].includes(new URL(configuredDatabaseUrl).hostname)
+  } catch {
+    return false
+  }
+})()
+
+describe.runIf(localPostgresAvailable)('Phase 2 durable PAPER risk latch PostgreSQL contract', () => {
+  const schema = `atlas_phase2_latch_${process.pid}_${Date.now()}`
+  const pools = new Set()
+  let adminPool
+  let base
+
+  function databaseFor(applicationName) {
+    const pool = new pg.Pool({
+      connectionString: configuredDatabaseUrl,
+      max: 4,
+      application_name: applicationName,
+      options: `-c search_path=${schema},public`,
+    })
+    pools.add(pool)
+    return {
+      pool,
+      database: createDatabaseAdapter({
+        client: {
+          connected: true,
+          query: (sql, params) => pool.query(sql, params),
+          connect: () => pool.connect(),
+          end: () => pool.end(),
+        },
+      }),
+    }
+  }
+
+  async function seedEvidence(database, value, targetScope) {
+    const common = [
+      targetScope.tenantContext.organizationId,
+      targetScope.tenantContext.teamWorkspaceId ?? '',
+      targetScope.accountId,
+      targetScope.userId,
+    ]
+    for (const [category, fingerprint, id] of [
+      ['paper_evaluation', value.evaluationEvidenceFingerprint, `evaluation-${value.evaluationId}`],
+      ['paper_simulation', value.fingerprint, `intent-${value.fingerprint}`],
+    ]) {
+      await database.query(
+        `INSERT INTO atlas_ai_opportunity_analysis_history
+          (id,organization_id,team_workspace_id,account_id,user_id,session_id,analysis_category,market_data_as_of,
+           candidate_fingerprints,deterministic_baseline_ranks,advisory_ranking,excluded_candidates,no_trade_recommended,
+           provider,model,prompt_version,context_fingerprint,latency_ms,usage_estimate,status,payload,created_at)
+         VALUES ($1,$2,$3,$4,$5,'phase2-test-session',$6,$7,$8,$9,$10,$11,false,
+           'phase2-test','deterministic','phase2-v1',$12,0,$13,'complete',$14,NOW())
+         ON CONFLICT (id) DO NOTHING`,
+        [id, ...common, category, value.simulatedAt, [], [], [], [], fingerprint, {}, {
+          paperTradingOnly: true,
+          ...(category === 'paper_evaluation' ? { paperEvaluation: { evaluationId: value.evaluationId } } : {}),
+        }],
+      )
+    }
+  }
+
+  async function waitForDatabaseLock(applicationName) {
+    const deadline = Date.now() + 5000
+    while (Date.now() < deadline) {
+      const result = await adminPool.query(
+        `SELECT wait_event_type FROM pg_stat_activity
+         WHERE datname=current_database() AND application_name=$1`,
+        [applicationName],
+      )
+      if (result.rows.some((row) => row.wait_event_type === 'Lock')) return
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    }
+    throw new Error(`PostgreSQL session ${applicationName} did not enter a real lock wait`)
+  }
+
+  async function holdAccountLock(targetScope) {
+    const holder = databaseFor(`phase2-holder-${Date.now()}`).pool
+    const client = await holder.connect()
+    await client.query('BEGIN')
+    await client.query(
+      `SELECT id FROM atlas_paper_accounts
+       WHERE organization_id=$1 AND team_workspace_id=$2 AND account_id=$3 AND user_id=$4 FOR UPDATE`,
+      [targetScope.tenantContext.organizationId, targetScope.tenantContext.teamWorkspaceId ?? '', targetScope.accountId, targetScope.userId],
+    )
+    return client
+  }
+
+  function latchCommand(targetScope, reason, extra = {}) {
+    return {
+      ...targetScope,
+      reason,
+      confirmed: true,
+      actor: { userId: targetScope.userId, role: 'owner', source: 'authenticated_human_request' },
+      ...extra,
+    }
+  }
+
+  function endpointFor(ledger, role = 'owner') {
+    const user = { id: 'user-a', status: 'active', role, provider: 'test', providerSubject: 'user-a' }
+    return createPaperRiskLatchActionHandler({
+      ledgerRepository: ledger,
+      env: { NODE_ENV: 'test' },
+      repositoryFactory: () => ({ end: vi.fn(async () => {}) }),
+      authProvider: { authenticate: vi.fn(async () => ({ ok: true, user, session: { id: 'session-a', userId: user.id, status: 'active', expiresAt: '2099-01-01T00:00:00.000Z', metadata: { localDevelopmentOnly: true } } })) },
+      authorizationService: { assert: vi.fn(() => ({ allowed: true })) },
+      organizationMembershipRepository: { getMembership: vi.fn(async () => ({ organizationId: 'org-a', userId: user.id, role, status: 'active' })) },
+      logger: { info: vi.fn(), error: vi.fn() },
+    })
+  }
+
+  async function invokeLatchEndpoint(ledger, body, role = 'owner') {
+    return endpointFor(ledger, role)({
+      httpMethod: 'POST',
+      headers: { authorization: 'Bearer phase2-test', 'x-csrf-token': 'phase2-csrf', 'content-type': 'application/json' },
+      body: JSON.stringify({ organizationId: 'org-a', accountId: 'paper-a', ...body }),
+    })
+  }
+
+  beforeAll(async () => {
+    adminPool = new pg.Pool({ connectionString: configuredDatabaseUrl, max: 2, application_name: 'phase2-latch-admin' })
+    await adminPool.query(`CREATE SCHEMA "${schema}"`)
+    base = databaseFor('phase2-latch-base')
+    await runMigrations(base.database)
+  }, 30000)
+
+  afterAll(async () => {
+    await Promise.allSettled([...pools].map((pool) => pool.end()))
+    if (adminPool) {
+      if (/^atlas_phase2_latch_\d+_\d+$/.test(schema)) await adminPool.query(`DROP SCHEMA "${schema}" CASCADE`)
+      await adminPool.end()
+    }
+  }, 30000)
+
+  it('persists and isolates the latch, enforces authenticated reset, and proves real row-lock ordering', async () => {
+    const accountA = scope({ accountId: 'paper-a', tenantContext: { organizationId: 'org-a', teamWorkspaceId: '', userId: 'user-a' } })
+    const accountB = scope({ accountId: 'paper-b', tenantContext: { organizationId: 'org-a', teamWorkspaceId: '', userId: 'user-a' } })
+    const otherTenant = scope({ accountId: 'paper-a', tenantContext: { organizationId: 'org-b', teamWorkspaceId: '', userId: 'user-a' } })
+    const missingAccount = scope({ accountId: 'paper-missing', tenantContext: { organizationId: 'org-a', teamWorkspaceId: '', userId: 'user-a' } })
+    const baseLedger = createCanonicalPaperLedgerRepository({ database: base.database })
+    await Promise.all([baseLedger.getOrCreateAccount(accountA), baseLedger.getOrCreateAccount(accountB), baseLedger.getOrCreateAccount(otherTenant), baseLedger.getOrCreateAccount(missingAccount)])
+
+    const blockedEntry = entryFor({ symbol: 'AAPL', fingerprint: 'phase2-blocked-entry', evaluationId: 'phase2-blocked-eval' })
+    await seedEvidence(base.database, blockedEntry, accountA)
+    const killFirst = databaseFor('phase2-kill-first')
+    const admissionWaiting = databaseFor('phase2-admission-waiting')
+    const holderOne = await holdAccountLock(accountA)
+    const killPromise = createCanonicalPaperLedgerRepository({ database: killFirst.database }).activateRiskLatch(latchCommand(accountA, 'Operator emergency kill before admission'))
+    await waitForDatabaseLock('phase2-kill-first')
+    const admissionPromise = createCanonicalPaperLedgerRepository({ database: admissionWaiting.database }).commitEntry({
+      ...accountA,
+      simulation: blockedEntry,
+      riskLatch: 'CLEAR',
+      aiOverride: { clearRiskLatch: true },
+    })
+    await waitForDatabaseLock('phase2-admission-waiting')
+    await holderOne.query('COMMIT')
+    holderOne.release()
+    const killed = await killPromise
+    expect(killed.latch).toMatchObject({ state: 'BLOCKED', revision: 1 })
+    await expect(admissionPromise).rejects.toMatchObject({ code: 'paper_risk_latch_blocked' })
+
+    const restartEntry = entryFor({ symbol: 'MSFT', fingerprint: 'phase2-restart-entry', evaluationId: 'phase2-restart-eval' })
+    await seedEvidence(base.database, restartEntry, accountA)
+    await expect(createCanonicalPaperLedgerRepository({ database: base.database }).commitEntry({ ...accountA, simulation: restartEntry })).rejects.toMatchObject({ code: 'paper_risk_latch_blocked' })
+
+    const isolatedEntry = entryFor({ symbol: 'GOOG', fingerprint: 'phase2-isolated-entry', evaluationId: 'phase2-isolated-eval' })
+    await seedEvidence(base.database, isolatedEntry, accountB)
+    await expect(baseLedger.commitEntry({ ...accountB, simulation: isolatedEntry })).resolves.toMatchObject({ ok: true, duplicate: false })
+    const tenantEntry = entryFor({ symbol: 'TSLA', fingerprint: 'phase2-tenant-entry', evaluationId: 'phase2-tenant-eval' })
+    await seedEvidence(base.database, tenantEntry, otherTenant)
+    await expect(baseLedger.commitEntry({ ...otherTenant, simulation: tenantEntry })).resolves.toMatchObject({ ok: true, duplicate: false })
+
+    const unreadableDatabase = {
+      ...base.database,
+      transaction: (callback) => base.database.transaction((client) => callback({
+        query: (sql, params) => String(sql).includes('SELECT * FROM atlas_paper_risk_latches')
+          ? Promise.reject(new Error('injected unreadable latch state'))
+          : client.query(sql, params),
+      })),
+    }
+    await expect(createCanonicalPaperLedgerRepository({ database: unreadableDatabase }).commitEntry({ ...accountA, simulation: restartEntry })).rejects.toMatchObject({ code: 'paper_risk_latch_unavailable' })
+
+    const missingRecord = await base.database.query(
+      `SELECT id FROM atlas_paper_accounts WHERE organization_id='org-a' AND account_id='paper-missing' AND user_id='user-a'`,
+    )
+    await base.database.query('DELETE FROM atlas_paper_risk_latches WHERE account_record_id=$1', [missingRecord.rows[0].id])
+    const missingEntry = entryFor({ symbol: 'NVDA', fingerprint: 'phase2-missing-entry', evaluationId: 'phase2-missing-eval' })
+    await seedEvidence(base.database, missingEntry, missingAccount)
+    await expect(baseLedger.commitEntry({ ...missingAccount, simulation: missingEntry })).rejects.toMatchObject({ code: 'paper_risk_latch_blocked' })
+
+    const viewerAttempt = await invokeLatchEndpoint(baseLedger, {
+      action: 'RESET', reason: 'AI supplied reset request must not authorize', expectedRevision: 1, confirmed: true,
+      actor: { userId: 'user-a', role: 'owner', source: 'authenticated_human_request' }, aiOverride: true, latchState: 'CLEAR',
+    }, 'viewer')
+    expect(viewerAttempt.statusCode).toBe(403)
+    await expect(baseLedger.resetRiskLatch({ ...latchCommand(accountA, 'Copilot must not reset this account', { expectedRevision: 1 }), actor: { userId: 'user-a', role: 'owner', source: 'ai_copilot' } })).rejects.toMatchObject({ code: 'paper_risk_latch_reset_denied' })
+    const staleReset = await invokeLatchEndpoint(baseLedger, { action: 'RESET', reason: 'Human reviewed stale revision', expectedRevision: 0, confirmed: true })
+    expect(staleReset.statusCode).toBe(409)
+    const humanReset = await invokeLatchEndpoint(baseLedger, { action: 'RESET', reason: 'Human reviewed incident and explicitly rearmed PAPER admission', expectedRevision: 1, confirmed: true })
+    expect(humanReset.statusCode).toBe(200)
+
+    const admissionFirstEntry = entryFor({ symbol: 'AMZN', fingerprint: 'phase2-admission-first', evaluationId: 'phase2-admission-first-eval' })
+    await seedEvidence(base.database, admissionFirstEntry, accountA)
+    const admissionFirst = databaseFor('phase2-admission-first')
+    const killLater = databaseFor('phase2-kill-later')
+    const holderTwo = await holdAccountLock(accountA)
+    const firstAdmissionPromise = createCanonicalPaperLedgerRepository({ database: admissionFirst.database }).commitEntry({ ...accountA, simulation: admissionFirstEntry })
+    await waitForDatabaseLock('phase2-admission-first')
+    const laterKillPromise = createCanonicalPaperLedgerRepository({ database: killLater.database }).activateRiskLatch(latchCommand(accountA, 'Kill requested after admitted PAPER order'))
+    await waitForDatabaseLock('phase2-kill-later')
+    await holderTwo.query('COMMIT')
+    holderTwo.release()
+    await expect(firstAdmissionPromise).resolves.toMatchObject({ ok: true, duplicate: false })
+    await expect(laterKillPromise).resolves.toMatchObject({ latch: { state: 'BLOCKED', revision: 3 } })
+
+    const killRace = databaseFor('phase2-kill-race')
+    const resetRace = databaseFor('phase2-reset-race')
+    const admissionRace = databaseFor('phase2-admission-race')
+    const holderThree = await holdAccountLock(accountA)
+    const racingKill = createCanonicalPaperLedgerRepository({ database: killRace.database }).activateRiskLatch(latchCommand(accountA, 'Second kill must invalidate queued stale reset'))
+    await waitForDatabaseLock('phase2-kill-race')
+    const racingReset = createCanonicalPaperLedgerRepository({ database: resetRace.database }).resetRiskLatch(latchCommand(accountA, 'Queued human reset carries observed revision', { expectedRevision: 3 }))
+    await waitForDatabaseLock('phase2-reset-race')
+    const racingEntry = entryFor({ symbol: 'META', fingerprint: 'phase2-racing-entry', evaluationId: 'phase2-racing-eval' })
+    await seedEvidence(base.database, racingEntry, accountA)
+    const racingAdmission = createCanonicalPaperLedgerRepository({ database: admissionRace.database }).commitEntry({ ...accountA, simulation: racingEntry })
+    await waitForDatabaseLock('phase2-admission-race')
+    await holderThree.query('COMMIT')
+    holderThree.release()
+    await expect(racingKill).resolves.toMatchObject({ latch: { state: 'BLOCKED', revision: 4 } })
+    await expect(racingReset).rejects.toMatchObject({ code: 'paper_risk_latch_conflict' })
+    await expect(racingAdmission).rejects.toMatchObject({ code: 'paper_risk_latch_blocked' })
+
+    const finalReset = await invokeLatchEndpoint(baseLedger, { action: 'RESET', reason: 'Human reviewed second kill and explicitly rearmed PAPER admission', expectedRevision: 4, confirmed: true })
+    expect(finalReset.statusCode).toBe(200)
+    const audit = await base.database.query(
+      `SELECT action,reason,actor_user_id,actor_role,latch_revision,evidence
+       FROM atlas_paper_risk_latch_audit WHERE organization_id='org-a' AND account_id='paper-a' ORDER BY latch_revision`,
+    )
+    expect(audit.rows.map((row) => row.action)).toEqual(['KILL', 'RESET', 'KILL', 'KILL', 'RESET'])
+    expect(audit.rows.at(-1)).toMatchObject({ action: 'RESET', actor_user_id: 'user-a', actor_role: 'owner', latch_revision: '5' })
+    expect(audit.rows.at(-1).evidence).toMatchObject({ paperTradingOnly: true, actor: { source: 'authenticated_human_request' } })
+    await expect(base.database.query(`UPDATE atlas_paper_risk_latch_audit SET reason='forged' WHERE account_id='paper-a'`)).rejects.toThrow('append-only')
+  }, 30000)
 })
