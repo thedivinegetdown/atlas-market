@@ -36,12 +36,14 @@ describe('PA.4 request evidence boundary', () => {
       positionId: 'pos-1', quantity: 100, confirmed: true, paperTrading: true,
       policyBar: { low: 1, high: 1000 }, sessionsHeld: 999, exitPolicy: { fingerprint: 'forged' },
       quote: { price: 500 }, policyEvidence: { authoritative: true }, exitReason: 'manual_emergency',
+      exitEvidence: { status: 'AVAILABLE' }, exitEvidenceManifest: { evidenceClass: 'GENUINE' },
+      exitEvidenceQualification: { capabilities: { finalMinutes: true } },
     })) })
     expect(response.statusCode).toBe(200)
     expect(commitExit).toHaveBeenCalledOnce()
     const input = commitExit.mock.calls[0][0]
     expect(input).toMatchObject({ confirmed: true, paperModeEnabled: true, exitReason: 'manual_emergency', quote })
-    for (const key of ['policyBar', 'sessionsHeld', 'exitPolicy', 'policyEvidence']) expect(input).not.toHaveProperty(key)
+    for (const key of ['policyBar', 'sessionsHeld', 'exitPolicy', 'policyEvidence', 'exitEvidence', 'exitEvidenceManifest', 'exitEvidenceQualification']) expect(input).not.toHaveProperty(key)
   })
   it('requires confirmation before requesting a quote or executing an emergency close', async () => {
     const { handler, commitExit, getMarketOverview } = endpoint()

@@ -7,6 +7,7 @@ import {
 } from '../lib/opportunities/persistence/canonicalPaperLedgerRepository.js'
 import { createIndexPullbackExitPolicy } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 import { buildCanonicalPaperOutcomes } from '../lib/analytics/canonicalPaperOutcomes.js'
+import { exitEvidenceFixture } from './helpers/exitEvidenceFixtures.js'
 
 const now = '2026-08-13T12:00:00.000Z'
 const scope = (overrides = {}) => ({
@@ -298,6 +299,54 @@ describe('canonical paper valuation and risk-state contract', () => {
 })
 
 describe('PI.3 transactional reductions, closes, and realized performance evidence', () => {
+  it('persists the server manifest atomically with a compliant human-confirmed close', async () => {
+    // Deliberately labeled GENUINE only inside this isolated SQL harness; no live DB or collector.
+    const fixture = exitEvidenceFixture({ entryAt: now, evidenceClass: 'GENUINE', mutate: (_data, minutes) => { minutes[2].low = 97 } })
+    const { database, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', exitPolicy: fixture.context.policy } })
+    const repository = createCanonicalPaperLedgerRepository({ database, exitEvidenceSource: fixture.source, exitEvidenceQualification: fixture.qualification, exitEvidenceClock: fixture.clock })
+    const input = { ...scope(), positionId: committed.position.positionId, quantity: 10, confirmed: true, paperModeEnabled: true, quote: { price: 110, updatedAt: fixture.now }, now: fixture.now,
+      // None of these may override the source or the locked entry.
+      policyBar: { low: 1 }, sessionsHeld: 999, exitEvidence: { status: 'AVAILABLE' }, exitPolicy: { fingerprint: 'forged' } }
+    const closed = await repository.commitExit(input)
+    expect(closed).toMatchObject({ ok: true, result: { status: 'POSITION_CLOSED', exitPlan: { referencePrice: 98, simulatedExitPrice: 97.95 }, exitAttribution: { policyCompliant: true } } })
+    const manifest = closed.execution.payload.exitEvidenceManifest
+    expect(manifest.binding).toMatchObject({ organizationId: 'org-a', userId: 'user-a', accountId: 'paper-portfolio', positionRevision: committed.position.revision,
+      entryExecutionId: committed.execution.executionId, entryExecutionAt: now, evaluationFingerprint: 'eval-evidence-1', intentFingerprint: 'entry-fp-1' })
+    expect(closed.execution.payload.exitAttribution.evidenceManifestHash).toBe(manifest.manifestHash)
+    expect(closed.result.exitEvidenceManifest).toEqual(manifest)
+    expect((await repository.commitExit(input)).duplicate).toBe(true)
+    expect(database.state.executions).toHaveLength(2)
+    const durable = await createCanonicalPaperLedgerRepository({ database }).listExecutions(scope())
+    expect(durable.find((row) => row.executionType === 'close').payload.exitEvidenceManifest).toEqual(manifest)
+    expect(buildCanonicalPaperOutcomes(durable).outcomes[0].exitEvidenceManifest).toEqual(manifest)
+  })
+
+  it.each(['SYNTHETIC', 'unknown-finality', 'legacy-entry', 'partial-close'])('never persists a compliant outcome for %s', async (mode) => {
+    const fixture = exitEvidenceFixture({ entryAt: now, evidenceClass: mode === 'SYNTHETIC' ? 'SYNTHETIC' : 'GENUINE', mutate: (data, minutes) => {
+      minutes[2].low = 97
+      if (mode === 'unknown-finality') data.quality.finality = 'UNKNOWN'
+    } })
+    const { database, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', exitPolicy: fixture.context.policy, forwardObservation: { experimentId: 'EDGE.2' } } })
+    if (mode === 'legacy-entry') delete database.state.executions[0].payload.entryChronology
+    const repository = createCanonicalPaperLedgerRepository({ database, exitEvidenceSource: fixture.source, exitEvidenceQualification: fixture.qualification, exitEvidenceClock: fixture.clock })
+    const before = structuredClone(database.state)
+    const result = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: mode === 'partial-close' ? 4 : 10,
+      confirmed: true, paperModeEnabled: true, quote: { price: 110, updatedAt: fixture.now }, now: fixture.now })
+    expect(result.ok).toBe(false)
+    expect(result.result.exitAttribution.policyCompliant).toBe(false)
+    expect(database.state).toEqual(before)
+  })
+
+  it('bypasses unavailable chronology only for a confirmed non-compliant emergency close', async () => {
+    const fixture = exitEvidenceFixture({ entryAt: now })
+    fixture.source.retrieve = async () => { throw new Error('must not retrieve') }
+    const { database, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', exitPolicy: fixture.context.policy } })
+    const repository = createCanonicalPaperLedgerRepository({ database, exitEvidenceSource: fixture.source, exitEvidenceQualification: fixture.qualification })
+    const closed = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 110, updatedAt: now },
+      exitReason: 'manual_emergency', confirmed: true, paperModeEnabled: true, now })
+    expect(closed.execution.payload).toMatchObject({ exitEvidenceManifest: null, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false } })
+  })
+
   it.each([
     { policyBar: { open: 100, high: 101, low: 97, close: 99, freshness: 'FRESH', observedAt: now } },
     { policyBar: { open: 100, high: 105, low: 99, close: 104, freshness: 'FRESH', observedAt: now } },

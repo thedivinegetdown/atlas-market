@@ -40,7 +40,7 @@ function completedOutcomes(observation, count) {
     executionId: `close-${index}`,
     executionType: 'close',
     forwardObservation: { experimentId: 'EDGE.2', observationId: observation.observationId, manifestFingerprint: observation.manifestFingerprint },
-    exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true },
+    exitEvidenceManifest: { version: 'pa4-session-chronology-v1', evidenceClass: 'GENUINE', manifestHash: 'a'.repeat(64) }, exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true, evidenceManifestHash: 'a'.repeat(64) },
   }))
 }
 
@@ -234,6 +234,9 @@ describe('EDGE.2 fixed forward paper observation', () => {
     const observation = manifest()
     const valid = completedOutcomes(observation, 1)[0]
     const records = [valid,
+      { ...valid, exitEvidenceManifest: null },
+      { ...valid, exitEvidenceManifest: { ...valid.exitEvidenceManifest, evidenceClass: 'SYNTHETIC' } },
+      { ...valid, exitEvidenceManifest: { ...valid.exitEvidenceManifest, manifestHash: 'b'.repeat(64) } },
       { ...valid, executionType: 'entry' },
       { ...valid, executionType: 'reduction' },
       { ...valid, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false } },
@@ -245,6 +248,13 @@ describe('EDGE.2 fixed forward paper observation', () => {
 
   it('keeps the production cohort not started until an approved manifest is persisted', () => {
     expect(buildForwardObservationStatus({})).toMatchObject({ status: 'NOT_STARTED', reviewClassification: null, blockers: ['observation_manifest_not_started'] })
+  })
+
+  it('excludes synthetic exit manifests from both outcome and session minimums', () => {
+    const observation = manifest()
+    const outcome = completedOutcomes(observation, 1)[0]
+    const synthetic = { ...outcome, evidenceTimestamp: NOW, exitEvidenceManifest: { ...outcome.exitEvidenceManifest, evidenceClass: 'SYNTHETIC' } }
+    expect(buildForwardObservationStatus({ manifest: observation, outcomes: [synthetic] })).toMatchObject({ completedOutcomes: 0, sessionsElapsed: 0 })
   })
 
   it('persists manifests and snapshots across repository re-instantiation and suppresses duplicates', async () => {
