@@ -574,7 +574,7 @@ describe('PI.3 migration and integration boundaries', () => {
 })
 
 const configuredDatabaseUrl = process.env.DATABASE_URL
-const localPostgresAvailable = (() => {
+const localPostgresAvailable = process.env.ATLAS_POSTGRES_INTEGRATION === 'true' && (() => {
   try {
     return ['localhost', '127.0.0.1', '::1'].includes(new URL(configuredDatabaseUrl).hostname)
   } catch {
