@@ -300,6 +300,7 @@ describe('Phase 2 Slice 2C cash-flow-neutral high-water and recovery', () => {
     ['checkpoint predecessor', (database) => { database.state.checkpoints[0].predecessor_checkpoint_id = 'invented' }],
     ['observation reference', (database) => { database.state.checkpoints[0].source_observation_id = 'missing-observation' }],
     ['observation numeric evidence', (database) => { database.state.observations[0].equity += 1 }],
+    ['observation sub-cent numeric evidence', (database) => { database.state.observations[0].equity += 0.001 }],
     ['unsupported denomination', (database) => { database.state.observations[0].denomination = 'EUR' }],
   ])('fails closed for corrupt %s on recovery', async (_label, corrupt) => {
     const database = new Slice2CHarness()
