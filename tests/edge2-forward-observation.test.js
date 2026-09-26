@@ -4,6 +4,7 @@ import {
   buildForwardObservationStatus,
   createForwardEvidenceSnapshot,
   createForwardObservationManifest,
+  EDGE2_FORWARD_EVALUATION_PROTOCOL,
   evaluateForwardObservationConfiguration,
 } from '../lib/opportunities/forwardTest/forwardObservationEngine.js'
 import { createIndexPullbackExitPolicy, INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT, INDEX_PULLBACK_EXIT_POLICY_VERSION } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
@@ -114,6 +115,60 @@ function memoryDatabase() {
 }
 
 describe('EDGE.2 fixed forward paper observation', () => {
+  it('freezes the approved forward-evaluation preregistration without activating or changing counters', () => {
+    const before = buildForwardObservationStatus({})
+    const protocol = EDGE2_FORWARD_EVALUATION_PROTOCOL
+    const after = buildForwardObservationStatus({})
+
+    expect(protocol).toMatchObject({
+      protocolId: 'EDGE.2-forward-evaluation-v1',
+      status: 'NON_ACTIVE',
+      strategy: { id: 'index-pullback-v1', version: '1.2.0' },
+      exitPolicy: { version: 'index-pullback-exit-v1.0.0', maximumHoldingSessions: 20 },
+      universe: ['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'],
+      economics: {
+        planningRiskDollarsPerLifecycle: 50,
+        requiredSurplusDollarsPerLifecycle: 10,
+        baseHurdleR: 0.2,
+        operationsCostDollarsPerLifecycle: null,
+        capitalCostDollarsPerLifecycle: null,
+        finalHurdleR: null,
+        minimumWorthwhileIncrement: { dollarsPerLifecycle: 10, rMultiple: 0.2 },
+        adverseCostScenario: { additionalFrictionMultiplier: 1 },
+      },
+      statistics: {
+        confidenceLevel: 0.95,
+        primaryBlockExchangeSessions: 20,
+        sensitivityBlockExchangeSessions: 40,
+        planningPower: 0.8,
+        minimumSensitivityBlockCoverage: 3,
+        structuralValidSessionFloor: 120,
+        readinessMinimum: { validSessions: 20, policyCompliantOutcomes: 30, provesEdge: false },
+        optionalStoppingAllowed: false,
+      },
+      activation: {
+        allowed: false,
+        collectionAllowed: false,
+        observationCreationAllowed: false,
+        outcomeCreationAllowed: false,
+        counterMutationAllowed: false,
+        blockers: [
+          'owner_operations_and_capital_cost_inputs_unbound_numeric_hurdle_unavailable',
+          'dedicated_EDGE.2_paper_account_identity_unbound',
+          'enrollment_dates_final_cutoff_and_reconciliation_period_unbound',
+          'PA.4_authoritative_chronology_not_qualified',
+          'prospective_power_inputs_and_required_sample_unfinalized',
+        ],
+      },
+    })
+    expect(protocol.fingerprint).toBe('053ead2b554b41cd1c9a57c3898383f98d6d95ebf93d1f2d81b7b6233de7b0b1')
+    expect(Object.isFrozen(protocol)).toBe(true)
+    expect(Object.isFrozen(protocol.statistics.prospectivePowerInputs)).toBe(true)
+    expect(() => { protocol.activation.allowed = true }).toThrow(TypeError)
+    expect(after).toEqual(before)
+    expect(after).toMatchObject({ status: 'NOT_STARTED', sessionsElapsed: 0, completedOutcomes: 0 })
+  })
+
   it('freezes the approved versions, universe, account state, and minimum sample', () => {
     const result = manifest()
     expect(result).toMatchObject({ minimumSessions: 20, minimumOutcomes: 30, symbolUniverse: ['AAPL', 'IWM', 'MSFT', 'QQQ', 'SPY'] })
