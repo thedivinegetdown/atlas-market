@@ -108,18 +108,24 @@ describe('Part 12B security and API guardrails', () => {
     expect(resolver).not.toHaveBeenCalled()
   })
 
-  it('rejects invalid symbols, asset types, numeric payloads, sides, and order types', async () => {
+  it('fails closed before caller-controlled order fields can become financial authority', async () => {
     const invalidSymbol = parseResponse(await submitPaperOrderHandler(postEvent(validOrder({ symbol: '../SPY' }))))
     const invalidAssetType = parseResponse(await submitPaperOrderHandler(postEvent(validOrder({ assetType: 'bond' }))))
     const invalidQuantity = parseResponse(await submitPaperOrderHandler(postEvent(validOrder({ quantity: Number.NaN }))))
     const invalidSide = parseResponse(await submitPaperOrderHandler(postEvent(validOrder({ side: 'HOLD' }))))
     const invalidType = parseResponse(await submitPaperOrderHandler(postEvent(validOrder({ type: 'TRAILING' }))))
 
-    expect(invalidSymbol.json.error.code).toBe('invalid_symbol')
-    expect(invalidAssetType.json.error.code).toBe('invalid_asset_type')
-    expect(invalidQuantity.json.error.code).toBe('invalid_number')
-    expect(invalidSide.json.error.code).toBe('invalid_order_side')
-    expect(invalidType.json.error.code).toBe('invalid_order_type')
+    for (const response of [invalidSymbol, invalidAssetType, invalidQuantity, invalidSide, invalidType]) {
+      expect(response.statusCode).toBe(410)
+      expect(response.json).toMatchObject({
+        ok: false,
+        error: {
+          code: 'legacy_paper_mutation_disabled',
+          message: 'legacy PAPER mutation route is disabled and non-authoritative',
+        },
+      })
+      expect(response.json.data).toBeUndefined()
+    }
   })
 
   it('allows requests within rate limits and blocks requests beyond the configured limit', async () => {
@@ -192,22 +198,21 @@ describe('Part 12B security and API guardrails', () => {
     expect(writes.length).toBe(1)
   })
 
-  it('keeps successful API responses on the standard contract with safe headers', async () => {
+  it('keeps the fail-closed API response on the standard error contract with safe headers', async () => {
     const response = parseResponse(await submitPaperOrderHandler(postEvent(validOrder({ type: 'LIMIT' }), {
       'x-request-id': 'req-success',
     })))
 
-    expect(response.statusCode).toBe(200)
+    expect(response.statusCode).toBe(410)
     expect(response.headers['x-content-type-options']).toBe('nosniff')
     expect(response.headers['referrer-policy']).toBe('no-referrer')
     expect(response.headers['x-request-id']).toBe('req-success')
-    expect(response.json).toMatchObject({
-      ok: true,
-      data: {
-        paperTrading: true,
-        order: {
-          symbol: 'AAPL',
-        },
+    expect(response.json).toEqual({
+      ok: false,
+      error: {
+        code: 'legacy_paper_mutation_disabled',
+        message: 'legacy PAPER mutation route is disabled and non-authoritative',
+        requestId: 'req-success',
       },
     })
   })

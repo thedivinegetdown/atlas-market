@@ -1,12 +1,9 @@
 import { createProtectedWorkspaceApiHandler } from './_shared/protectedWorkspaceApi.js'
-import { requireSymbol } from '../../lib/workspace/validators.js'
+import { AppError } from '../../lib/errors/appError.js'
 
-export const handler = createProtectedWorkspaceApiHandler(({ body, service, requestId }) => {
-  const validation = requireSymbol(body.symbol)
-  if (!validation.ok) return validation
-
-  return service.submitPaperOrder({
-    ...body,
-    symbol: validation.symbol,
-  }, { requestId })
+export const handler = createProtectedWorkspaceApiHandler(() => {
+  throw new AppError('legacy_paper_mutation_disabled', 'Legacy PAPER mutation route is disabled and non-authoritative.', {
+    statusCode: 410,
+    publicMessage: 'legacy PAPER mutation route is disabled and non-authoritative',
+  })
 }, { allowedMethods: ['POST'], mutation: true, routeId: 'submit-paper-order' })

@@ -1,40 +1,24 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { act } from 'react-dom/test-utils'
-import { createRoot } from 'react-dom/client'
+import { beforeEach, describe, expect, it } from 'vitest'
 import { handler as cancelPaperOrderHandler } from '../netlify/functions/cancel-paper-order.js'
 import { handler as submitPaperOrderHandler } from '../netlify/functions/submit-paper-order.js'
+import { getStore, resetStore } from '../lib/repositories/store.js'
+import { journalRepository, orderRepository, portfolioRepository } from '../src/hooks/tradingRuntime.js'
 import { workspaceApiClient } from '../src/api/workspaceApiClient.js'
-import { OrderEntryPanel } from '../src/components/OrderEntryPanel.jsx'
-import { OrdersPanel } from '../src/components/OrdersPanel.jsx'
-import { orderRepository } from '../src/hooks/tradingRuntime.js'
-import { resetStore } from '../lib/repositories/store.js'
 import { auth2Body, auth2Headers } from './helpers/auth2Fixtures.js'
 
-const quote = {
-  symbol: 'AAPL',
-  price: 100,
-  updatedAt: new Date().toISOString(),
+const disabledError = {
+  code: 'legacy_paper_mutation_disabled',
+  message: 'legacy PAPER mutation route is disabled and non-authoritative',
 }
 
-let root = null
-let container = null
-
-function renderWithRoot(ui) {
-  container = document.createElement('div')
-  document.body.appendChild(container)
-  root = createRoot(container)
-
-  act(() => {
-    root.render(ui)
-  })
-
-  return { container }
+function snapshotStore() {
+  return JSON.parse(JSON.stringify(getStore()))
 }
 
-async function invoke(handler, body) {
+async function invoke(handler, body, headers = auth2Headers()) {
   const response = await handler({
     httpMethod: 'POST',
-    headers: auth2Headers(),
+    headers,
     body: JSON.stringify(auth2Body(body)),
   })
 
@@ -44,92 +28,50 @@ async function invoke(handler, body) {
   }
 }
 
+function callerControlledOrder(overrides = {}) {
+  return {
+    paperTrading: true,
+    symbol: 'AAPL',
+    side: 'BUY',
+    type: 'MARKET',
+    quantity: 25,
+    price: 1,
+    riskPct: 0,
+    cash: 999999999,
+    positions: [{ symbol: 'AAPL', quantity: 1000000 }],
+    quote: {
+      symbol: 'AAPL',
+      price: 1,
+      updatedAt: '2099-01-01T00:00:00.000Z',
+    },
+    ...overrides,
+  }
+}
+
 beforeEach(() => {
   resetStore()
 })
 
-afterEach(() => {
-  act(() => {
-    root?.unmount()
-  })
-  container?.remove()
-  root = null
-  container = null
-})
+describe('Part 11C legacy PAPER mutation containment', () => {
+  it('fails closed on submit without changing compatibility financial state', async () => {
+    portfolioRepository.create({ id: 'portfolio-1', cash: 100000, exposure: 0.1 })
+    journalRepository.create({ id: 'journal-existing', message: 'existing evidence' })
+    const before = snapshotStore()
 
-describe('Part 11C paper trading mutation API', () => {
-  it('submits a paper order through the Netlify function', async () => {
-    const response = await invoke(submitPaperOrderHandler, {
-      paperTrading: true,
-      symbol: 'AAPL',
-      side: 'BUY',
-      type: 'LIMIT',
-      quantity: 1,
-      price: 100,
-      limitPrice: 100,
-      timeInForce: 'DAY',
-      quote,
+    const response = await invoke(submitPaperOrderHandler, callerControlledOrder())
+
+    expect(response.statusCode).toBe(410)
+    expect(response.payload).toEqual({
+      ok: false,
+      error: { ...disabledError, requestId: expect.any(String) },
     })
-
-    expect(response.statusCode).toBe(200)
-    expect(response.payload.ok).toBe(true)
-    expect(response.payload.data.paperTrading).toBe(true)
-    expect(response.payload.data.order.symbol).toBe('AAPL')
-    expect(response.payload.data.order.state).toBe('WORKING')
+    expect(response.payload.data).toBeUndefined()
+    expect(getStore()).toEqual(before)
   })
 
-  it('returns validation failures for invalid submit order payloads', async () => {
-    const missingSymbol = await invoke(submitPaperOrderHandler, {
-      paperTrading: true,
-      side: 'BUY',
-      type: 'LIMIT',
-      quantity: 1,
-      price: 100,
-    })
-    const invalidSide = await invoke(submitPaperOrderHandler, {
-      paperTrading: true,
-      symbol: 'AAPL',
-      side: 'HOLD',
-      type: 'LIMIT',
-      quantity: 1,
-      price: 100,
-    })
-    const liveMode = await invoke(submitPaperOrderHandler, {
-      paperTrading: false,
-      symbol: 'AAPL',
-      side: 'BUY',
-      type: 'LIMIT',
-      quantity: 1,
-      price: 100,
-    })
-
-    expect(missingSymbol.statusCode).toBe(400)
-    expect(missingSymbol.payload.error.code).toBe('missing_symbol')
-    expect(invalidSide.statusCode).toBe(400)
-    expect(invalidSide.payload.error.code).toBe('invalid_order_side')
-    expect(liveMode.statusCode).toBe(400)
-    expect(liveMode.payload.error.code).toBe('paper_trading_required')
-  })
-
-  it('returns an engine failure when risk blocks the submitted order', async () => {
-    const response = await invoke(submitPaperOrderHandler, {
-      paperTrading: true,
-      symbol: 'AAPL',
-      side: 'BUY',
-      type: 'LIMIT',
-      quantity: 10,
-      price: 100,
-      limitPrice: 100,
-      quote,
-    })
-
-    expect(response.statusCode).toBe(400)
-    expect(response.payload.ok).toBe(false)
-    expect(response.payload.error.code).toBe('risk_blocked')
-  })
-
-  it('cancels a cancellable paper order through the Netlify function', async () => {
-    const created = orderRepository.create({
+  it('fails closed on cancel without changing compatibility order state', async () => {
+    const existing = orderRepository.create({
+      id: 'compatibility-order-1',
       symbol: 'AAPL',
       side: 'BUY',
       type: 'LIMIT',
@@ -137,91 +79,39 @@ describe('Part 11C paper trading mutation API', () => {
       price: 100,
       state: 'WORKING',
     })
+    portfolioRepository.create({ id: 'portfolio-1', cash: 100000, exposure: 0.1 })
+    journalRepository.create({ id: 'journal-existing', message: 'existing evidence' })
+    const before = snapshotStore()
 
-    const response = await invoke(cancelPaperOrderHandler, { orderId: created.id })
+    const response = await invoke(cancelPaperOrderHandler, { orderId: existing.id })
 
-    expect(response.statusCode).toBe(200)
-    expect(response.payload.ok).toBe(true)
-    expect(response.payload.data.order.state).toBe('CANCELED')
+    expect(response.statusCode).toBe(410)
+    expect(response.payload).toEqual({
+      ok: false,
+      error: { ...disabledError, requestId: expect.any(String) },
+    })
+    expect(response.payload.data).toBeUndefined()
+    expect(getStore()).toEqual(before)
+    expect(orderRepository.find(existing.id).state).toBe('WORKING')
   })
 
-  it('rejects cancelling a non-cancellable paper order', async () => {
-    const created = orderRepository.create({
-      symbol: 'AAPL',
-      side: 'BUY',
-      type: 'MARKET',
-      quantity: 1,
-      price: 100,
-      state: 'FILLED',
-    })
+  it('preserves authentication and CSRF enforcement before the disabled response', async () => {
+    for (const handler of [submitPaperOrderHandler, cancelPaperOrderHandler]) {
+      const unauthenticated = await invoke(handler, {}, { 'content-type': 'application/json' })
+      const missingCsrf = await invoke(handler, {}, auth2Headers({ csrf: false }))
 
-    const response = await invoke(cancelPaperOrderHandler, { orderId: created.id })
-
-    expect(response.statusCode).toBe(400)
-    expect(response.payload.ok).toBe(false)
-    expect(response.payload.error.code).toBe('order_not_cancellable')
+      expect(unauthenticated.statusCode).toBe(401)
+      expect(unauthenticated.payload.error.code).toBe('authentication_required')
+      expect(missingCsrf.statusCode).toBe(403)
+      expect(missingCsrf.payload.error.code).toBe('csrf_required')
+    }
   })
 
-  it('exposes frontend API client mutation helpers', async () => {
-    const submitted = await workspaceApiClient.submitPaperOrder({
-      symbol: 'AAPL',
-      side: 'BUY',
-      type: 'LIMIT',
-      quantity: 1,
-      price: 100,
-      limitPrice: 100,
-      quote,
-    })
-    const canceled = await workspaceApiClient.cancelPaperOrder(submitted.order.id)
-
-    expect(submitted.paperTrading).toBe(true)
-    expect(submitted.order.state).toBe('WORKING')
-    expect(canceled.order.state).toBe('CANCELED')
-  })
-
-  it('submits from the order entry panel and notifies related panel refresh', async () => {
-    const onMutationSuccess = vi.fn()
-
-    renderWithRoot(<OrderEntryPanel quote={quote} onMutationSuccess={onMutationSuccess} />)
-
-    await act(async () => {
-      container.querySelector('form').dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
-    expect(container.textContent).toContain('paper order submitted')
-    expect(onMutationSuccess).toHaveBeenCalledTimes(1)
-  })
-
-  it('cancels from the orders panel and notifies related panel refresh', async () => {
-    const created = orderRepository.create({
-      symbol: 'AAPL',
-      side: 'BUY',
-      type: 'LIMIT',
-      quantity: 1,
-      price: 100,
-      state: 'WORKING',
-    })
-    const onCancelOrder = vi.fn(async () => ({ ...created, state: 'CANCELED' }))
-    const onMutationSuccess = vi.fn()
-
-    renderWithRoot(
-      <OrdersPanel
-        orders={[created]}
-        onCancelOrder={onCancelOrder}
-        onRefresh={vi.fn()}
-        onMutationSuccess={onMutationSuccess}
-      />
-    )
-
-    await act(async () => {
-      container.querySelector('tbody button').click()
-      await Promise.resolve()
-      await Promise.resolve()
-    })
-
-    expect(onCancelOrder).toHaveBeenCalledWith(created.id)
-    expect(onMutationSuccess).toHaveBeenCalledTimes(1)
+  it('exposes no successful client mutation shape for disabled routes', async () => {
+    await expect(workspaceApiClient.submitPaperOrder(callerControlledOrder())).rejects.toMatchObject(disabledError)
+    await expect(workspaceApiClient.cancelPaperOrder('compatibility-order-1')).rejects.toMatchObject(disabledError)
+    expect(getStore().orders).toEqual([])
+    expect(getStore().portfolios).toEqual([])
+    expect(getStore().journals).toEqual([])
   })
 })
