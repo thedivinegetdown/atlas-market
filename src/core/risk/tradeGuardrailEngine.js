@@ -21,6 +21,13 @@ function round(value, decimals = 2) {
   return Number(numberValue(value).toFixed(decimals))
 }
 
+function roundRiskUp(value, decimals = 2) {
+  const factor = 10 ** decimals
+  const scaled = numberValue(value) * factor
+  const nearest = Math.round(scaled)
+  return (Math.abs(scaled - nearest) < 1e-9 ? nearest : Math.ceil(scaled)) / factor
+}
+
 function normalizeSymbol(symbol) {
   return String(symbol ?? '').trim().toUpperCase()
 }
@@ -40,6 +47,7 @@ function validateProposedTrade(trade = {}) {
   const quantity = Number(trade.quantity)
   const price = Number(trade.price ?? trade.limitPrice)
   const stopPrice = Number(trade.stopPrice)
+  const entryCosts = trade.entryCosts === undefined ? 0 : Number(trade.entryCosts)
   const validationErrors = []
 
   if (!/^[A-Z][A-Z0-9./-]{0,19}$/.test(symbol)) validationErrors.push('symbol is required')
@@ -48,6 +56,7 @@ function validateProposedTrade(trade = {}) {
   if (!Number.isFinite(quantity) || quantity <= 0) validationErrors.push('quantity must be greater than zero')
   if (!Number.isFinite(price) || price <= 0) validationErrors.push('price must be greater than zero')
   if (!Number.isFinite(stopPrice) || stopPrice <= 0) validationErrors.push('stop price must be greater than zero')
+  if (!Number.isFinite(entryCosts) || entryCosts < 0) validationErrors.push('entry costs must be a non-negative number')
 
   return {
     ok: validationErrors.length === 0,
@@ -60,6 +69,7 @@ function validateProposedTrade(trade = {}) {
       quantity: numberValue(quantity),
       price: numberValue(price),
       stopPrice: numberValue(stopPrice),
+      entryCosts: numberValue(entryCosts),
       timeInForce: String(trade.timeInForce ?? 'DAY').trim().toUpperCase(),
       paperTrading: trade.paperTrading !== false,
     },
@@ -70,12 +80,15 @@ function calculateTradeRisk(trade, profile) {
   const multiplier = numberValue(profile.contractMultiplier, 1)
   const notional = trade.quantity * trade.price * multiplier
   const riskPerUnit = Math.abs(trade.price - trade.stopPrice) * multiplier
-  const dollarRisk = riskPerUnit * trade.quantity
+  const priceRisk = riskPerUnit * trade.quantity
+  const dollarRisk = roundRiskUp(priceRisk + trade.entryCosts)
   const marginRequirement = notional * numberValue(profile.margin?.initialRequirement, 1)
 
   return {
     notional: round(notional),
-    dollarRisk: round(dollarRisk),
+    priceRisk: roundRiskUp(priceRisk),
+    entryCosts: roundRiskUp(trade.entryCosts),
+    dollarRisk,
     marginRequirement: round(marginRequirement),
   }
 }
@@ -156,6 +169,8 @@ function buildResult({ portfolio, validation, currentRisk, limits, timestamp }) 
       buyingPower: round(checkContext.buyingPower),
       notional: tradeRisk.notional,
       marginRequirement: tradeRisk.marginRequirement,
+      priceRisk: tradeRisk.priceRisk,
+      entryCosts: tradeRisk.entryCosts,
       dollarRisk: tradeRisk.dollarRisk,
       riskPct: checkContext.riskPct,
       currentPortfolioHeat: round(numberValue(currentRisk.summary.openRiskPct)),
