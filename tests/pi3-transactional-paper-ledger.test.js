@@ -223,27 +223,35 @@ function entryFor({ symbol, fingerprint, evaluationId, side = 'buy', quantity = 
 }
 
 describe('Phase 2 Slice 3B canonical PAPER risk-commitment integrity', () => {
-  it('commits actual fill-to-stop risk with the asset multiplier and entry fee exactly once', async () => {
+  it('commits actual fill-to-stop risk with multiplier and supported entry/exit costs exactly once', async () => {
     const database = new PaperPgHarness()
     const repository = createCanonicalPaperLedgerRepository({ database })
     const simulation = entry({
-      symbol: 'AAPL-OPT',
+      symbol: 'ES',
       fingerprint: 'slice3b-realistic-fill',
       evaluationId: 'slice3b-realistic-fill-eval',
       evaluationEvidenceFingerprint: 'slice3b-realistic-fill-evidence',
-      orderPlan: { evidenceTimestamp: now, side: 'buy', entryType: 'market', referencePrice: 2, stopReference: 1.5, maximumRisk: 100 },
-      executionFill: { symbol: 'AAPL-OPT', assetType: 'options', side: 'buy', quantity: 2, referencePrice: 2, fillPrice: 2.05, fees: 1.3, slippageBps: 25, cashImpact: -411.3 },
+      orderPlan: { evidenceTimestamp: now, side: 'buy', entryType: 'market', referencePrice: 100, stopReference: 98, maximumRisk: 200 },
+      executionFill: { symbol: 'ES', assetType: 'futures', side: 'buy', quantity: 2, referencePrice: 100, fillPrice: 101, fees: 2.5, slippageBps: 100, cashImpact: -10102.5 },
     })
 
     const committed = await repository.commitEntry({ ...scope(), simulation })
 
     expect(committed.canonicalRiskDecision).toMatchObject({
-      proposedTrade: { price: 2.05, stopPrice: 1.5, quantity: 2, entryCosts: 1.3 },
-      assetProfile: { contractMultiplier: 100 },
-      metrics: { priceRisk: 110, entryCosts: 1.3, dollarRisk: 111.3 },
+      proposedTrade: { price: 101, stopPrice: 98, quantity: 2, entryCosts: 2.5, exitCosts: 7.5 },
+      assetProfile: { contractMultiplier: 50 },
+      metrics: { priceRisk: 300, entryCosts: 2.5, exitCosts: 7.5, dollarRisk: 310 },
     })
-    expect(committed.position.riskState).toEqual({ status: 'KNOWN', openRisk: 111.3, source: 'canonical_fill_risk' })
-    expect(committed.execution.payload.plannedRisk).toBe(111.3)
+    expect(committed.execution.payload.exitCostTreatment).toMatchObject({
+      status: 'QUALIFIED_BASE_WITH_UNQUALIFIED_FUTURE_COMPONENTS',
+      deterministic: { referencePrice: 98, simulatedFillPrice: 97.95, slippageCost: 5, exitFee: 2.5, total: 7.5 },
+      unqualifiedComponents: [
+        { component: 'adverse_gap_beyond_stop', status: 'UNQUALIFIED_FUTURE_MARKET_EVIDENCE' },
+        { component: 'conditional_low_liquidity_slippage_and_fee_variance', status: 'UNQUALIFIED_FUTURE_MARKET_EVIDENCE' },
+      ],
+    })
+    expect(committed.position.riskState).toMatchObject({ version: 'canonical-paper-risk-commitment-v2', status: 'KNOWN', openRisk: 310, source: 'canonical_fill_to_deterministic_stop_exit_risk', components: { fillToStop: 300, entryFees: 2.5, deterministicExitSlippage: 5, deterministicExitFees: 2.5 } })
+    expect(committed.execution.payload.plannedRisk).toBe(310)
   })
 
   it('fails closed for missing or unsupported risk evidence and never defaults unknown durable risk to zero', async () => {
@@ -284,7 +292,7 @@ describe('Phase 2 Slice 3B canonical PAPER risk-commitment integrity', () => {
     const restarted = createCanonicalPaperLedgerRepository({ database })
     const state = await restarted.getCanonicalState({ ...scope(), marks, now, requireKnownRisk: true })
     expect(state.positions).toHaveLength(6)
-    expect(state.risk.summary).toMatchObject({ openRisk: 5400, openRiskPct: 5.4 })
+    expect(state.risk.summary).toMatchObject({ openRisk: 5457.3, openRiskPct: 5.46 })
   })
 
   it('reduces remaining risk conservatively, allocates entry cost once, and removes risk on durable full close', async () => {
@@ -296,13 +304,13 @@ describe('Phase 2 Slice 3B canonical PAPER risk-commitment integrity', () => {
       executionFill: { symbol: 'AAPL', assetType: 'equity', side: 'buy', quantity: 3, referencePrice: 10, fillPrice: 10, fees: 0.02, slippageBps: 0, cashImpact: -30.02 },
     })
     const committed = await repository.commitEntry({ ...scope(), simulation })
-    expect(committed.position.riskState.openRisk).toBe(1.01)
+    expect(committed.position.riskState.openRisk).toBe(1.26)
 
     const reduced = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 1, quote: { price: 11, updatedAt: now, liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now })
-    expect(reduced.position).toMatchObject({ quantity: 2, riskState: { status: 'KNOWN', openRisk: 0.68, source: 'proportional_exit_reduction' } })
+    expect(reduced.position).toMatchObject({ quantity: 2, riskState: { status: 'KNOWN', openRisk: 0.84, source: 'proportional_exit_reduction' } })
     const restarted = createCanonicalPaperLedgerRepository({ database })
     const readback = await restarted.getCanonicalState({ ...scope(), marks: [{ symbol: 'AAPL', price: 11, updatedAt: now }], now, requireKnownRisk: true })
-    expect(readback.risk.summary.openRisk).toBe(0.68)
+    expect(readback.risk.summary.openRisk).toBe(0.84)
 
     const closed = await restarted.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 2, quote: { price: 11, updatedAt: '2026-08-13T12:00:01.000Z', liquidityScore: 80 }, paperModeEnabled: true, confirmed: true, now: '2026-08-13T12:00:01.000Z' })
     expect(closed.position).toMatchObject({ status: 'closed', quantity: 0, riskState: { status: 'KNOWN', openRisk: 0, source: 'durable_full_close' } })
@@ -322,7 +330,7 @@ describe('Phase 2 Slice 3B canonical PAPER risk-commitment integrity', () => {
     const restarted = createCanonicalPaperLedgerRepository({ database })
     const state = await restarted.getCanonicalState({ ...scope(), marks: [{ symbol: 'AAPL', price: 110, updatedAt: now }], now, requireKnownRisk: true })
     expect(state.positions).toHaveLength(1)
-    expect(state.risk.summary.openRisk).toBe(21)
+    expect(state.risk.summary.openRisk).toBe(21.99)
   })
 })
 
@@ -396,7 +404,7 @@ describe('canonical paper valuation and risk-state contract', () => {
     const state = await repository.getCanonicalState({ ...scope(), marks: [{ symbol: 'AAPL', price: 105, updatedAt: now }], now, requireKnownRisk: true })
     expect(state.valuation).toMatchObject({ status: 'RECONCILED', cash: 98999, signedMarkedValue: 1050, equity: 100049 })
     expect(state.riskState.status).toBe('KNOWN')
-    expect(state.risk.summary.openRisk).toBe(21)
+    expect(state.risk.summary.openRisk).toBe(21.99)
   })
 
   it('preserves another long position and reconciles equity after a full close', async () => {
@@ -425,7 +433,7 @@ describe('canonical paper valuation and risk-state contract', () => {
       marks: [{ symbol: 'MSFT', price: 100, updatedAt: now }],
       paperModeEnabled: true, confirmed: true, now,
     })
-    expect(reduced.position).toMatchObject({ quantity: 6, riskState: { status: 'KNOWN', openRisk: 12.6 } })
+    expect(reduced.position).toMatchObject({ quantity: 6, riskState: { status: 'KNOWN', openRisk: 13.2 } })
     expect(reduced.account.equity).toBeCloseTo(reduced.account.cash + (6 * reduced.position.currentPrice) - 500, 2)
   })
 

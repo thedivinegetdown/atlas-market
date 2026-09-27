@@ -48,6 +48,7 @@ function validateProposedTrade(trade = {}) {
   const price = Number(trade.price ?? trade.limitPrice)
   const stopPrice = Number(trade.stopPrice)
   const entryCosts = trade.entryCosts === undefined ? 0 : Number(trade.entryCosts)
+  const exitCosts = trade.exitCosts === undefined ? 0 : Number(trade.exitCosts)
   const validationErrors = []
 
   if (!/^[A-Z][A-Z0-9./-]{0,19}$/.test(symbol)) validationErrors.push('symbol is required')
@@ -57,6 +58,7 @@ function validateProposedTrade(trade = {}) {
   if (!Number.isFinite(price) || price <= 0) validationErrors.push('price must be greater than zero')
   if (!Number.isFinite(stopPrice) || stopPrice <= 0) validationErrors.push('stop price must be greater than zero')
   if (!Number.isFinite(entryCosts) || entryCosts < 0) validationErrors.push('entry costs must be a non-negative number')
+  if (!Number.isFinite(exitCosts) || exitCosts < 0) validationErrors.push('exit costs must be a non-negative number')
 
   return {
     ok: validationErrors.length === 0,
@@ -70,6 +72,7 @@ function validateProposedTrade(trade = {}) {
       price: numberValue(price),
       stopPrice: numberValue(stopPrice),
       entryCosts: numberValue(entryCosts),
+      exitCosts: numberValue(exitCosts),
       timeInForce: String(trade.timeInForce ?? 'DAY').trim().toUpperCase(),
       paperTrading: trade.paperTrading !== false,
     },
@@ -81,13 +84,14 @@ function calculateTradeRisk(trade, profile) {
   const notional = trade.quantity * trade.price * multiplier
   const riskPerUnit = Math.abs(trade.price - trade.stopPrice) * multiplier
   const priceRisk = riskPerUnit * trade.quantity
-  const dollarRisk = roundRiskUp(priceRisk + trade.entryCosts)
+  const dollarRisk = roundRiskUp(priceRisk + trade.entryCosts + trade.exitCosts)
   const marginRequirement = notional * numberValue(profile.margin?.initialRequirement, 1)
 
   return {
     notional: round(notional),
     priceRisk: roundRiskUp(priceRisk),
     entryCosts: roundRiskUp(trade.entryCosts),
+    exitCosts: roundRiskUp(trade.exitCosts),
     dollarRisk,
     marginRequirement: round(marginRequirement),
   }
@@ -171,6 +175,7 @@ function buildResult({ portfolio, validation, currentRisk, limits, timestamp }) 
       marginRequirement: tradeRisk.marginRequirement,
       priceRisk: tradeRisk.priceRisk,
       entryCosts: tradeRisk.entryCosts,
+      exitCosts: tradeRisk.exitCosts,
       dollarRisk: tradeRisk.dollarRisk,
       riskPct: checkContext.riskPct,
       currentPortfolioHeat: round(numberValue(currentRisk.summary.openRiskPct)),

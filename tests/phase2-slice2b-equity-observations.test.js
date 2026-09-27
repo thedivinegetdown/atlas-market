@@ -202,8 +202,8 @@ describe('Phase 2 Slice 2B durable complete equity observations', () => {
 
   it('leaves the existing canonical valuation and risk-state behavior unchanged', async () => {
     const database = new Slice2BHarness({ positions: [
-      position({ risk_state: { status: 'KNOWN', openRisk: 25, source: 'deterministic_entry_guardrail' } }),
-      position({ id: 'position-spy-short-option', symbol: 'SPY-PUT', asset_type: 'options', side: 'short', quantity: 2, revision: 1, risk_state: { status: 'KNOWN', openRisk: 40, source: 'deterministic_entry_guardrail' } }),
+      position({ risk_state: { version: 'canonical-paper-risk-commitment-v2', status: 'KNOWN', openRisk: 25, source: 'canonical_fill_to_deterministic_stop_exit_risk' } }),
+      position({ id: 'position-spy-short-option', symbol: 'SPY-PUT', asset_type: 'options', side: 'short', quantity: 2, revision: 1, risk_state: { version: 'canonical-paper-risk-commitment-v2', status: 'KNOWN', openRisk: 40, source: 'canonical_fill_to_deterministic_stop_exit_risk' } }),
     ] })
     const ledger = createCanonicalPaperLedgerRepository({ database })
     const canonical = await ledger.getCanonicalState({
