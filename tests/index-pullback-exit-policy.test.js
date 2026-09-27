@@ -10,6 +10,7 @@ import {
 } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 import { simulatePaperPositionExit } from '../lib/opportunities/paperExit/paperExitEngine.js'
 import { simulateApprovedPaperEvaluations } from '../lib/opportunities/paperSimulation/paperSimulationEngine.js'
+import { compactCurrentMarketEvidence, createCurrentMarketEvidenceBundle } from '../lib/market/currentMarketEvidenceContract.js'
 
 const NOW = '2026-08-25T14:00:00.000Z'
 const longPolicy = () => createIndexPullbackExitPolicy({ strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', side: 'long', entryPrice: 100, stopPrice: 98, targetPrice: 104, enteredAt: NOW })
@@ -68,8 +69,10 @@ describe('index-pullback-v1 deterministic paper observation exits', () => {
   })
 
   it('attaches the immutable policy at PA.2 entry without automatic or live execution', () => {
-    const evaluation = { evaluationId: 'eval-1', candidateId: 'candidate-1', symbol: 'SPY', strategyId: 'index-pullback-v1', status: 'APPROVED_FOR_PAPER_REVIEW', freshness: 'FRESH', evaluatedAt: NOW, orderContext: { assetType: 'equity', side: 'buy', price: 100, stopPrice: 98, targetPrice: 104 } }
-    const executionQuote = { symbol: 'SPY', price: 100, bid: 99.98, ask: 100.02, bidSize: 10000, askSize: 10000, liquidityScore: 80, updatedAt: NOW, receivedAt: NOW, provider: 'controlled-test-top-of-book', dataStatus: 'LIVE', fallbackUsed: false }
+    const provenance = { provider: 'controlled-test-top-of-book', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false, mock: false, delayed: false, observedAt: NOW, receivedAt: NOW, sourceCount: 1, warningCodes: [] }
+    const currentMarketEvidence = createCurrentMarketEvidenceBundle({ candidate: compactCurrentMarketEvidence({ quote: { symbol: 'SPY', price: 100 }, provenance }), regime: compactCurrentMarketEvidence({ quote: { symbol: 'SPY', price: 100 }, provenance }) })
+    const evaluation = { evaluationId: 'eval-1', candidateId: 'candidate-1', symbol: 'SPY', strategyId: 'index-pullback-v1', status: 'APPROVED_FOR_PAPER_REVIEW', freshness: 'FRESH', evaluatedAt: NOW, currentMarketEvidence, currentMarketEvidenceFingerprint: currentMarketEvidence.fingerprint, evidenceFingerprint: 'evidence-1', orderContext: { assetType: 'equity', side: 'buy', price: 100, stopPrice: 98, targetPrice: 104 } }
+    const executionQuote = { symbol: 'SPY', price: 100, bid: 99.98, ask: 100.02, bidSize: 10000, askSize: 10000, liquidityScore: 80, updatedAt: NOW, provenance }
     const result = simulateApprovedPaperEvaluations({ evaluations: [evaluation], executionQuotes: [executionQuote], portfolio: { cash: 100000, equity: 100000, buyingPower: 100000, positions: [] }, enabled: true }, { now: NOW, confirmedAt: NOW, confirmationSource: 'authenticated_manual_request' })
     expect(result.results[0]).toMatchObject({ status: 'SIMULATED_FILLED', exitPolicy: { version: INDEX_PULLBACK_EXIT_POLICY_VERSION, liveTradingApproved: false }, automaticExecution: false, liveOrders: false })
     expect(result.results[0].orderPlan.exitPolicy.fingerprint).toBe(result.results[0].exitPolicy.fingerprint)
