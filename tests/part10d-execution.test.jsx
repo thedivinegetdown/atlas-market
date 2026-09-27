@@ -118,7 +118,7 @@ describe('Part 10D paper execution', () => {
     expect(container.textContent).toContain('Notional')
   })
 
-  it('submits a successful paper order and resets the form', async () => {
+  it('fails closed when the legacy paper submit route is used', async () => {
     renderWithRoot(<OrderEntryPanel quote={quote} />)
 
     await act(async () => {
@@ -128,8 +128,10 @@ describe('Part 10D paper execution', () => {
     })
 
     expect(container.textContent).toContain('Pending')
-    expect(container.textContent).toContain('paper order submitted')
+    expect(container.textContent).toContain('legacy PAPER mutation route is disabled and non-authoritative')
+    expect(container.textContent).not.toContain('paper order submitted')
     expect(container.querySelector('input[name="ticker"]').value).toBe('AAPL')
+    expect(orderRepository.list()).toEqual([])
   })
 
   it('shows a failed paper order submission notification', async () => {
@@ -204,6 +206,6 @@ describe('Part 10D paper execution', () => {
     })
 
     expect(container.textContent).toContain('AAPL')
-    expect(orderRepository.list().length).toBe(1)
+    expect(orderRepository.list()).toEqual([])
   })
 })
