@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createCanonicalPaperLedgerRepository, DEFAULT_INITIAL_PAPER_BALANCE } from '../lib/opportunities/persistence/canonicalPaperLedgerRepository.js'
 import { createAccountingEvidenceRepository } from '../lib/opportunities/persistence/accountingEvidenceRepository.js'
+import { compactCurrentMarketEvidence, createCurrentMarketEvidenceBundle, currentMarketEvidenceFingerprint } from '../lib/market/currentMarketEvidenceContract.js'
 
 const now = '2026-09-26T12:00:00.000Z'
 const scope = (overrides = {}) => ({
@@ -13,17 +14,25 @@ const scope = (overrides = {}) => ({
 const authority = { source: 'authenticated_human_request', principalType: 'human', userId: 'user-a', role: 'owner' }
 
 function entry() {
+  const provenance = { provider: 'test-live-provider', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false, mock: false, delayed: false, observedAt: now, receivedAt: now, sourceCount: 1, warningCodes: [] }
+  const currentMarketEvidence = createCurrentMarketEvidenceBundle({
+    candidate: compactCurrentMarketEvidence({ quote: { symbol: 'AAPL', price: 100 }, provenance }),
+    regime: compactCurrentMarketEvidence({ quote: { symbol: 'SPY', price: 500 }, provenance }),
+  })
+  const quoteEvidence = compactCurrentMarketEvidence({ quote: { symbol: 'AAPL', price: 100, bid: 99.98, ask: 100, bidSize: 10, askSize: 10 }, provenance })
   return {
     status: 'SIMULATED_FILLED', fingerprint: 'slice2a-entry-1', evaluationId: 'slice2a-eval-1', evaluationEvidenceFingerprint: 'slice2a-evidence-1',
     candidateId: 'slice2a-candidate-1', symbol: 'AAPL', strategyId: 'momentum', simulatedAt: now,
     orderPlan: { evidenceTimestamp: now, side: 'buy', entryType: 'market', referencePrice: 100, stopReference: 98, maximumRisk: 20 },
     engineVersion: 'guarded-paper-simulation-v3', executionCalibrationStatus: 'PAPER_ONLY_NOT_LIVE_CALIBRATED',
+    currentMarketEvidence, currentMarketEvidenceFingerprint: currentMarketEvidence.fingerprint,
     executionFill: { symbol: 'AAPL', assetType: 'equity', side: 'buy', quantity: 10, referencePrice: 100, fillPrice: 100, fees: 1, slippageBps: 2, cashImpact: -1001 },
     executionRealism: {
       version: 'paper-execution-realism-v2', paperSimulationAdmissibility: { status: 'ADMISSIBLE' },
       liveExecutionCalibration: { status: 'NOT_CALIBRATED', liveMoneyReady: false },
       chronology: { decisionAt: now, confirmedAt: now, submittedAt: now },
-      quoteEvidence: { bid: 99.98, ask: 100, observedAt: now },
+      recommendationEvidence: currentMarketEvidence, recommendationEvidenceFingerprint: currentMarketEvidence.fingerprint,
+      quoteEvidence, quoteEvidenceFingerprint: currentMarketEvidenceFingerprint(quoteEvidence),
       quantityEvidence: { requestedQuantity: 10, executableSide: 'ask', displayedSize: 10, fullQuantityDisplayed: true },
       fillEvidence: { status: 'PAPER_FILLED', requestedQuantity: 10, filledQuantity: 10, referencePrice: 100, fillPrice: 100, slippageBps: 2, fees: 1, costApplications: { spread: 1, slippage: 1, fees: 1 } },
     },

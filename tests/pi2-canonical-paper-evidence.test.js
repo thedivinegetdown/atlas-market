@@ -11,6 +11,7 @@ import {
 } from '../lib/opportunities/persistence/canonicalPaperEvidenceRepository.js'
 
 const NOW = '2026-08-11T16:00:00.000Z'
+const provenance = { provider: 'test-live-provider', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false, mock: false, delayed: false, observedAt: NOW, receivedAt: NOW, sourceCount: 1, warningCodes: [] }
 const scope = (overrides = {}) => ({
   tenantContext: { organizationId: 'org-a', teamWorkspaceId: 'team-a', userId: 'user-a' },
   accountId: 'account-a',
@@ -23,7 +24,7 @@ function snapshot(overrides = {}) {
     opportunityId: 'opp-aapl-1', symbol: 'AAPL', strategyId: 'index-pullback-v1', score: 86,
     band: 'STRONG', confidence: 84, status: 'COMPLETE', reasons: ['Deterministic evidence aligned'],
     blockingReasons: [], missingInputs: [], freshness: 'FRESH', asOf: NOW, reviewState: 'reviewed',
-    engineVersion: 'trade-quality-v1', orderContext: { assetType: 'equity', side: 'buy', orderType: 'market', price: 100, stopPrice: 98, targetPrice: 104 },
+    engineVersion: 'trade-quality-v1', marketData: provenance, orderContext: { assetType: 'equity', side: 'buy', orderType: 'market', price: 100, stopPrice: 98, targetPrice: 104 },
     ...overrides,
   }
 }
@@ -170,14 +171,16 @@ describe('PI.2 canonical durable paper evidence', () => {
   })
 
   it('changes downstream fingerprints when reviewed evidence changes and links PA.2 to PA.1', () => {
-    const regime = { engineVersion: 'market-regime-v1', asOf: NOW, freshness: 'FRESH', classification: { status: 'COMPLETE', trendRegime: 'BULL' } }
+    const regime = { symbol: 'SPY', engineVersion: 'market-regime-v1', asOf: NOW, freshness: 'FRESH', marketData: provenance, classification: { status: 'COMPLETE', trendRegime: 'BULL' } }
     const suitability = { engineVersion: 'adaptive-strategy-v1', strategies: [{ strategyId: 'index-pullback-v1', decision: 'ENABLED', confidence: 80, blockingReasons: [] }] }
     const base = snapshot({ evidenceFingerprint: 'a'.repeat(64) })
     const changed = snapshot({ evidenceFingerprint: 'c'.repeat(64) })
-    const firstEvaluation = evaluatePaperCandidates({ candidates: [base], regime, strategySuitability: suitability, portfolioRisk: { maxDrawdown: 0 } }, { now: NOW })[0]
-    const changedEvaluation = evaluatePaperCandidates({ candidates: [changed], regime, strategySuitability: suitability, portfolioRisk: { maxDrawdown: 0 } }, { now: NOW })[0]
+    const currentMarketEvidence = { symbol: 'SPY', price: 500 }
+    const firstEvaluation = evaluatePaperCandidates({ candidates: [base], regime, strategySuitability: suitability, portfolioRisk: { maxDrawdown: 0 }, currentMarketEvidence }, { now: NOW })[0]
+    const changedEvaluation = evaluatePaperCandidates({ candidates: [changed], regime, strategySuitability: suitability, portfolioRisk: { maxDrawdown: 0 }, currentMarketEvidence }, { now: NOW })[0]
     expect(changedEvaluation.evidenceFingerprint).not.toBe(firstEvaluation.evidenceFingerprint)
-    const result = simulateApprovedPaperEvaluations({ evaluations: [firstEvaluation], portfolio: { cash: 100000, equity: 100000, buyingPower: 100000 }, portfolioRisk: { account: { accountValue: 100000, cash: 100000, buyingPower: 100000 }, summary: { openRisk: 0, openRiskPct: 0 } }, enabled: true }, { now: NOW }).results[0]
+    const quote = { symbol: 'AAPL', price: 100, bid: 99.98, ask: 100.02, bidSize: 10000, askSize: 10000, liquidityScore: 80, provenance }
+    const result = simulateApprovedPaperEvaluations({ evaluations: [firstEvaluation], portfolio: { cash: 100000, equity: 100000, buyingPower: 100000 }, portfolioRisk: { account: { accountValue: 100000, cash: 100000,buyingPower: 100000 }, summary: { openRisk: 0, openRiskPct: 0 } }, enabled: true, executionQuotes: [quote] }, { now: NOW, confirmedAt: NOW, confirmationSource: 'authenticated_manual_request' }).results[0]
     expect(result.evaluationEvidenceFingerprint).toBe(firstEvaluation.evidenceFingerprint)
     expect(result).toMatchObject({ liveOrders: false, brokerExecution: false, paperTradingOnly: true })
   })

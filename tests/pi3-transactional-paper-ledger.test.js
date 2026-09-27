@@ -12,6 +12,7 @@ import { createPaperRiskLatchActionHandler } from '../netlify/functions/paper-ri
 import { createIndexPullbackExitPolicy } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 import { buildCanonicalPaperOutcomes } from '../lib/analytics/canonicalPaperOutcomes.js'
 import { exitEvidenceFixture } from './helpers/exitEvidenceFixtures.js'
+import { compactCurrentMarketEvidence, createCurrentMarketEvidenceBundle, currentMarketEvidenceFingerprint } from '../lib/market/currentMarketEvidenceContract.js'
 
 const now = '2026-08-13T12:00:00.000Z'
 const scope = (overrides = {}) => ({
@@ -36,14 +37,24 @@ function entry(overrides = {}) {
   const fill = simulation.executionFill
   const referencePrice = fill.referencePrice ?? fill.fillPrice
   const executableSide = fill.side === 'buy' || fill.side === 'cover' ? 'ask' : 'bid'
-  return { ...simulation, executionFill: { ...fill, referencePrice }, executionRealism: simulation.executionRealism ?? {
+  const provenance = { provider: 'test-live-provider', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false, mock: false, delayed: false, observedAt: now, receivedAt: now, sourceCount: 1, warningCodes: [] }
+  const currentMarketEvidence = createCurrentMarketEvidenceBundle({
+    candidate: compactCurrentMarketEvidence({ quote: { symbol: simulation.symbol, price: referencePrice }, provenance }),
+    regime: compactCurrentMarketEvidence({ quote: { symbol: 'SPY', price: 500 }, provenance }),
+  })
+  const quoteEvidence = compactCurrentMarketEvidence({ quote: { symbol: simulation.symbol, price: referencePrice, bid: executableSide === 'bid' ? referencePrice : referencePrice - 0.02, ask: executableSide === 'ask' ? referencePrice : referencePrice + 0.02, bidSize: fill.quantity, askSize: fill.quantity }, provenance })
+  const executionRealism = simulation.executionRealism ?? {
     version: 'paper-execution-realism-v2', executionCalibrationStatus: 'PAPER_ONLY_NOT_LIVE_CALIBRATED',
     paperSimulationAdmissibility: { status: 'ADMISSIBLE' }, liveExecutionCalibration: { status: 'NOT_CALIBRATED', liveMoneyReady: false },
     chronology: { decisionAt: now, confirmedAt: now, submittedAt: now, decisionToConfirmationMs: 0, confirmationToSubmissionMs: 0 },
-    quoteEvidence: { bid: executableSide === 'bid' ? referencePrice : referencePrice - 0.02, ask: executableSide === 'ask' ? referencePrice : referencePrice + 0.02, observedAt: now },
+    recommendationEvidence: currentMarketEvidence,
+    recommendationEvidenceFingerprint: currentMarketEvidence.fingerprint,
+    quoteEvidence,
+    quoteEvidenceFingerprint: currentMarketEvidenceFingerprint(quoteEvidence),
     quantityEvidence: { requestedQuantity: fill.quantity, executableSide, displayedSize: fill.quantity, fullQuantityDisplayed: true },
     fillEvidence: { status: 'PAPER_FILLED', requestedQuantity: fill.quantity, filledQuantity: fill.quantity, referencePrice, fillPrice: fill.fillPrice, slippageBps: fill.slippageBps, fees: fill.fees, costApplications: { spread: 1, slippage: 1, fees: 1 } },
-  } }
+  }
+  return { ...simulation, currentMarketEvidence, currentMarketEvidenceFingerprint: currentMarketEvidence.fingerprint, executionFill: { ...fill, referencePrice }, executionRealism }
 }
 
 class PaperPgHarness {

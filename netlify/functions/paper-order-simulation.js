@@ -33,7 +33,7 @@ export function createPaperOrderSimulationHandler({repository:providedRepository
    const market=await service.getMarketOverview(symbol)
    const quote=market.quote??{}
    const provenance=quote.provenance??{}
-   marks.push({symbol,price:quote.price,last:quote.price,bid:quote.bid,ask:quote.ask,bidSize:quote.bidSize??quote.bid_size,askSize:quote.askSize??quote.ask_size,updatedAt:quote.updatedAt,receivedAt:quote.receivedAt??provenance.receivedAt,provider:quote.provider??provenance.provider,dataStatus:provenance.dataStatus??quote.dataStatus,fallbackUsed:provenance.fallbackUsed??quote.fallbackUsed,liquidityScore:quote.liquidityScore})
+   marks.push({symbol,price:quote.price,last:quote.price,bid:quote.bid,ask:quote.ask,bidSize:quote.bidSize??quote.bid_size,askSize:quote.askSize??quote.ask_size,updatedAt:quote.updatedAt,liquidityScore:quote.liquidityScore,provenance:{...provenance}})
   }
   const today=new Date().toISOString().slice(0,10)
   const dailyCount=existing.filter(x=>x.status==='SIMULATED_FILLED'&&String(x.simulatedAt).startsWith(today)).length
