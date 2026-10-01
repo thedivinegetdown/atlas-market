@@ -38,6 +38,10 @@ describe('market data layer', () => {
     expect(normalized).toEqual({
       symbol: 'SPY',
       price: 510,
+      bid: null,
+      ask: null,
+      bidSize: null,
+      askSize: null,
       open: 508,
       high: 512,
       low: 507,
