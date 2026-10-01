@@ -26,13 +26,13 @@ describe('guarded paper order simulation',()=>{
 describe('endpoint security',()=>{it('requires authenticated CSRF request',async()=>{const handler=createPaperOrderSimulationHandler({env:{PAPER_AUTOMATION_ENABLED:'true'}});expect((await handler({httpMethod:'POST',headers:auth2Headers({csrf:false}),body:JSON.stringify(auth2Body())})).statusCode).toBe(403)})})
 
 describe('EDGE.2 durable cohort linkage',()=>{
- it('requires an exact persisted evaluation snapshot and approved exit definition',async()=>{
+ it('requires durable activation before considering persisted evaluation evidence',async()=>{
   const evaluated=evaluation({strategyId:'index-pullback-v1',evidenceFingerprint:'evidence-a'})
   const manifest={observationId:'edge-a',manifestFingerprint:'manifest-a',exitPolicy:{version:'index-pullback-exit-v1.0.0',policyFingerprint:'policy-a'}}
   const snapshot={experimentId:'EDGE.2',observationId:'edge-a',manifestFingerprint:'manifest-a',evaluationId:'eval-1',evaluationEvidenceFingerprint:'evidence-a',symbol:'AAPL',strategyId:'index-pullback-v1'}
   const repository={getForwardObservationManifest:vi.fn(async()=>({status:'collecting',manifest})),listForwardEvidenceSnapshots:vi.fn(async()=>[snapshot])}
   const simulation={exitPolicy:{version:manifest.exitPolicy.version,definitionFingerprint:'policy-a'}}
-  await expect(edge2CohortFor(repository,{},evaluated,simulation)).resolves.toEqual({experimentId:'EDGE.2',observationId:'edge-a',manifestFingerprint:'manifest-a'})
+  await expect(edge2CohortFor(repository,{},evaluated,simulation)).resolves.toBeNull()
   await expect(edge2CohortFor(repository,{},evaluated,{exitPolicy:{...simulation.exitPolicy,definitionFingerprint:'wrong'}})).resolves.toBeNull()
   await expect(edge2CohortFor({...repository,listForwardEvidenceSnapshots:async()=>[{...snapshot,evaluationId:'other'}]}, {}, evaluated, simulation)).resolves.toBeNull()
  })

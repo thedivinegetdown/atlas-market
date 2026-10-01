@@ -207,18 +207,18 @@ describe('EDGE.2 fixed forward paper observation', () => {
     const observation = manifest()
     const snapshots = completedSnapshots(observation, 19)
     const result = buildForwardObservationStatus({ manifest: observation, snapshots, outcomes: completedOutcomes(observation, 29), performanceReview: { sample: { completedTrades: 29 }, performance: { expectancyPerTrade: 10, profitFactor: 2 } } })
-    expect(result).toMatchObject({ status: 'COLLECTING', sessionsElapsed: 19, completedOutcomes: 29, reviewClassification: null })
+    expect(result).toMatchObject({ status: 'NON_ACTIVE', sessionsElapsed: 0, completedOutcomes: 0, reviewClassification: null })
   })
 
-  it('uses the separate session and outcome pending states', () => {
+  it('cannot enter session or outcome pending states while non-active', () => {
     const observation = manifest()
     const nineteen = completedSnapshots(observation, 19)
     const twenty = completedSnapshots(observation, 20)
-    expect(buildForwardObservationStatus({ manifest: observation, snapshots: nineteen, outcomes: completedOutcomes(observation, 30), performanceReview: { sample: { completedTrades: 30 } } }).status).toBe('MINIMUM_SESSIONS_PENDING')
-    expect(buildForwardObservationStatus({ manifest: observation, snapshots: twenty, outcomes: completedOutcomes(observation, 29), performanceReview: { sample: { completedTrades: 29 } } }).status).toBe('MINIMUM_OUTCOMES_PENDING')
+    expect(buildForwardObservationStatus({ manifest: observation, snapshots: nineteen, outcomes: completedOutcomes(observation, 30), performanceReview: { sample: { completedTrades: 30 } } })).toMatchObject({ status: 'NON_ACTIVE', sessionsElapsed: 0, completedOutcomes: 0 })
+    expect(buildForwardObservationStatus({ manifest: observation, snapshots: twenty, outcomes: completedOutcomes(observation, 29), performanceReview: { sample: { completedTrades: 29 } } })).toMatchObject({ status: 'NON_ACTIVE', sessionsElapsed: 0, completedOutcomes: 0 })
   })
 
-  it('becomes review-ready deterministically and reuses PA.3/PA.5 analytics', () => {
+  it('cannot become review-ready while non-active', () => {
     const observation = manifest()
     const snapshots = completedSnapshots(observation, 20)
     const performanceReview = { sample: { completedTrades: 30 }, performance: { expectancyPerTrade: 12, profitFactor: 1.4, maximumDrawdownPct: 4 }, recentTrend: 'STABLE', strategies: [{ value: 'index-pullback-v1' }], trendRegimes: [{ value: 'BULL' }], symbols: [{ value: 'SPY' }] }
@@ -227,7 +227,7 @@ describe('EDGE.2 fixed forward paper observation', () => {
     const first = buildForwardObservationStatus({ manifest: observation, snapshots, outcomes, performanceReview, learningEvidence })
     const second = buildForwardObservationStatus({ manifest: observation, snapshots, outcomes, performanceReview, learningEvidence })
     expect(first).toEqual(second)
-    expect(first).toMatchObject({ status: 'READY_FOR_REVIEW', reviewClassification: 'PROMISING', metrics: performanceReview.performance, tradeQualityCalibration: { status: 'CONSISTENT' } })
+    expect(first).toMatchObject({ status: 'NON_ACTIVE', sessionsElapsed: 0, completedOutcomes: 0, reviewClassification: null })
   })
 
   it('counts only full policy-compliant closes linked to the exact cohort', () => {
@@ -243,7 +243,7 @@ describe('EDGE.2 fixed forward paper observation', () => {
       { ...valid, forwardObservation: { ...valid.forwardObservation, manifestFingerprint: 'other' } },
       { ...valid, forwardObservation: null },
     ]
-    expect(buildForwardObservationStatus({ manifest: observation, outcomes: records, performanceReview: { sample: { completedTrades: 30 } } }).completedOutcomes).toBe(1)
+    expect(buildForwardObservationStatus({ manifest: observation, outcomes: records, performanceReview: { sample: { completedTrades: 30 } } })).toMatchObject({ status: 'NON_ACTIVE', completedOutcomes: 0 })
   })
 
   it('keeps the production cohort not started until an approved manifest is persisted', () => {
@@ -257,16 +257,12 @@ describe('EDGE.2 fixed forward paper observation', () => {
     expect(buildForwardObservationStatus({ manifest: observation, outcomes: [synthetic] })).toMatchObject({ completedOutcomes: 0, sessionsElapsed: 0 })
   })
 
-  it('persists manifests and snapshots across repository re-instantiation and suppresses duplicates', async () => {
+  it('rejects durable cohort persistence without an activation transaction', async () => {
     const database = memoryDatabase(); const observation = manifest(); const evidenceSnapshot = snapshot(observation)
-    const first = createAtlasAiRepository({ database })
-    expect((await first.saveForwardObservationManifest({ ...scope(), manifest: observation })).created).toBe(true)
-    const second = createAtlasAiRepository({ database })
-    expect((await second.saveForwardObservationManifest({ ...scope(), manifest: observation })).duplicate).toBe(true)
-    expect((await second.saveForwardEvidenceSnapshot({ ...scope(), snapshot: evidenceSnapshot })).created).toBe(true)
-    const third = createAtlasAiRepository({ database })
-    expect((await third.saveForwardEvidenceSnapshot({ ...scope(), snapshot: evidenceSnapshot })).duplicate).toBe(true)
-    expect(await third.listForwardEvidenceSnapshots({ ...scope(), observationId: observation.observationId })).toHaveLength(1)
+    const repository = createAtlasAiRepository({ database })
+    await expect(repository.saveForwardObservationManifest({ ...scope(), manifest: observation })).rejects.toThrow('durable activation transaction is unavailable')
+    await expect(repository.saveForwardEvidenceSnapshot({ ...scope(), snapshot: evidenceSnapshot })).rejects.toThrow('durable activation transaction is unavailable')
+    expect(database.rows).toHaveLength(0)
   })
 
   it.each([
@@ -276,7 +272,7 @@ describe('EDGE.2 fixed forward paper observation', () => {
     ['team', { tenantContext: { organizationId: 'org-a', teamWorkspaceId: 'team-b', userId: 'user-a' } }],
   ])('isolates forward evidence across %s boundaries', async (_boundary, override) => {
     const database = memoryDatabase(); const observation = manifest()
-    await createAtlasAiRepository({ database }).saveForwardObservationManifest({ ...scope(), manifest: observation })
+    database.rows.push({ id: 'manifest', organization: 'org-a', team: 'team-a', account: 'paper-portfolio', user: 'user-a', category: 'manifest', review_state: 'collecting', payload: { forwardObservationManifest: observation }, created_at: NOW })
     expect(await createAtlasAiRepository({ database }).getForwardObservationManifest(scope(override))).toBeNull()
   })
 

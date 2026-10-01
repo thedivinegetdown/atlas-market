@@ -85,6 +85,9 @@ class PaperPgHarness {
       this.failPattern = null
       throw new Error(`injected database failure at ${pattern}`)
     }
+    if (text.startsWith('select pg_advisory_xact_lock')) return { rows: [{ locked: true }] }
+    if (text.startsWith('lock table atlas_ai_opportunity_analysis_history')) return { rows: [] }
+    if (text.includes("analysis_category='edge2_activation_manifest'")) return { rows: [] }
     if (text.startsWith('insert into atlas_paper_accounts')) {
       const [id, organization_id, team_workspace_id, account_id, user_id, accounting_origin_id, balance] = params
       let inserted = null
@@ -560,16 +563,16 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
     expect(database.state).toEqual(before)
   })
 
-  it('preserves EDGE.2 identity on an emergency close without making it qualifying', async () => {
+  it('removes unactivated EDGE.2 identity before an ordinary emergency close', async () => {
     const policy = createIndexPullbackExitPolicy({ strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', side: 'long', entryPrice: 100, stopPrice: 98, targetPrice: 104, enteredAt: now })
     const cohort = { experimentId: 'EDGE.2', observationId: 'edge-a', manifestFingerprint: 'manifest-a' }
     const { database, repository, committed } = await seeded({ entry: { strategyId: 'index-pullback-v1', strategyFingerprint: 'strategy-a', exitPolicy: policy, forwardObservation: cohort } })
-    expect(committed.execution.payload.forwardObservation).toEqual(cohort)
+    expect(committed.execution.payload.forwardObservation).toBeNull()
     const closed = await repository.commitExit({ ...scope(), positionId: committed.position.positionId, quantity: 10, quote: { price: 98, updatedAt: now, liquidityScore: 80 }, exitPolicy: { ...policy, fingerprint: 'caller-forgery' }, exitReason: 'manual_emergency', paperModeEnabled: true, confirmed: true, now })
-    expect(closed.execution.payload).toMatchObject({ executionType: 'close', forwardObservation: cohort, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false }, exitPolicy: policy, evaluationEvidenceFingerprint: 'eval-evidence-1' })
+    expect(closed.execution.payload).toMatchObject({ executionType: 'close', forwardObservation: null, exitAttribution: { policyCompliant: false, countsTowardObservationMinimum: false }, exitPolicy: policy, evaluationEvidenceFingerprint: 'eval-evidence-1' })
     expect(closed.execution.payload.entryEvidence).toMatchObject([{
       executionId: committed.execution.executionId, strategyId: 'index-pullback-v1', evaluationId: 'eval-1',
-      evaluationEvidenceFingerprint: 'eval-evidence-1', executionIntentFingerprint: 'entry-fp-1', exitPolicy: policy, forwardObservation: cohort,
+      evaluationEvidenceFingerprint: 'eval-evidence-1', executionIntentFingerprint: 'entry-fp-1', exitPolicy: policy, forwardObservation: null,
     }])
     expect(database.state.executions[0].payload).toEqual(committed.execution.payload)
     expect(closed.execution.fillPrice).toBe(97.95)
@@ -579,8 +582,8 @@ describe('PI.3 transactional reductions, closes, and realized performance eviden
     expect(closed.account.realizedPnl).toBe(-21.99)
     expect(closed.position).toMatchObject({ quantity: 0, realizedPnl: -21.99, status: 'closed' })
     const durable = await createCanonicalPaperLedgerRepository({ database }).listExecutions(scope())
-    expect(durable.find((record) => record.executionType === 'close')?.payload?.forwardObservation).toEqual(cohort)
-    expect((await repository.listForwardObservationExecutions(scope())).map((record) => record.executionType)).toEqual(['close'])
+    expect(durable.find((record) => record.executionType === 'close')?.payload?.forwardObservation).toBeNull()
+    expect(await repository.listForwardObservationExecutions(scope())).toEqual([])
   })
   it('partially reduces, preserves cost basis, and records realized profit/cash/P&L', async () => {
     const { repository, committed } = await seeded()

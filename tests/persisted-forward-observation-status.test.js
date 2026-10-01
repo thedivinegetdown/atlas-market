@@ -15,7 +15,7 @@ describe('persisted forward observation statuses', () => {
     const evidenceRepository = { getForwardObservationManifest: vi.fn(async ({ experimentId }) => experimentId === 'EDGE.2' ? { manifest: edge, status: 'collecting' } : null), listForwardEvidenceSnapshots: vi.fn(async () => [{ timestamp: base.startedAt, quoteFreshness: 'LIVE', provider: 'twelvedata' }]) }
     const statuses = await resolvePersistedForwardObservationStatuses({ ...scope, evidenceRepository, ledgerRepository: { listExecutions: vi.fn(async () => [{ executionType: 'close', payload: { forwardObservation: { experimentId: 'EDGE.2', observationId: edge.observationId, manifestFingerprint: edge.manifestFingerprint }, exitEvidenceManifest: { version: 'pa4-session-chronology-v1', evidenceClass: 'GENUINE', manifestHash: 'a'.repeat(64) }, exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true, evidenceManifestHash: 'a'.repeat(64) } } }, { experimentId: 'BREAKOUT.1', exitAttribution: {} }]) } })
     expect(evidenceRepository.getForwardObservationManifest).toHaveBeenCalledWith(expect.objectContaining({ ...scope, experimentId: 'EDGE.2' }))
-    expect(statuses[0]).toMatchObject({ experimentId: 'EDGE.2', strategyId: 'index-pullback-v1', exitPolicyFingerprint: INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT, completedOutcomes: 1 })
+    expect(statuses[0]).toMatchObject({ experimentId: 'EDGE.2', strategyId: 'index-pullback-v1', status: 'NON_ACTIVE', completedOutcomes: 0, reason: 'edge2_activation_manifest_missing' })
     expect(statuses[1]).toMatchObject({ experimentId: 'BREAKOUT.1', status: 'NOT_STARTED', completedOutcomes: 0 })
   })
 
@@ -24,7 +24,7 @@ describe('persisted forward observation statuses', () => {
     const invalid = { ...breakout, exitPolicy: { ...breakout.exitPolicy, policyFingerprint: 'changed' } }
     const evidenceRepository = { getForwardObservationManifest: vi.fn(async ({ experimentId }) => experimentId === 'BREAKOUT.1' ? { manifest: invalid, status: 'collecting' } : null), listForwardEvidenceSnapshots: vi.fn(async () => []) }
     const statuses = await resolvePersistedForwardObservationStatuses({ ...scope, evidenceRepository, ledgerRepository: { listExecutions: async () => [{ experimentId: 'EDGE.2', exitAttribution: {} }] } })
-    expect(statuses[0].status).toBe('NOT_STARTED')
+    expect(statuses[0].status).toBe('NON_ACTIVE')
     expect(statuses[1]).toMatchObject({ experimentId: 'BREAKOUT.1', strategyId: 'breakout-momentum-v1', status: 'INVALIDATED', completedOutcomes: 0, reason: 'frozen_configuration_changed' })
   })
 
@@ -40,7 +40,7 @@ describe('persisted forward observation statuses', () => {
     const ledgerRepository = { listExecutions: vi.fn(async () => []), listForwardObservationExecutions: vi.fn(async () => [close]) }
     const evidenceRepository = { getForwardObservationManifest: async ({ experimentId }) => experimentId === 'EDGE.2' ? { manifest: edge, status: 'collecting' } : null, listForwardEvidenceSnapshots: async () => [] }
     const statuses = await resolvePersistedForwardObservationStatuses({ ...scope, evidenceRepository, ledgerRepository, executions: [] })
-    expect(statuses[0].completedOutcomes).toBe(1)
+    expect(statuses[0]).toMatchObject({ status: 'NON_ACTIVE', completedOutcomes: 0 })
     expect(ledgerRepository.listForwardObservationExecutions).toHaveBeenCalledWith(expect.objectContaining({ accountId: 'paper-a' }))
     expect(ledgerRepository.listExecutions).not.toHaveBeenCalled()
   })

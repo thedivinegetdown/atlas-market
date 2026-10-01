@@ -70,19 +70,20 @@ describe('governed forward observation orchestration', () => {
     const result = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledgerRepository(), now: NOW })
     expect(result).toMatchObject({ result: 'PASSIVE_WAIT', boundaries: { paperOnly: true, liveExecutionDisabled: true, callerScientificInputsAccepted: false } })
     expect(result.experiments).toHaveLength(4)
-    expect(result.experiments.every((item) => item.statusAfter === 'NOT_STARTED' && item.validSessions === 0 && item.completedOutcomes === 0)).toBe(true)
-    expect(result.experiments.every((item) => item.reason === 'no_current_governed_evaluation')).toBe(true)
+    expect(result.experiments[0]).toMatchObject({ experimentId: 'EDGE.2', statusAfter: 'NON_ACTIVE', validSessions: 0, completedOutcomes: 0, reason: 'edge2_activation_manifest_missing' })
+    expect(result.experiments.slice(1).every((item) => item.statusAfter === 'NOT_STARTED' && item.validSessions === 0 && item.completedOutcomes === 0 && item.reason === 'no_current_governed_evaluation')).toBe(true)
     expect(evidence.saveForwardObservationManifest).not.toHaveBeenCalled()
     expect(evidence.saveForwardEvidenceSnapshot).not.toHaveBeenCalled()
   })
 
-  it('reuses all four frozen experiment and exit-policy factories for qualified LIVE evidence', async () => {
+  it('keeps EDGE.2 non-active while the other frozen experiments collect qualified LIVE evidence', async () => {
     const evidence = evidenceRepository(['index-pullback-v1', 'breakout-momentum-v1', 'range-mean-reversion-v1', 'volatility-expansion-v1'].map((strategyId) => evaluation(strategyId)))
     const result = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledgerRepository(), now: NOW })
     expect(result.result).toBe('COLLECTING')
     expect(result.experiments.map((item) => item.experimentId)).toEqual(['EDGE.2', 'BREAKOUT.1', 'RANGE.1', 'VOL.1'])
-    expect(result.experiments.every((item) => item.statusBefore === 'NOT_STARTED' && item.statusAfter === 'COLLECTING')).toBe(true)
-    expect(result.experiments.every((item) => item.sessionRecorded && item.validSessions === 1 && item.requiredSessions === 20)).toBe(true)
+    expect(result.experiments[0]).toMatchObject({ statusBefore: 'NON_ACTIVE', statusAfter: 'NON_ACTIVE', sessionRecorded: false, validSessions: 0, reason: 'edge2_activation_manifest_missing' })
+    expect(result.experiments.slice(1).every((item) => item.statusBefore === 'NOT_STARTED' && item.statusAfter === 'COLLECTING')).toBe(true)
+    expect(result.experiments.slice(1).every((item) => item.sessionRecorded && item.validSessions === 1 && item.requiredSessions === 20)).toBe(true)
     expect(result.experiments.every((item) => item.completedOutcomes === 0 && item.requiredOutcomes === 30 && item.empiricalConfidenceState === 'UNAVAILABLE')).toBe(true)
     expect([...evidence.snapshots.values()].every((item) => item.provider === 'twelvedata' && item.quoteFreshness === 'LIVE' && item.boundaries.liveTrading === false)).toBe(true)
   })
@@ -92,10 +93,10 @@ describe('governed forward observation orchestration', () => {
     const ledger = ledgerRepository()
     const first = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledger, now: NOW })
     const second = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledger, now: NOW })
-    expect(first.experiments[0]).toMatchObject({ sessionRecorded: true, validSessions: 1, completedOutcomes: 0 })
-    expect(second.experiments[0]).toMatchObject({ statusBefore: 'COLLECTING', statusAfter: 'COLLECTING', sessionRecorded: false, validSessions: 1, completedOutcomes: 0, reason: 'duplicate_observation_suppressed' })
-    expect(evidence.manifests).toHaveProperty('size', 1)
-    expect(evidence.snapshots).toHaveProperty('size', 1)
+    expect(first.experiments[0]).toMatchObject({ statusAfter: 'NON_ACTIVE', sessionRecorded: false, validSessions: 0, completedOutcomes: 0 })
+    expect(second.experiments[0]).toMatchObject({ statusBefore: 'NON_ACTIVE', statusAfter: 'NON_ACTIVE', sessionRecorded: false, validSessions: 0, completedOutcomes: 0, reason: 'edge2_activation_manifest_missing' })
+    expect(evidence.manifests).toHaveProperty('size', 0)
+    expect(evidence.snapshots).toHaveProperty('size', 0)
   })
 
   it.each([
@@ -103,17 +104,17 @@ describe('governed forward observation orchestration', () => {
     ['STALE', { freshness: 'STALE' }, 'qualified_plan_stale'],
     ['WATCH', { status: 'WATCH' }, 'qualified_plan_watch'],
     ['NO_TRADE', { orderContext: { assetType: 'etf', side: 'buy', price: 120, stopPrice: 110, targetPrice: 140, quantity: 0 } }, 'qualified_plan_no_trade'],
-  ])('rejects %s evidence without starting a cohort', async (_label, overrides, reason) => {
+  ])('keeps EDGE.2 non-active for %s evidence', async (_label, overrides) => {
     const evidence = evidenceRepository([evaluation('index-pullback-v1', overrides)])
     const result = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledgerRepository(), now: NOW })
-    expect(result.experiments[0]).toMatchObject({ statusAfter: 'NOT_STARTED', sessionRecorded: false, validSessions: 0, reason })
+    expect(result.experiments[0]).toMatchObject({ statusAfter: 'NON_ACTIVE', sessionRecorded: false, validSessions: 0, reason: 'edge2_activation_manifest_missing' })
     expect(evidence.saveForwardObservationManifest).not.toHaveBeenCalled()
   })
 
   it('ignores otherwise qualified evidence from a different market session', async () => {
     const evidence = evidenceRepository([evaluation('index-pullback-v1', { evaluatedAt: '2026-09-02T19:45:00.000Z' })])
     const result = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledgerRepository(), now: NOW })
-    expect(result.experiments[0]).toMatchObject({ statusAfter: 'NOT_STARTED', reason: 'no_current_governed_evaluation' })
+    expect(result.experiments[0]).toMatchObject({ statusAfter: 'NON_ACTIVE', reason: 'edge2_activation_manifest_missing' })
   })
 
   it('does not call market providers, watchlists, brokers, execution, or confidence mutation hooks', async () => {
@@ -183,7 +184,7 @@ describe('forward observation production client', () => {
   it('does not start EDGE.2 when the reviewed evaluation lacks durable linkage', async () => {
     const evidence = evidenceRepository([evaluation('index-pullback-v1', { evidenceFingerprint: null })])
     const result = await runForwardObservation({ ...scope, evidenceRepository: evidence, ledgerRepository: ledgerRepository(), now: NOW })
-    expect(result.experiments[0]).toMatchObject({ statusAfter: 'NOT_STARTED', reason: 'durable_evaluation_linkage_missing' })
+    expect(result.experiments[0]).toMatchObject({ statusAfter: 'NON_ACTIVE', reason: 'edge2_activation_manifest_missing' })
     expect(evidence.saveForwardObservationManifest).not.toHaveBeenCalled()
   })
 })
