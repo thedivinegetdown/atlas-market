@@ -4,16 +4,21 @@ import { createWorkspaceDataService } from '../../lib/workspace/workspaceDataSer
 import { simulateApprovedPaperEvaluations } from '../../lib/opportunities/paperSimulation/index.js'
 import { requireAccountContext } from '../../lib/security/securityPolicyEngine.js'
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
+import { edge2BindingMatches, evaluateEdge2Activation } from '../../lib/opportunities/forwardTest/edge2ActivationContract.js'
 
 export async function edge2CohortFor(repository, context, evaluation, simulation) {
  if (evaluation.strategyId !== 'index-pullback-v1' || !evaluation.evidenceFingerprint) return null
+ const activationRecord=await repository.getEdge2ActivationManifest?.(context)
+ const activation=evaluateEdge2Activation(activationRecord,{accountId:context.accountId,at:evaluation.evaluatedAt})
+ if(!activation.collectionAllowed || evaluation.strategyFingerprint!==activation.manifest.protocol.strategyFingerprint)return null
  const persisted=await repository.getForwardObservationManifest?.({...context,experimentId:'EDGE.2'})
  if (persisted?.status!=='collecting' || !persisted.manifest?.manifestFingerprint) return null
  const manifest=persisted.manifest
+ if(!edge2BindingMatches(manifest.activationBinding,activation,context.accountId))return null
  if (simulation.exitPolicy?.version!==manifest.exitPolicy?.version || simulation.exitPolicy?.definitionFingerprint!==manifest.exitPolicy?.policyFingerprint) return null
  const snapshots=await repository.listForwardEvidenceSnapshots?.({...context,observationId:manifest.observationId})??[]
- const matched=snapshots.find(snapshot=>snapshot.experimentId==='EDGE.2' && snapshot.observationId===manifest.observationId && snapshot.manifestFingerprint===manifest.manifestFingerprint && snapshot.evaluationId===evaluation.evaluationId && snapshot.evaluationEvidenceFingerprint===evaluation.evidenceFingerprint && snapshot.symbol===evaluation.symbol && snapshot.strategyId===evaluation.strategyId)
- return matched ? {experimentId:'EDGE.2',observationId:manifest.observationId,manifestFingerprint:manifest.manifestFingerprint} : null
+ const matched=snapshots.find(snapshot=>snapshot.experimentId==='EDGE.2' && snapshot.observationId===manifest.observationId && snapshot.manifestFingerprint===manifest.manifestFingerprint && edge2BindingMatches(snapshot.activationBinding,activation,context.accountId) && snapshot.evaluationId===evaluation.evaluationId && snapshot.evaluationEvidenceFingerprint===evaluation.evidenceFingerprint && snapshot.symbol===evaluation.symbol && snapshot.strategyId===evaluation.strategyId)
+ return matched ? {experimentId:'EDGE.2',observationId:manifest.observationId,manifestFingerprint:manifest.manifestFingerprint,activationBinding:activation.binding,enrolledAt:matched.timestamp} : null
 }
 
 export function createPaperOrderSimulationHandler({repository:providedRepository,ledgerRepository:providedLedgerRepository,serviceFactory=createWorkspaceDataService,env=process.env,...options}={}) {

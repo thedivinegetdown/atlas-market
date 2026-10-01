@@ -6,11 +6,18 @@ import { resolveCanonicalPaperEvidenceRepository } from '../../lib/opportunities
 import { resolveCanonicalPaperLedgerRepository } from '../../lib/opportunities/persistence/canonicalPaperLedgerRepository.js'
 import { requireAccountContext } from '../../lib/security/securityPolicyEngine.js'
 import { createOrganizationAuthenticatedApiHandler } from './_shared/authApi.js'
+import { edge2BindingMatches, evaluateEdge2Activation } from '../../lib/opportunities/forwardTest/edge2ActivationContract.js'
 
-function matchesManifest(outcome, manifest) {
+function matchesManifest(outcome, manifest, activation) {
+  const enrolledAt = Date.parse(outcome.forwardObservation?.enrolledAt)
+  const closedAt = Date.parse(outcome.closedAt ?? outcome.evidenceTimestamp)
   return outcome.forwardObservation?.experimentId === (manifest?.experiment?.experimentId ?? 'EDGE.2')
     && outcome.forwardObservation?.observationId === manifest?.observationId
     && outcome.forwardObservation?.manifestFingerprint === manifest?.manifestFingerprint
+    && edge2BindingMatches(manifest?.activationBinding, activation)
+    && edge2BindingMatches(outcome.forwardObservation?.activationBinding, activation)
+    && Number.isFinite(enrolledAt) && enrolledAt >= Date.parse(activation.enrollment.startAt) && enrolledAt <= Date.parse(activation.enrollment.endAt)
+    && Number.isFinite(closedAt) && closedAt >= enrolledAt && closedAt <= Date.parse(activation.enrollment.outcomeCutoffAt)
     && outcome.exitAttribution?.policyCompliant === true
     && outcome.exitAttribution?.countsTowardObservationMinimum === true
 }
@@ -28,15 +35,16 @@ export function createPaperLearningHandler({ ledgerRepository: providedLedgerRep
     const review = reviewPaperPerformance(measurement.outcomes, { asOf: query.asOf, cohortIsolation: true, equityChronology: measurement.equityChronology })
     const learning = buildPaperLearningEvidence(review)
     const observation = evidenceRepository ? await evidenceRepository.getForwardObservationManifest({ ...context, experimentId: 'EDGE.2' }) : null
-    const snapshots = observation ? await evidenceRepository.listForwardEvidenceSnapshots({ ...context, observationId: observation.manifest.observationId }) : []
-    const cohortOutcomes = observation ? measurement.outcomes.filter((outcome) => matchesManifest(outcome, observation.manifest)) : []
+    const activation = evaluateEdge2Activation(evidenceRepository ? await evidenceRepository.getEdge2ActivationManifest?.(context) : null, { accountId })
+    const snapshots = observation && activation.valid ? await evidenceRepository.listForwardEvidenceSnapshots({ ...context, observationId: observation.manifest.observationId }) : []
+    const cohortOutcomes = observation && activation.valid ? measurement.outcomes.filter((outcome) => matchesManifest(outcome, observation.manifest, activation)) : []
     const cohortReview = reviewPaperPerformance(cohortOutcomes, { asOf: query.asOf, cohortIsolation: true, equityChronology: measurement.equityChronology })
     const cohortLearning = buildPaperLearningEvidence(cohortReview)
     return {
       ...learning,
       history: measurement.history,
       outcomeContract: { version: measurement.version, excludedOutcomes: measurement.excludedOutcomes, equityChronology: measurement.equityChronology, boundaries: measurement.boundaries },
-      forwardObservation: buildForwardObservationStatus({ manifest: observation?.manifest, manifestStatus: observation?.status, snapshots, outcomes: cohortOutcomes, performanceReview: cohortReview, learningEvidence: cohortLearning }),
+      forwardObservation: buildForwardObservationStatus({ manifest: observation?.manifest, manifestStatus: observation?.status, snapshots, outcomes: cohortOutcomes, performanceReview: cohortReview, learningEvidence: cohortLearning, experimentId: 'EDGE.2', activationDecision: activation }),
     }
   }, { allowedMethods: ['GET'], requiredPermission: 'dashboard.read', workspaceAction: 'read', routeId: 'paper-learning', env, ...options })
 }
