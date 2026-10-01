@@ -91,7 +91,9 @@ describe('Gap 3 canonical outcome contract', () => {
     const measurement = buildCanonicalPaperOutcomes([...roundTrip({ id: 'edge', attrs: edge, start: 8 }), ...roundTrip({ id: 'other', attrs: other, start: 12 })])
     const exact = measurement.outcomes.filter((outcome) => outcome.forwardObservation?.experimentId === 'EDGE.2' && outcome.forwardObservation?.manifestFingerprint === 'manifest-a')
     expect(exact).toHaveLength(1)
-    expect(reviewPaperPerformance(measurement.outcomes, { cohortIsolation: true, equityChronology: measurement.equityChronology }).status).toBe('INCOMPATIBLE_COHORTS')
+    expect(exact[0].attribution.status).toBe('MIXED')
+    expect(measurement.comparableOutcomes.map((outcome) => outcome.experimentId)).toEqual(['BREAKOUT.1'])
+    expect(reviewPaperPerformance(measurement.outcomes, { cohortIsolation: true, equityChronology: measurement.equityChronology }).status).toBe('INSUFFICIENT_SAMPLE')
   })
 
   it('reads history beyond the former default cap and returns the actual latest N records', async () => {

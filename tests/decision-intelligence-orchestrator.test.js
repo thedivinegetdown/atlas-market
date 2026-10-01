@@ -50,8 +50,8 @@ describe('decision intelligence orchestration', () => {
     const result = await buildDecisionIntelligence(input({ evaluations: [{ ...evaluation, orderContext: { ...evaluation.orderContext, quantity: 0 } }] }))
     expect(result.opportunities.noTradeReasons).toEqual([{ strategyId: 'index-pullback-v1', reason: 'Risk sizing allowed zero quantity.' }])
   })
-  it('keeps completed outcomes grouped by their persisted experiment identity', async () => {
+  it('excludes incomplete EDGE.2 attribution while retaining ordinary completed outcomes', async () => {
     const result = await buildDecisionIntelligence(input({ executions: [...outcomeExecutions('edge', 'EDGE.2', 'index-pullback-v1', 10, '01'), ...outcomeExecutions('breakout', 'BREAKOUT.1', 'breakout-momentum-v1', 5, '02')] }))
-    expect(result.decisionQuality.groupings.byExperimentId).toEqual(expect.arrayContaining([{ experimentId: 'EDGE.2', compatibilityStatus: 'SEPARATE_COHORT' }, { experimentId: 'BREAKOUT.1', compatibilityStatus: 'SEPARATE_COHORT' }]))
+    expect(result.decisionQuality.groupings.byExperimentId).toEqual([{ experimentId: 'BREAKOUT.1', compatibilityStatus: 'COMPATIBLE' }])
   })
 })
