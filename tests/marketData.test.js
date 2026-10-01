@@ -46,7 +46,9 @@ describe('market data layer', () => {
       changePercent: 0.2,
       volume: 1200000,
       provider: 'mock',
-      updatedAt: expect.any(String),
+      updatedAt: null,
+      sourceObservedAt: null,
+      sourceTimestampStatus: 'MISSING',
     })
   })
 
