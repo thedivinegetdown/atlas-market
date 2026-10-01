@@ -11,7 +11,9 @@ import { edge2BindingMatches, evaluateEdge2Activation } from '../../lib/opportun
 function matchesManifest(outcome, manifest, activation) {
   const enrolledAt = Date.parse(outcome.forwardObservation?.enrolledAt)
   const closedAt = Date.parse(outcome.closedAt ?? outcome.evidenceTimestamp)
-  return outcome.forwardObservation?.experimentId === (manifest?.experiment?.experimentId ?? 'EDGE.2')
+  return outcome.attribution?.status === 'COMPLETE'
+    && outcome.accountId === activation.binding.accountId
+    && outcome.forwardObservation?.experimentId === (manifest?.experiment?.experimentId ?? 'EDGE.2')
     && outcome.forwardObservation?.observationId === manifest?.observationId
     && outcome.forwardObservation?.manifestFingerprint === manifest?.manifestFingerprint
     && edge2BindingMatches(manifest?.activationBinding, activation)
