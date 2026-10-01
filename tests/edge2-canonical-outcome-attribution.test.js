@@ -114,6 +114,10 @@ describe('EDGE.2 canonical outcome attribution', () => {
     ['close rewrites activation', (rows) => { rows[2].payload.forwardObservation = { ...cohort, activationBinding: { ...cohort.activationBinding, activationId: 'other' } } }],
     ['reduction rewrites activation', (rows) => { rows[1].payload.forwardObservation = { ...cohort, activationBinding: { ...cohort.activationBinding, activationId: 'other' } } }],
     ['close rewrites observation attribution', (rows) => { rows[2].payload.attribution = { ...rows[2].payload.attribution, observationId: 'other' } }],
+    ['close rewrites experiment attribution', (rows) => { rows[2].payload.attribution = { ...rows[2].payload.attribution, experimentId: 'BREAKOUT.1' } }],
+    ['close rewrites evaluation ID', (rows) => { rows[2].payload.evaluationId = 'other-evaluation' }],
+    ['reduction rewrites evaluation fingerprint', (rows) => { rows[1].payload.evaluationEvidenceFingerprint = 'other-evidence' }],
+    ['entry evaluation evidence contradicts attribution', (rows) => { rows[0].payload.evaluationEvidenceFingerprint = 'other-evidence' }],
   ])('%s cannot qualify or increment counters', async (_name, change) => {
     const rows = structuredClone(lifecycle())
     change(rows)
