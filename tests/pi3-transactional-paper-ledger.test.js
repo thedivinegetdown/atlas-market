@@ -11,6 +11,9 @@ import { runMigrations } from '../lib/db/migrations.js'
 import { createPaperRiskLatchActionHandler } from '../netlify/functions/paper-risk-latch-action.js'
 import { createIndexPullbackExitPolicy } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 import { buildCanonicalPaperOutcomes } from '../lib/analytics/canonicalPaperOutcomes.js'
+import { buildForwardObservationStatus, createForwardObservationExperimentDefinition, createForwardObservationManifest, EDGE2_FORWARD_EVALUATION_PROTOCOL } from '../lib/opportunities/forwardTest/forwardObservationEngine.js'
+import { EDGE2_ACTIVATION_MANIFEST_VERSION, EDGE2_FROZEN_PROTOCOL_FINGERPRINT, EDGE2_FROZEN_PROTOCOL_ID, evaluateEdge2Activation, fingerprintEdge2ActivationManifest } from '../lib/opportunities/forwardTest/edge2ActivationContract.js'
+import { INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT, INDEX_PULLBACK_EXIT_POLICY_VERSION } from '../lib/opportunities/forwardTest/indexPullbackExitPolicy.js'
 import { exitEvidenceFixture } from './helpers/exitEvidenceFixtures.js'
 import { compactCurrentMarketEvidence, createCurrentMarketEvidenceBundle, currentMarketEvidenceFingerprint } from '../lib/market/currentMarketEvidenceContract.js'
 
@@ -63,6 +66,13 @@ class PaperPgHarness {
     this.state = { accounts: [], positions: [], executions: [], accountingEvidence: [], riskLatches: [], riskLatchAudit: [] }
     this.failPattern = null
     this.evidenceAvailable = true
+    this.edge2Activation = null
+    this.edge2Manifest = null
+    this.edge2Snapshot = null
+    this.entryTime = now
+    this.onAccountLock = null
+    this.entryInsertSql = null
+    this.queryLog = []
     this.queue = Promise.resolve()
   }
   async query(sql, params = []) { return this.#run(this.state, sql, params) }
@@ -80,6 +90,7 @@ class PaperPgHarness {
   }
   #run(state, sql, params) {
     const text = sql.replace(/\s+/g, ' ').trim().toLowerCase()
+    this.queryLog.push(text)
     if (this.failPattern && text.includes(this.failPattern)) {
       const pattern = this.failPattern
       this.failPattern = null
@@ -87,7 +98,6 @@ class PaperPgHarness {
     }
     if (text.startsWith('select pg_advisory_xact_lock')) return { rows: [{ locked: true }] }
     if (text.startsWith('lock table atlas_ai_opportunity_analysis_history')) return { rows: [] }
-    if (text.includes("analysis_category='edge2_activation_manifest'")) return { rows: [] }
     if (text.startsWith('insert into atlas_paper_accounts')) {
       const [id, organization_id, team_workspace_id, account_id, user_id, accounting_origin_id, balance] = params
       let inserted = null
@@ -135,9 +145,13 @@ class PaperPgHarness {
       return { rows: [row] }
     }
     if (text.startsWith('select * from atlas_paper_accounts')) {
+      if (text.includes('for update') && this.onAccountLock) return this.onAccountLock().then(() => ({ rows: state.accounts.filter(x => x.organization_id === params[0] && x.team_workspace_id === params[1] && x.account_id === params[2] && x.user_id === params[3]) }))
       const [organization_id, team_workspace_id, account_id, user_id] = params
       return { rows: state.accounts.filter(x => x.organization_id === organization_id && x.team_workspace_id === team_workspace_id && x.account_id === account_id && x.user_id === user_id) }
     }
+    if (text.includes("analysis_category='edge2_activation_manifest'")) return { rows: this.edge2Activation ? [{ review_state: this.edge2Activation.status, payload: { edge2ActivationManifest: this.edge2Activation.manifest }, created_at: now }] : [] }
+    if (text.includes("analysis_category='forward_observation_manifest'")) return { rows: this.edge2Manifest ? [{ review_state: 'collecting', payload: { forwardObservationManifest: this.edge2Manifest } }] : [] }
+    if (text.includes("analysis_category='forward_evidence_snapshot'")) return { rows: this.edge2Snapshot ? [{ payload: { forwardEvidenceSnapshot: this.edge2Snapshot } }] : [] }
     if (text.includes('from atlas_ai_opportunity_analysis_history')) {
       return { rows: this.evidenceAvailable ? [{ id: text.includes("analysis_category='paper_evaluation'") ? 'evaluation-row-1' : 'intent-row-1' }] : [] }
     }
@@ -172,8 +186,12 @@ class PaperPgHarness {
     }
     if (text.startsWith('insert into atlas_paper_executions')) {
       const isEntry = text.includes("$7,'entry',$8")
+      if (isEntry) this.entryInsertSql = sql
+      const entryTime = isEntry ? this.entryTime : now
+      const cohortAllowed = isEntry && params[23] != null && Date.parse(entryTime) >= Date.parse(params[24]) && Date.parse(entryTime) <= Date.parse(params[25])
+      const payload = cohortAllowed ? { ...params[23], forwardObservation: { ...params[23].forwardObservation, enrolledAt: entryTime } } : params[22]
       const row = isEntry
-        ? { id: params[0], account_record_id: params[1], organization_id: params[2], team_workspace_id: params[3], account_id: params[4], user_id: params[5], position_id: params[6], execution_type: 'entry', idempotency_fingerprint: params[7], candidate_id: params[8], evaluation_id: params[9], execution_intent_id: params[10], strategy_id: params[11], symbol: params[12], asset_type: params[13], side: params[14], quantity: params[15], fill_price: params[16], fees: params[17], slippage_bps: params[18], cash_impact: params[19], realized_pnl_delta: 0, evidence_timestamp: params[20], engine_version: params[21], payload: params[22], created_at: now }
+        ? { id: params[0], account_record_id: params[1], organization_id: params[2], team_workspace_id: params[3], account_id: params[4], user_id: params[5], position_id: params[6], execution_type: 'entry', idempotency_fingerprint: params[7], candidate_id: params[8], evaluation_id: params[9], execution_intent_id: params[10], strategy_id: params[11], symbol: params[12], asset_type: params[13], side: params[14], quantity: params[15], fill_price: params[16], fees: params[17], slippage_bps: params[18], cash_impact: params[19], realized_pnl_delta: 0, evidence_timestamp: params[20], engine_version: params[21], payload, created_at: entryTime }
         : { id: params[0], account_record_id: params[1], organization_id: params[2], team_workspace_id: params[3], account_id: params[4], user_id: params[5], position_id: params[6], execution_type: params[7], idempotency_fingerprint: params[8], candidate_id: params[9], evaluation_id: params[10], execution_intent_id: params[11], strategy_id: params[12], symbol: params[13], asset_type: params[14], side: params[15], quantity: params[16], fill_price: params[17], fees: params[18], slippage_bps: params[19], cash_impact: params[20], realized_pnl_delta: params[21], evidence_timestamp: params[22], engine_version: params[23], payload: params[24], created_at: now }
       if (state.executions.some(x => x.account_record_id === row.account_record_id && x.idempotency_fingerprint === row.idempotency_fingerprint)) return { rows: [] }
       state.executions.push(row)
@@ -235,6 +253,170 @@ function entryFor({ symbol, fingerprint, evaluationId, side = 'buy', quantity = 
     executionFill: { symbol, assetType: 'equity', side, quantity, fillPrice: price, fees, slippageBps: 2, cashImpact },
   })
 }
+
+const EDGE2_START = '2026-08-13T11:00:00.000Z'
+const EDGE2_END = '2026-08-13T12:00:00.000Z'
+const EDGE2_BEFORE = '2026-08-13T11:59:59.999Z'
+const EDGE2_AFTER = '2026-08-13T12:00:00.001Z'
+const EDGE2_STRATEGY_FINGERPRINT = '1'.repeat(64)
+const edge2Scope = () => scope({ accountId: 'edge2-paper' })
+
+function syntheticEdge2Activation(change) {
+  const core = {
+    version: EDGE2_ACTIVATION_MANIFEST_VERSION, activationId: 'edge2-entry-cutoff-test-only', revision: 1,
+    immutable: true, status: 'ACTIVATED', collectionAllowed: true, activatedAt: '2026-08-12T13:00:00.000Z',
+    protocol: { protocolId: EDGE2_FROZEN_PROTOCOL_ID, protocolFingerprint: EDGE2_FROZEN_PROTOCOL_FINGERPRINT,
+      strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', strategyFingerprint: EDGE2_STRATEGY_FINGERPRINT,
+      exitPolicyVersion: INDEX_PULLBACK_EXIT_POLICY_VERSION, exitPolicyFingerprint: INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT },
+    account: { accountId: 'edge2-paper', scope: 'dedicated_EDGE.2_paper_account', paperOnly: true, liveBrokerExecution: false },
+    economics: { operationsCostDollarsPerLifecycle: 2, capitalCostDollarsPerLifecycle: 3, finalHurdleR: 0.3, ownerApproved: true },
+    enrollment: { startAt: EDGE2_START, endAt: EDGE2_END, outcomeCutoffAt: '2026-08-20T21:00:00.000Z', reconciliationEndsAt: '2026-08-27T21:00:00.000Z', noBackfill: true },
+    sampling: { finalized: true, ownerApproved: true,
+      prospectivePowerInputs: { dispersionAssumption: 1.2, dependenceAssumption: 0.25, validCandidateRate: 0.5, entryRate: 0.5, completionRate: 0.9, attritionAllowance: 0.1 },
+      requiredValidSessions: 140, requiredCompletedLifecycles: 45 },
+    prerequisites: {
+      pa4AuthoritativeChronology: { status: 'QUALIFIED', evidenceFingerprint: 'a'.repeat(64) },
+      exchangeCalendar: { status: 'QUALIFIED', evidenceFingerprint: 'b'.repeat(64) },
+      dedicatedPaperAccount: { status: 'BOUND', evidenceFingerprint: 'c'.repeat(64) },
+      economicHurdle: { status: 'APPROVED', evidenceFingerprint: 'd'.repeat(64) },
+      enrollmentWindow: { status: 'BOUND', evidenceFingerprint: 'e'.repeat(64) },
+      prospectiveSamplingPower: { status: 'FINALIZED', evidenceFingerprint: 'f'.repeat(64) },
+      frozenConfiguration: { status: 'MATCHED', evidenceFingerprint: '0'.repeat(64) },
+    },
+  }
+  change?.(core)
+  return { manifest: { ...core, activationFingerprint: fingerprintEdge2ActivationManifest(core) }, status: 'activated', serverOwned: true }
+}
+
+function syntheticEdge2Manifest(binding) {
+  const definition = createForwardObservationExperimentDefinition({
+    experimentId: 'EDGE.2', strategyId: 'index-pullback-v1', strategyVersion: '1.2.0', strategyFingerprint: EDGE2_STRATEGY_FINGERPRINT,
+    observationUniverse: ['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'],
+    exitPolicy: { id: INDEX_PULLBACK_EXIT_POLICY_VERSION, version: INDEX_PULLBACK_EXIT_POLICY_VERSION, policyFingerprint: INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT, deterministic: true },
+    createdAt: EDGE2_BEFORE,
+  })
+  return createForwardObservationManifest({
+    observationId: 'edge2-entry-cutoff-test-only', startedAt: EDGE2_BEFORE, experimentDefinition: definition,
+    regimeEngineVersion: 'market-regime-v1', tradeQualityVersion: 'trade-quality-v1', riskPolicyVersion: 'trade-guardrail-v1',
+    startingPaperAccount: { accountId: 'edge2-paper', cash: 100000, buyingPower: 100000, equity: 100000, revision: 0 },
+    activationBinding: binding,
+    exitPolicy: { version: INDEX_PULLBACK_EXIT_POLICY_VERSION, policyFingerprint: INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT, deterministic: true, maximumHoldingSessions: 20, sameBarAmbiguity: 'stop_first', gapRule: 'adverse_stop_gap_fills_at_open;favorable_target_gap_capped_at_target' },
+  })
+}
+
+function edge2CutoffFixture({ entryTime = EDGE2_BEFORE, candidateChange, activationChange } = {}) {
+  const database = new PaperPgHarness()
+  database.entryTime = entryTime
+  database.edge2Activation = syntheticEdge2Activation(activationChange)
+  const decision = evaluateEdge2Activation(database.edge2Activation, { accountId: 'edge2-paper' })
+  const manifest = syntheticEdge2Manifest(decision.binding)
+  database.edge2Manifest = manifest
+  database.edge2Snapshot = { experimentId: 'EDGE.2', observationId: manifest.observationId, manifestFingerprint: manifest.manifestFingerprint,
+    evaluationId: 'eval-1', evaluationEvidenceFingerprint: 'eval-evidence-1', symbol: 'AAPL', strategyId: 'index-pullback-v1',
+    timestamp: EDGE2_BEFORE, activationBinding: decision.binding }
+  const candidate = { experimentId: 'EDGE.2', observationId: manifest.observationId, manifestFingerprint: manifest.manifestFingerprint,
+    activationBinding: { ...decision.binding }, enrolledAt: EDGE2_BEFORE }
+  candidateChange?.(candidate)
+  const simulation = entry({ strategyId: 'index-pullback-v1', strategyFingerprint: EDGE2_STRATEGY_FINGERPRINT,
+    policyFingerprint: INDEX_PULLBACK_EXIT_POLICY_DEFINITION_FINGERPRINT,
+    experimentId: 'EDGE.2', forwardObservation: candidate, evaluatedAt: EDGE2_BEFORE,
+    copilot: { edge2Active: true, cutoffOverride: EDGE2_BEFORE } })
+  return { database, repository: createCanonicalPaperLedgerRepository({ database }), simulation, decision, manifest }
+}
+
+function cutoffOutcome(execution) {
+  const close = { ...execution, executionId: `${execution.executionId}-close`, executionType: 'close',
+    quantity: execution.quantity, cashImpact: 1100, realizedPnlDelta: 99, evidenceTimestamp: '2026-08-14T14:00:00.000Z',
+    createdAt: '2026-08-14T14:00:00.000Z', payload: { ...execution.payload, executionType: 'close',
+      cashImpact: 1100, realizedPnlDelta: 99,
+      exitEvidenceManifest: { version: 'pa4-session-chronology-v1', evidenceClass: 'GENUINE', manifestHash: '9'.repeat(64) },
+      exitAttribution: { policyCompliant: true, countsTowardObservationMinimum: true, evidenceManifestHash: '9'.repeat(64) } } }
+  return buildCanonicalPaperOutcomes([execution, close]).outcomes[0]
+}
+
+describe('EDGE.2 authoritative PAPER entry cutoff', () => {
+  it.each([EDGE2_BEFORE, EDGE2_END])('enrolls at the database entry time %s within the frozen inclusive window', async (entryTime) => {
+    const { repository, database, simulation, decision, manifest } = edge2CutoffFixture({ entryTime })
+    simulation.forwardObservation.enrolledAt = EDGE2_AFTER
+    simulation.forwardObservation.callerClaimedEntryTime = EDGE2_AFTER
+    const committed = await repository.commitEntry({ ...edge2Scope(), simulation })
+    expect(committed.execution.createdAt).toBe(entryTime)
+    expect(committed.execution.payload.forwardObservation).toMatchObject({ experimentId: 'EDGE.2', activationBinding: decision.binding, enrolledAt: entryTime })
+    expect(committed.execution.payload.forwardObservation.enrolledAt).not.toBe(simulation.forwardObservation.enrolledAt)
+    expect(committed.execution.payload.forwardObservation).not.toHaveProperty('callerClaimedEntryTime')
+    expect(cutoffOutcome(committed.execution)).toMatchObject({ accountingStatus: 'position_closed', forwardObservation: committed.execution.payload.forwardObservation })
+    expect(database.entryInsertSql).toMatch(/MATERIALIZED \(SELECT clock_timestamp\(\) AS created_at\)/)
+    expect(database.entryInsertSql).toMatch(/canonical_entry\.created_at >= \$25::timestamptz[\s\S]*canonical_entry\.created_at <= \$26::timestamptz/)
+    expect(database.entryInsertSql).toMatch(/to_jsonb\(canonical_entry\.created_at\)/)
+    expect(buildForwardObservationStatus({ manifest, snapshots: [], outcomes: [cutoffOutcome(committed.execution)], activationDecision: decision }).completedOutcomes).toBe(1)
+  })
+
+  it('keeps post-cutoff entry and outcome economic while cohort identity and counters stay zero, including after activation changes', async () => {
+    const { repository, database, simulation, decision, manifest } = edge2CutoffFixture({ entryTime: EDGE2_AFTER })
+    simulation.forwardObservation.enrolledAt = EDGE2_BEFORE
+    simulation.snapshotAt = EDGE2_BEFORE
+    const committed = await repository.commitEntry({ ...edge2Scope(), simulation })
+    const outcome = cutoffOutcome(committed.execution)
+    expect(committed).toMatchObject({ ok: true, duplicate: false })
+    expect(committed.execution.createdAt).toBe(EDGE2_AFTER)
+    expect(committed.execution.payload.forwardObservation).toBeNull()
+    expect(committed.execution.payload.attribution).toMatchObject({ experimentId: null, observationId: null, manifestFingerprint: null })
+    expect(outcome).toMatchObject({ accountingStatus: 'position_closed' })
+    expect(outcome.netPnl).not.toBe(0)
+    expect(outcome.forwardObservation).toBeNull()
+    const snapshots = [database.edge2Snapshot]
+    const baseline = buildForwardObservationStatus({ manifest, snapshots, outcomes: [], activationDecision: decision })
+    const status = buildForwardObservationStatus({ manifest, snapshots, outcomes: [outcome], activationDecision: decision })
+    expect(status.sessionsElapsed - baseline.sessionsElapsed).toBe(0)
+    expect(status.completedOutcomes - baseline.completedOutcomes).toBe(0)
+    expect(status.completedOutcomes).toBe(0)
+    const originalPayload = structuredClone(database.state.executions[0].payload)
+    database.edge2Activation = syntheticEdge2Activation((core) => { core.revision = 2 })
+    expect(database.state.executions[0].payload).toEqual(originalPayload)
+    expect(cutoffOutcome(committed.execution).forwardObservation).toBeNull()
+  })
+
+  it('uses the database time after an account-lock wait, regardless of request, evaluation, snapshot, caller, or Copilot time', async () => {
+    const { repository, database, simulation } = edge2CutoffFixture({ entryTime: EDGE2_BEFORE })
+    database.onAccountLock = async () => { database.entryTime = EDGE2_AFTER }
+    simulation.forwardObservation.enrolledAt = EDGE2_BEFORE
+    const committed = await repository.commitEntry({ ...edge2Scope(), simulation, now: EDGE2_BEFORE })
+    expect(committed.execution.createdAt).toBe(EDGE2_AFTER)
+    expect(committed.execution.payload.forwardObservation).toBeNull()
+    const accountLock = database.queryLog.findIndex((sql) => sql.startsWith('select * from atlas_paper_accounts') && sql.includes('for update'))
+    const activationReload = database.queryLog.findIndex((sql) => sql.includes("analysis_category='edge2_activation_manifest'"))
+    const executionInsert = database.queryLog.findIndex((sql) => sql.startsWith('insert into atlas_paper_executions'))
+    expect(accountLock).toBeGreaterThanOrEqual(0)
+    expect(activationReload).toBeGreaterThan(accountLock)
+    expect(executionInsert).toBeGreaterThan(activationReload)
+  })
+
+  it('reloads activation after the account lock and discards a stale activation revision', async () => {
+    const { repository, database, simulation } = edge2CutoffFixture()
+    database.onAccountLock = async () => { database.edge2Activation = syntheticEdge2Activation((core) => { core.revision = 2 }) }
+    const committed = await repository.commitEntry({ ...edge2Scope(), simulation })
+    expect(committed.execution.payload.forwardObservation).toBeNull()
+    expect(committed.execution.payload.attribution.experimentId).toBeNull()
+  })
+
+  it.each([
+    ['stale revision', (candidate) => { candidate.activationBinding.activationRevision = 0 }],
+    ['wrong fingerprint', (candidate) => { candidate.activationBinding.activationFingerprint = 'f'.repeat(64) }],
+  ])('%s cannot preserve EDGE.2 eligibility', async (_name, candidateChange) => {
+    const { repository, simulation } = edge2CutoffFixture({ candidateChange })
+    const committed = await repository.commitEntry({ ...edge2Scope(), simulation })
+    expect(committed.execution.payload.forwardObservation).toBeNull()
+    expect(committed.execution.payload.attribution.experimentId).toBeNull()
+  })
+
+  it('leaves the shipped EDGE.2 protocol non-active and creates no live authority', () => {
+    expect(EDGE2_FORWARD_EVALUATION_PROTOCOL).toMatchObject({ status: 'NON_ACTIVE', activation: { collectionAllowed: false } })
+    expect(evaluateEdge2Activation(null, { accountId: 'edge2-paper' })).toMatchObject({ valid: false, collectionAllowed: false })
+    const source = readFileSync('lib/opportunities/persistence/canonicalPaperLedgerRepository.js', 'utf8')
+    expect(source).toContain('brokerExecution: false')
+    expect(source).not.toMatch(/placeLiveOrder|brokerClient/)
+  })
+})
 
 describe('Phase 2 Slice 3B canonical PAPER risk-commitment integrity', () => {
   it('commits actual fill-to-stop risk with multiplier and supported entry/exit costs exactly once', async () => {
