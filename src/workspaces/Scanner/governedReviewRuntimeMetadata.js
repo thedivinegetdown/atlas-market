@@ -27,3 +27,9 @@ export function publishGovernedReviewRuntimeMetadata(data = {}) {
   globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__ = metadata
   globalThis.document?.documentElement?.setAttribute('data-atlas-governed-review-preparation', JSON.stringify(metadata))
 }
+
+export function clearGovernedReviewRuntimeMetadata() {
+  if (typeof globalThis === 'undefined') return
+  delete globalThis.__ATLAS_GOVERNED_REVIEW_PREPARATION__
+  globalThis.document?.documentElement?.removeAttribute('data-atlas-governed-review-preparation')
+}
