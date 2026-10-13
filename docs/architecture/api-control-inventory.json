@@ -12,8 +12,8 @@
     },
     "byAccess": {
       "read": 80,
-      "mutation": 59,
-      "read-and-mutation": 142
+      "mutation": 60,
+      "read-and-mutation": 141
     },
     "byPriority": {
       "P0": 0,
@@ -2352,10 +2352,9 @@
       "path": "netlify/functions/governed-review-prepare.js",
       "wrapper": "organization-authenticated",
       "methods": [
-        "GET",
         "POST"
       ],
-      "access": "read-and-mutation",
+      "access": "mutation",
       "authenticated": true,
       "boundary": "organization",
       "permission": "dashboard.read",

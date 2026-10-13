@@ -344,10 +344,10 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
       })
     },
 
-    startGovernedReviewPreparation() {
+    startGovernedReviewPreparation(idempotencyKey) {
       return request('governed-review-prepare', {}, 'Unable to start governed review preparation', {
         method: 'POST',
-        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio' },
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', idempotencyKey },
       })
     },
 
@@ -355,8 +355,8 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
       return request('governed-review-status', { preparationId, organizationId: 'org-atlas-local' }, 'Unable to get preparation status')
     },
 
-    discoverGovernedReviewPreparation() {
-      return request('governed-review-status', { organizationId: 'org-atlas-local' }, 'Unable to discover governed review preparation')
+    discoverGovernedReviewPreparation(idempotencyKey) {
+      return request('governed-review-status', { organizationId: 'org-atlas-local', idempotencyKey }, 'Unable to discover governed review preparation')
     },
 
     diagnoseGovernedReview() {

@@ -17,8 +17,8 @@ This inventory reports source-level controls. It does not prove production ident
 | Wrapper: plain-api | 2 |
 | Wrapper: unknown | 0 |
 | Access: read | 80 |
-| Access: mutation | 59 |
-| Access: read-and-mutation | 142 |
+| Access: mutation | 60 |
+| Access: read-and-mutation | 141 |
 | Priority: P0 | 0 |
 | Priority: P1 | 0 |
 | Priority: P2 | 0 |
@@ -160,7 +160,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `evidence-review-status-update` | `netlify/functions/evidence-review-status-update.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `forward-observation` | `netlify/functions/forward-observation.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `governed-review-diag` | `netlify/functions/governed-review-diag.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
-| `governed-review-prepare` | `netlify/functions/governed-review-prepare.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
+| `governed-review-prepare` | `netlify/functions/governed-review-prepare.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `governed-review-prepare-background` | `netlify/functions/governed-review-prepare-background.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `governed-review-status` | `netlify/functions/governed-review-status.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `health` | `netlify/functions/health.js` | PUBLIC_READ | Minimal liveness/readiness response contains no tenant data, mutation capability, or privileged operational detail. | GET | read | plain-api | none | no | controlled | P3 | Retain explicit public-read policy and regression coverage. |

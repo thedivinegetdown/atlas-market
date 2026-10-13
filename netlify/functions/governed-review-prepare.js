@@ -26,7 +26,7 @@ export function resolveBackgroundDispatchUrl(event = {}, env = process.env) {
 }
 
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
-  const { organizationId, user, tenantContext, token, event } = context
+  const { organizationId, user, tenantContext, token, event, body } = context
   const repository = context.repository
 
   const log = (...args) => serverLogger.debug('[governed-review-prepare]', ...args)
@@ -41,6 +41,10 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
         ok: false,
         error: { code: 'AUTH_CONTEXT_FAILED', message: 'Missing organizationId or userId after auth' }
       }
+    }
+    const idempotencyKey = body?.idempotencyKey
+    if (typeof idempotencyKey !== 'string' || !/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey)) {
+      return { ok: false, error: { code: 'IDEMPOTENCY_KEY_REQUIRED', message: 'A valid governed review start identity is required' } }
     }
 
     // Stage: REPOSITORY_INIT
@@ -72,23 +76,23 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     let preparationResult
     try {
       const insertStart = Date.now()
-      preparationResult = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, () => new Date())
+      preparationResult = await createOrReusePreparation(repository, organizationId, user.id, tenantContext, () => new Date(), idempotencyKey)
       log('upsert completed', { elapsedMs: Date.now() - insertStart })
       log('preparation created', { preparationId: preparationResult.preparation.id })
     } catch (err) {
       return { ok: false, error: { code: 'PREPARATION_WRITE_FAILED', message: 'Failed to write preparation', details: err?.message } }
     }
 
-    const { preparation: prep, created, existingId } = preparationResult
+    const { preparation: prep, created, existingId, reuseReason } = preparationResult
 
-    const shouldDispatch = created || prep.status === 'pending'
+    const shouldDispatch = created || (reuseReason === 'active' && prep.status === 'pending')
     if (!shouldDispatch) {
       return {
         ok: true,
         data: {
           preparationId: existingId,
           status: prep.status,
-          message: 'Governed review preparation already in progress',
+          message: reuseReason === 'idempotent' ? 'Original governed review preparation recovered' : 'Governed review preparation already in progress',
           reused: true,
         },
       }
@@ -159,5 +163,5 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   requiredPermission: 'dashboard.read',
   workspaceAction: 'read',
   routeId: 'governed-review-prepare',
-  allowedMethods: ['GET', 'POST'],
+  allowedMethods: ['POST'],
 })

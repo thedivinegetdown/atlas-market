@@ -19,6 +19,10 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   const { body, query, repository, tenantContext, user, organizationId } = context
   const preparationId = body?.preparationId ?? query?.preparationId
   const discovering = !preparationId
+  const idempotencyKey = discovering ? query?.idempotencyKey ?? body?.idempotencyKey : null
+  if (idempotencyKey && (typeof idempotencyKey !== 'string' || !/^[A-Za-z0-9._:-]{16,128}$/.test(idempotencyKey))) {
+    return { ok: true, data: { discoveryStatus: 'UNKNOWN', preparationId: null, status: 'unknown' } }
+  }
 
   const store = repository.getStore(PREPARATION_STORE)
   if (!store) {
@@ -32,7 +36,9 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   let record
   try {
     record = discovering
-      ? await store.findCurrentScoped(tenantContext)
+      ? idempotencyKey
+        ? await store.findByIdempotencyKeyScoped(idempotencyKey, tenantContext)
+        : await store.findCurrentScoped(tenantContext)
       : await store.getScoped(preparationId, tenantContext)
   } catch (error) {
     if (discovering) return { ok: true, data: { discoveryStatus: 'UNKNOWN', preparationId: null, status: 'unknown' } }
@@ -40,6 +46,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
   }
 
   if (!record) {
+    if (discovering && idempotencyKey) return { ok: true, data: { discoveryStatus: 'UNKNOWN', preparationId: null, status: 'unknown' } }
     if (discovering) return { ok: true, data: { discoveryStatus: 'NONE_ACTIVE', preparationId: null, status: 'none_active' } }
     return {
       ok: false,
@@ -72,6 +79,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
           preparationId: payload.id,
           status: 'expired',
           ...(discovering ? { discoveryStatus: 'EXPIRED' } : {}),
+          ...(idempotencyKey ? { requestMatched: true } : {}),
           createdAt: payload.createdAt,
           startedAt: payload.startedAt,
           completedAt: payload.completedAt,
@@ -93,6 +101,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
       preparationId: payload.id,
       status: payload.status,
       ...(discovering ? { discoveryStatus: ['pending', 'running', 'completed', 'failed', 'expired'].includes(payload.status) ? payload.status.toUpperCase() : 'UNKNOWN' } : {}),
+      ...(idempotencyKey ? { requestMatched: true } : {}),
       attempt: payload.attempt ?? 0,
       claimTokenPresent: Boolean(payload.claimToken),
       claimDiagnostics: safeClaimDiagnostics(payload.claimDiagnostics),

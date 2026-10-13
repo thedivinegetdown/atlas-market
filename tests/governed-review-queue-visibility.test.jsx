@@ -112,7 +112,7 @@ describe('governed review result visibility', () => {
     expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
     expect(container.textContent).toContain('another start is blocked')
     expect(container.querySelector('button').disabled).toBe(true)
-    expect(localStorage.getItem('atlas-governed-review-uncertain-start')).toBe('1')
+    expect(localStorage.getItem('atlas-governed-review-uncertain-start')).toMatch(/^[A-Za-z0-9._:-]{16,128}$/)
 
     await act(async () => root.unmount())
     container.remove()
@@ -137,6 +137,22 @@ describe('governed review result visibility', () => {
     expect(container.textContent).not.toContain('found no legitimate matches')
     expect(container.querySelector('button').disabled).toBe(true)
     expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
+  })
+
+  it('reconciles a terminal response to the same logical request and allows a later explicit start', async () => {
+    api.startGovernedReviewPreparation.mockRejectedValueOnce(new Error('Connection lost'))
+    api.discoverGovernedReviewPreparation
+      .mockResolvedValueOnce({ ok: true, data: { discoveryStatus: 'NONE_ACTIVE', preparationId: null, status: 'none_active' } })
+      .mockResolvedValueOnce(status({ discoveryStatus: 'COMPLETED', status: 'completed', requestMatched: true, queueItems: [], observationCoverage: completeCoverage }))
+
+    await renderQueue()
+    await startQueue()
+
+    expect(container.textContent).toContain('Preparation prep-current · completed')
+    expect(container.querySelector('button').disabled).toBe(false)
+    expect(localStorage.getItem('atlas-governed-review-uncertain-start')).toBeNull()
+    expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
+    expect(api.discoverGovernedReviewPreparation.mock.calls[1][0]).toBe(api.startGovernedReviewPreparation.mock.calls[0][0])
   })
 
   it('sends only one POST for repeated clicks before the first response arrives', async () => {
@@ -298,6 +314,22 @@ describe('governed review durable discovery', () => {
 
     expect((await readStatus({ ...context, repository: empty })).data).toMatchObject({ discoveryStatus: 'NONE_ACTIVE', preparationId: null })
     expect((await readStatus({ ...context, repository: unavailable })).data).toMatchObject({ discoveryStatus: 'UNKNOWN', preparationId: null })
+  })
+
+  it('recovers a terminal request by key only within its server-derived tenant scope', async () => {
+    const completed = { ...preparation, status: 'completed', idempotencyKey: 'logical-request-0001' }
+    const query = vi.fn(async (sql, params) => ({ rows: params[0] === scope.organizationId && params[1] === scope.teamWorkspaceId
+      && params[2] === scope.userId && params[3] === completed.idempotencyKey
+      ? [{ id: completed.id, payload: completed, status: 'completed' }] : [] }))
+    const repository = createPostgresRepository({ database: { connected: true, query } })
+    const context = { body: {}, query: { organizationId: scope.organizationId, idempotencyKey: completed.idempotencyKey }, repository,
+      tenantContext: scope, user: { id: scope.userId }, organizationId: scope.organizationId }
+
+    const found = await readStatus(context)
+    expect(found.data).toMatchObject({ discoveryStatus: 'COMPLETED', preparationId: completed.id, requestMatched: true })
+    expect(JSON.stringify(found)).not.toContain('secret-claim')
+    const otherTenant = await readStatus({ ...context, tenantContext: { ...scope, teamWorkspaceId: 'workspace-b' } })
+    expect(otherTenant.data).toMatchObject({ discoveryStatus: 'UNKNOWN', preparationId: null })
   })
 
   it.each(['pending', 'running', 'completed', 'failed'])('reports durable %s without caller supplied identity', async (durableStatus) => {

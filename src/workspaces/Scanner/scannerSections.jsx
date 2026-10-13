@@ -23,16 +23,23 @@ function value(numberValue) {
 const UNCERTAIN_GOVERNED_START_KEY = 'atlas-governed-review-uncertain-start'
 
 function readUncertainGovernedStart() {
-  try { return globalThis.localStorage?.getItem(UNCERTAIN_GOVERNED_START_KEY) !== null } catch { return true }
+  try { return globalThis.localStorage?.getItem(UNCERTAIN_GOVERNED_START_KEY) ?? null } catch { return 'storage-unavailable' }
 }
 
 function persistUncertainGovernedStart(value) {
   try {
-    if (value) globalThis.localStorage?.setItem(UNCERTAIN_GOVERNED_START_KEY, '1')
+    if (value) globalThis.localStorage?.setItem(UNCERTAIN_GOVERNED_START_KEY, value)
     else globalThis.localStorage?.removeItem(UNCERTAIN_GOVERNED_START_KEY)
   } catch {
     // The in-memory guard still prevents another POST in this page session.
   }
+}
+
+function createGovernedStartKey() {
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  if (!globalThis.crypto?.getRandomValues) throw new Error('Secure request identity is unavailable')
+  const bytes = globalThis.crypto.getRandomValues(new Uint8Array(16))
+  return `gr_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('')}`
 }
 
 export function QualifiedTradePlanCard({ evaluation }) {
@@ -80,11 +87,11 @@ export function GovernedReviewQueue() {
   const [coverageSummary, setCoverageSummary] = useState(null)
   const [error, setError] = useState(null)
   const [pollError, setPollError] = useState(null)
-  const [uncertainStart, setUncertainStart] = useState(readUncertainGovernedStart)
+  const [uncertainStart, setUncertainStart] = useState(() => Boolean(readUncertainGovernedStart()))
   const [selectedStrategies, setSelectedStrategies] = useState({})
   const pollInterval = useRef(null)
   const currentPreparationId = useRef(null)
-  const uncertainStartRef = useRef(uncertainStart)
+  const uncertainStartRef = useRef(readUncertainGovernedStart())
   const active = uncertainStart || ['preparing', 'pending', 'running', 'unknown'].includes(preparationStatus)
   const completeEvaluation = coverageSummary?.status === 'COMPLETE'
     && coverageSummary.expected > 0
@@ -159,7 +166,9 @@ export function GovernedReviewQueue() {
     setPreparationStatus('unknown')
     setPollError(null)
     try {
-      const response = await workspaceApiClient.discoverGovernedReviewPreparation()
+      const pendingKey = uncertainStartRef.current
+      const lookupKey = pendingKey && /^[A-Za-z0-9._:-]{16,128}$/.test(pendingKey) ? pendingKey : undefined
+      const response = await workspaceApiClient.discoverGovernedReviewPreparation(lookupKey)
       const data = response?.data
       if (!response?.ok || !data || data.discoveryStatus === 'UNKNOWN') {
         setPollError('Preparation discovery is unavailable. Retry status before starting another.')
@@ -177,11 +186,16 @@ export function GovernedReviewQueue() {
         setPollError('Preparation discovery is unavailable. Retry status before starting another.')
         return
       }
-      if (uncertainStartRef.current && !['pending', 'running'].includes(data.status)) {
+      if (uncertainStartRef.current && !data.requestMatched && !['pending', 'running'].includes(data.status)) {
         setPreparationId(null)
         setPreparationStatus('unknown')
         setPollError('The start response is uncertain. A prior terminal record does not resolve it; another start is blocked.')
         return
+      }
+      if (uncertainStartRef.current && data.requestMatched) {
+        uncertainStartRef.current = null
+        setUncertainStart(false)
+        persistUncertainGovernedStart(null)
       }
       applyPreparationStatus(response, data.preparationId)
       if (['pending', 'running'].includes(data.status)) watchPreparation(data.preparationId)
@@ -193,9 +207,14 @@ export function GovernedReviewQueue() {
 
   const handlePrepareQueue = useCallback(async () => {
     if (uncertainStartRef.current) return
-    uncertainStartRef.current = true
+    let idempotencyKey
+    try { idempotencyKey = createGovernedStartKey() } catch (err) {
+      setError(err instanceof Error ? err.message : 'Secure request identity is unavailable')
+      return
+    }
+    uncertainStartRef.current = idempotencyKey
     setUncertainStart(true)
-    persistUncertainGovernedStart(true)
+    persistUncertainGovernedStart(idempotencyKey)
     clearPolling()
     currentPreparationId.current = null
     clearGovernedReviewRuntimeMetadata()
@@ -209,14 +228,14 @@ export function GovernedReviewQueue() {
     setPreparationStatus('preparing')
 
     try {
-      const response = await workspaceApiClient.startGovernedReviewPreparation()
+      const response = await workspaceApiClient.startGovernedReviewPreparation(idempotencyKey)
       if (!response.ok || !response.data?.preparationId) {
         throw new Error(response?.error?.message || 'Failed to start preparation')
       }
       const pid = response.data.preparationId
-      uncertainStartRef.current = false
+      uncertainStartRef.current = null
       setUncertainStart(false)
-      persistUncertainGovernedStart(false)
+      persistUncertainGovernedStart(null)
       currentPreparationId.current = pid
       setPreparationId(pid)
       setPreparationStatus(response.data.status ?? 'unknown')
