@@ -59,7 +59,7 @@ export function QualifiedOpportunityRankingPanel({ plans = [] }) {
 
 export function GovernedReviewQueue() {
   const [preparationId, setPreparationId] = useState(null)
-  const [preparationStatus, setPreparationStatus] = useState('idle')
+  const [preparationStatus, setPreparationStatus] = useState('unknown')
   const [queueItems, setQueueItems] = useState([])
   const [observationAttention, setObservationAttention] = useState(null)
   const [coverageSummary, setCoverageSummary] = useState(null)
@@ -91,6 +91,82 @@ export function GovernedReviewQueue() {
     }
   }, [])
 
+  const applyPreparationStatus = useCallback((response, pid) => {
+    if (!response?.ok || response.data?.preparationId !== pid) {
+      setPollError('Preparation status is unavailable; retrying without assuming an outcome.')
+      return false
+    }
+    const { status, queueItems: items, error: prepError, observationAttention: coverageAttention } = response.data
+    if (!['pending', 'running', 'completed', 'failed', 'expired'].includes(status)) {
+      setPreparationStatus('unknown')
+      setPollError('Preparation status is unavailable; retrying without assuming an outcome.')
+      return false
+    }
+    setPollError(null)
+    setPreparationId(pid)
+    setPreparationStatus(status)
+    setObservationAttention(coverageAttention ?? null)
+    setCoverageSummary(response.data.observationCoverage?.summary ?? null)
+    publishGovernedReviewRuntimeMetadata(response.data)
+    if (status === 'completed') {
+      currentPreparationId.current = null
+      clearPolling()
+      setQueueItems(items || [])
+    } else if (status === 'failed' || status === 'expired') {
+      currentPreparationId.current = null
+      clearPolling()
+      setError(status === 'expired'
+        ? 'Preparation expired before every governed observation check completed'
+        : prepError ? `Preparation failed: ${prepError}` : 'Preparation failed')
+    }
+    return true
+  }, [clearPolling])
+
+  const watchPreparation = useCallback((pid) => {
+    clearPolling()
+    currentPreparationId.current = pid
+    const pollStatus = async () => {
+      try {
+        const response = await workspaceApiClient.getGovernedReviewPreparationStatus(pid)
+        if (currentPreparationId.current === pid) applyPreparationStatus(response, pid)
+      } catch (err) {
+        serverLogger?.warn?.('governed review status poll failed', { error: err?.message })
+        if (currentPreparationId.current === pid) setPollError('Preparation status is unavailable; retrying without assuming an outcome.')
+      }
+    }
+    pollInterval.current = setInterval(pollStatus, 3000)
+    void pollStatus()
+  }, [applyPreparationStatus, clearPolling])
+
+  const recoverPreparation = useCallback(async () => {
+    setPreparationStatus('unknown')
+    setPollError(null)
+    try {
+      const response = await workspaceApiClient.discoverGovernedReviewPreparation()
+      const data = response?.data
+      if (!response?.ok || !data || data.discoveryStatus === 'UNKNOWN') {
+        setPollError('Preparation discovery is unavailable. Retry status before starting another.')
+        return
+      }
+      if (data.discoveryStatus === 'NONE_ACTIVE') {
+        currentPreparationId.current = null
+        clearGovernedReviewRuntimeMetadata()
+        setPreparationId(null)
+        setPreparationStatus('idle')
+        return
+      }
+      if (!data.preparationId) {
+        setPollError('Preparation discovery is unavailable. Retry status before starting another.')
+        return
+      }
+      applyPreparationStatus(response, data.preparationId)
+      if (['pending', 'running'].includes(data.status)) watchPreparation(data.preparationId)
+    } catch (err) {
+      serverLogger?.warn?.('governed review discovery failed', { error: err?.message })
+      setPollError('Preparation discovery is unavailable. Retry status before starting another.')
+    }
+  }, [applyPreparationStatus, watchPreparation])
+
   const handlePrepareQueue = useCallback(async () => {
     clearPolling()
     currentPreparationId.current = null
@@ -114,54 +190,15 @@ export function GovernedReviewQueue() {
       setPreparationId(pid)
       setPreparationStatus(response.data.status ?? 'unknown')
       publishGovernedReviewRuntimeMetadata(response.data)
-
-      const pollStatus = async () => {
-        try {
-          const statusResponse = await workspaceApiClient.getGovernedReviewPreparationStatus(pid)
-          if (currentPreparationId.current !== pid) return
-          if (statusResponse.ok && statusResponse.data?.preparationId === pid) {
-            const { status, queueItems: items, error: prepError, observationAttention: coverageAttention } = statusResponse.data
-            setPollError(null)
-            setPreparationStatus(status)
-            setObservationAttention(coverageAttention ?? null)
-            setCoverageSummary(statusResponse.data.observationCoverage?.summary ?? null)
-            publishGovernedReviewRuntimeMetadata(statusResponse.data)
-            if (status === 'completed') {
-              currentPreparationId.current = null
-              clearPolling()
-              setQueueItems(items || [])
-            } else if (status === 'failed') {
-              currentPreparationId.current = null
-              clearPolling()
-              const diagnosticCode = prepError ? ` [${prepError}]` : ''
-              setError(prepError ? `Preparation failed: ${prepError}${diagnosticCode}` : 'Preparation failed')
-              setPreparationStatus('failed')
-            } else if (status === 'expired') {
-              currentPreparationId.current = null
-              clearPolling()
-              setError('Preparation expired before every governed observation check completed')
-              setPreparationStatus('expired')
-            }
-          } else {
-            setPollError('Preparation status is unavailable; retrying without assuming an outcome.')
-          }
-        } catch (err) {
-          serverLogger?.warn?.('governed review status poll failed', { error: err?.message })
-          if (currentPreparationId.current === pid) {
-            setPollError('Preparation status is unavailable; retrying without assuming an outcome.')
-          }
-        }
-      }
-      pollInterval.current = setInterval(pollStatus, 3000)
-      void pollStatus()
+      watchPreparation(pid)
     } catch (err) {
       clearPolling()
       const message = err instanceof Error ? err.message : 'Failed to start preparation'
       const code = err.code ? ` [${err.code}]` : ''
       setError(`${message}${code}`)
-      setPreparationStatus('failed')
+      await recoverPreparation()
     }
-  }, [clearPolling])
+  }, [clearPolling, recoverPreparation, watchPreparation])
 
   useCallback((symbol, strategyId) => {
     setSelectedStrategies(prev => ({ ...prev, [symbol]: strategyId }))
@@ -193,11 +230,12 @@ export function GovernedReviewQueue() {
 
   // Cleanup polling on unmount
   useEffect(() => {
+    void recoverPreparation()
     return () => {
       currentPreparationId.current = null
       clearPolling()
     }
-  }, [clearPolling])
+  }, [clearPolling, recoverPreparation])
 
   return (
     <WorkspacePanel id="governed-review-queue" title="Governed Review Queue" subtitle="BREAKOUT.1 · RANGE.1 · VOL.1 · Human review required">
@@ -227,6 +265,7 @@ export function GovernedReviewQueue() {
 
       {error && <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>{error}</p>}
       {pollError && <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>{pollError}</p>}
+      {preparationStatus === 'unknown' && !preparationId && pollError && <button type="button" onClick={recoverPreparation}>Retry status</button>}
 
       {observationAttention?.required && ['completed', 'failed', 'expired'].includes(preparationStatus) && (
         <section role="alert" aria-label="Governed observation coverage attention" style={{ color: 'var(--color-error, #c00)', marginBottom: '1rem' }}>
@@ -256,7 +295,7 @@ export function GovernedReviewQueue() {
       {preparationStatus === 'completed' && queueItems.length === 0 && !completeEvaluation && (
         <p role="status">No candidate conclusion is available because governed evaluation coverage is incomplete or degraded.</p>
       )}
-      {preparationStatus === 'unknown' && <p role="status">Preparation was accepted, but its current status is unavailable.</p>}
+      {preparationStatus === 'unknown' && <p role="status">Current durable preparation status is unknown. Starting another is disabled.</p>}
 
       {queueItems.map((item) => (
         <article key={`${item.symbol}-${item.strategyId}`} className="strategy-manager-card" style={{ marginBottom: '1rem' }}>

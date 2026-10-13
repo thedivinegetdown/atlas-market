@@ -18,25 +18,29 @@ function safeClaimDiagnostics(value) {
 export const handler = createOrganizationAuthenticatedApiHandler(async (context) => {
   const { body, query, repository, tenantContext, user, organizationId } = context
   const preparationId = body?.preparationId ?? query?.preparationId
-
-  if (!preparationId) {
-    return {
-      ok: false,
-      error: { code: 'validation_error', message: 'preparationId is required' },
-    }
-  }
+  const discovering = !preparationId
 
   const store = repository.getStore(PREPARATION_STORE)
   if (!store) {
+    if (discovering) return { ok: true, data: { discoveryStatus: 'UNKNOWN', preparationId: null, status: 'unknown' } }
     return {
       ok: false,
       error: { code: 'store_unavailable', message: 'Preparation store not available' },
     }
   }
 
-  const record = await store.getScoped(preparationId, tenantContext)
+  let record
+  try {
+    record = discovering
+      ? await store.findCurrentScoped(tenantContext)
+      : await store.getScoped(preparationId, tenantContext)
+  } catch (error) {
+    if (discovering) return { ok: true, data: { discoveryStatus: 'UNKNOWN', preparationId: null, status: 'unknown' } }
+    throw error
+  }
 
   if (!record) {
+    if (discovering) return { ok: true, data: { discoveryStatus: 'NONE_ACTIVE', preparationId: null, status: 'none_active' } }
     return {
       ok: false,
       error: { code: 'not_found', message: 'Preparation not found' },
@@ -47,6 +51,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
 
   // Verify authorization: preparation must belong to this org/user
   if (payload.organizationId !== organizationId || payload.userId !== user.id) {
+    if (discovering) return { ok: true, data: { discoveryStatus: 'UNKNOWN', preparationId: null, status: 'unknown' } }
     return {
       ok: false,
       error: { code: 'forbidden', message: 'Access denied' },
@@ -66,6 +71,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
         data: {
           preparationId: payload.id,
           status: 'expired',
+          ...(discovering ? { discoveryStatus: 'EXPIRED' } : {}),
           createdAt: payload.createdAt,
           startedAt: payload.startedAt,
           completedAt: payload.completedAt,
@@ -86,6 +92,7 @@ export const handler = createOrganizationAuthenticatedApiHandler(async (context)
     data: {
       preparationId: payload.id,
       status: payload.status,
+      ...(discovering ? { discoveryStatus: ['pending', 'running', 'completed', 'failed', 'expired'].includes(payload.status) ? payload.status.toUpperCase() : 'UNKNOWN' } : {}),
       attempt: payload.attempt ?? 0,
       claimTokenPresent: Boolean(payload.claimToken),
       claimDiagnostics: safeClaimDiagnostics(payload.claimDiagnostics),
