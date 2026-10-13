@@ -55,6 +55,11 @@ afterEach(async () => {
 
 describe('governed review result visibility', () => {
   it('keeps the accepted operation identified and nonterminal until the server reports completion with degraded evidence', async () => {
+    const checks = ['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'].flatMap((symbol) =>
+      ['BREAKOUT.1', 'RANGE.1', 'VOL.1'].map((experimentId) => ({
+        checkId: `${symbol}-${experimentId}`, symbol, experimentId,
+        status: 'BLOCKED_DEGRADED', reason: 'quote_evidence_missing',
+      })))
     api.getGovernedReviewPreparationStatus
       .mockResolvedValueOnce(status({ status: 'pending' }))
       .mockResolvedValueOnce(status({ status: 'running' }))
@@ -62,7 +67,7 @@ describe('governed review result visibility', () => {
         status: 'completed',
         queueItems: [],
         observationCoverage: { summary: { status: 'DEGRADED', expected: 15, evaluated: 15, blockedDegraded: 15, missedNotEvaluated: 0 } },
-        observationAttention: { required: true, status: 'DEGRADED', count: 15, checks: [{ checkId: 'one', symbol: 'SPY', experimentId: 'BREAKOUT.1', status: 'BLOCKED_DEGRADED', reason: 'quote_evidence_missing' }] },
+        observationAttention: { required: true, status: 'DEGRADED', count: 15, checks },
       }))
 
     await renderQueue()
@@ -79,6 +84,7 @@ describe('governed review result visibility', () => {
     await nextPoll()
     expect(container.textContent).toContain('Preparation prep-current · completed')
     expect(container.textContent).toContain('quote_evidence_missing')
+    expect(container.querySelectorAll('[aria-label="Governed observation coverage attention"] li')).toHaveLength(15)
     expect(container.textContent).toContain('No candidate conclusion is available')
     expect(container.textContent).not.toContain('found no legitimate matches')
     expect(container.querySelector('button').disabled).toBe(false)
@@ -109,6 +115,28 @@ describe('governed review result visibility', () => {
     expect(container.querySelector('button').disabled).toBe(true)
     expect(container.textContent).not.toContain('found no legitimate matches')
     expect(JSON.parse(document.documentElement.getAttribute('data-atlas-governed-review-preparation')).preparationId).toBe('prep-current')
+  })
+
+  it('does not replace a terminal result with an older in-flight status response', async () => {
+    let resolveOlderPoll
+    api.getGovernedReviewPreparationStatus
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveOlderPoll = resolve }))
+      .mockResolvedValueOnce(status({
+        status: 'completed', queueItems: [], observationCoverage: completeCoverage,
+      }))
+
+    await renderQueue()
+    await startQueue()
+    expect(container.textContent).toContain('Preparation prep-current · pending')
+
+    await nextPoll()
+    expect(container.textContent).toContain('Preparation prep-current · completed')
+    expect(container.textContent).toContain('found no legitimate matches')
+
+    await act(async () => resolveOlderPoll(status({ status: 'running' })))
+    expect(container.textContent).toContain('Preparation prep-current · completed')
+    expect(container.textContent).toContain('found no legitimate matches')
+    expect(JSON.parse(document.documentElement.getAttribute('data-atlas-governed-review-preparation')).status).toBe('completed')
   })
 
   it('removes the prior result and identifier when starting a later preparation', async () => {

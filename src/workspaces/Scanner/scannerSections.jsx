@@ -127,14 +127,17 @@ export function GovernedReviewQueue() {
             setCoverageSummary(statusResponse.data.observationCoverage?.summary ?? null)
             publishGovernedReviewRuntimeMetadata(statusResponse.data)
             if (status === 'completed') {
+              currentPreparationId.current = null
               clearPolling()
               setQueueItems(items || [])
             } else if (status === 'failed') {
+              currentPreparationId.current = null
               clearPolling()
               const diagnosticCode = prepError ? ` [${prepError}]` : ''
               setError(prepError ? `Preparation failed: ${prepError}${diagnosticCode}` : 'Preparation failed')
               setPreparationStatus('failed')
             } else if (status === 'expired') {
+              currentPreparationId.current = null
               clearPolling()
               setError('Preparation expired before every governed observation check completed')
               setPreparationStatus('expired')
