@@ -23,7 +23,7 @@ describe('API control inventory', () => {
       'plain-api': 2,
       unknown: 0,
     })
-    expect(inventory.summary.byAccess).toEqual({ read: 80, mutation: 59, 'read-and-mutation': 142 })
+    expect(inventory.summary.byAccess).toEqual({ read: 80, mutation: 60, 'read-and-mutation': 141 })
     expect(inventory.summary.byPriority).toEqual({ P0: 0, P1: 0, P2: 0, P3: 281 })
     expect(inventory.functions.filter((entry) => entry.wrapper === 'plain-api').map((entry) => entry.function)).toEqual(['health', 'watchlist'])
     expect(inventory.functions).toHaveLength(281)
