@@ -36,14 +36,13 @@ function createMockMarketDataService() {
   return {
     async getQuotes(symbols) {
       quoteCalls.push({ symbols: [...symbols], batch: true, credits: symbols.length, timestamp: Date.now() })
-      return {
-        ok: true,
-        provider: 'twelvedata',
-        assetType: 'equity',
-        data: symbols.map(s => ({
-          ok: true,
+      return symbols.map(s => ({
           symbol: s,
           price: MOCK_QUOTES[s].price,
+          bid: s === 'SPY' ? 450.24 : undefined,
+          ask: s === 'SPY' ? 450.26 : undefined,
+          bidSize: s === 'SPY' ? 100 : undefined,
+          askSize: s === 'SPY' ? 200 : undefined,
           open: MOCK_QUOTES[s].open,
           high: MOCK_QUOTES[s].high,
           low: MOCK_QUOTES[s].low,
@@ -53,11 +52,9 @@ function createMockMarketDataService() {
           volume: MOCK_QUOTES[s].volume,
           provider: 'twelvedata',
           updatedAt: MOCK_QUOTES[s].updatedAt,
-          provenance: { provider: 'twelvedata', dataStatus: 'LIVE', observedAt: MOCK_QUOTES[s].updatedAt, receivedAt: new Date().toISOString(), fallbackUsed: false, mock: false },
-        })),
-        receivedAt: new Date().toISOString(),
-        credits: { used: symbols.length, remaining: 795, limit: 800 },
-      }
+          sourceObservedAt: MOCK_QUOTES[s].updatedAt,
+          provenance: { provider: 'twelvedata', dataStatus: 'LIVE', sourceObservedAt: MOCK_QUOTES[s].updatedAt, receivedAt: '2026-08-15T14:30:01Z', fallbackUsed: false, mock: false },
+        }))
     },
     async getCandles(symbol) {
       if (candleCache.has(symbol)) {
@@ -155,12 +152,15 @@ describe('Market Evidence Packet', () => {
       expect(ev.quote.provenance).toBeDefined()
       expect(ev.quote.provenance.provider).toBe('twelvedata')
       expect(ev.quote.provenance.dataStatus).toBe('LIVE')
+      expect(ev.quote.sourceObservedAt).toBe(MOCK_QUOTES[symbol].updatedAt)
+      expect(ev.quote.provenance.receivedAt).toBe('2026-08-15T14:30:01Z')
       expect(ev.candles.length).toBe(260)
       expect(ev.provenance.candles.provider).toBe('twelvedata')
       expect(ev.regime.classification.status).toBe('COMPLETE')
       expect(ev.regime.freshness).toBe('FRESH')
       expect(ev.provenance.quote.dataStatus).toBe('LIVE')
     }
+    expect(packet.symbols.SPY.quote).toMatchObject({ bid: 450.24, ask: 450.26, bidSize: 100, askSize: 200 })
   })
 
   it('reuses SPY benchmark evidence exactly (no duplicate)', async () => {
@@ -283,7 +283,7 @@ it('warm-run reuses cached candles and only spends quote credits', async () => {
 
   it('handles missing quote/candles gracefully', async () => {
     const failingService = {
-      async getQuotes() { return { ok: true, data: [] } },
+      async getQuotes() { return [] },
       async getCandles() { return { ok: false, error: { code: 'historical_data_unavailable' }, provider: 'twelvedata' } },
       getMarketStatus() { return { ok: true, data: { isOpen: true } } },
     }
@@ -300,10 +300,34 @@ it('warm-run reuses cached candles and only spends quote credits', async () => {
     expect(packet.symbols.SPY.warnings).toContain('Historical candles unavailable')
   })
 
+  it('keeps mock, stale, and missing batch quotes unavailable to governed evaluation', async () => {
+    const genuineQuote = (await marketDataService.getQuotes(['SPY']))[0]
+    marketDataService.getQuotes = async () => [
+      genuineQuote,
+      {
+        ...MOCK_QUOTES.QQQ,
+        provenance: { provider: 'mock', dataStatus: 'MOCK', mock: true, sourceObservedAt: MOCK_QUOTES.QQQ.updatedAt },
+      },
+      {
+        ...MOCK_QUOTES.IWM,
+        provenance: { provider: 'twelvedata', dataStatus: 'STALE', mock: false, sourceObservedAt: MOCK_QUOTES.IWM.updatedAt },
+      },
+    ]
+
+    const packet = await packetBuilder.build(['SPY', 'QQQ', 'IWM', 'AAPL'])
+    expect(packet.symbols.SPY.quote?.provenance.dataStatus).toBe('LIVE')
+    expect(packet.symbols.QQQ.quote).toBeNull()
+    expect(packet.symbols.IWM.quote).toBeNull()
+    expect(packet.symbols.AAPL.quote).toBeNull()
+    expect(packet.symbols.QQQ.warnings).toContain('Quote unavailable')
+    expect(packet.symbols.IWM.warnings).toContain('Quote unavailable')
+    expect(packet.symbols.AAPL.warnings).toContain('Quote unavailable')
+  })
+
   it('existing non-packet call paths still work', async () => {
     const quoteResponse = await marketDataService.getQuotes(['SPY'])
-    expect(quoteResponse.data.length).toBe(1)
-    expect(quoteResponse.data[0].symbol).toBe('SPY')
+    expect(quoteResponse.length).toBe(1)
+    expect(quoteResponse[0].symbol).toBe('SPY')
 
     const candles = await marketDataService.getCandles('SPY')
     expect(candles.ok).toBe(true)
