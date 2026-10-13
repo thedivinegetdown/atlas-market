@@ -45,6 +45,7 @@ const completeCoverage = {
 }
 
 beforeEach(() => {
+  localStorage.removeItem('atlas-governed-review-uncertain-start')
   vi.useFakeTimers()
   api.startGovernedReviewPreparation.mockReset()
   api.getGovernedReviewPreparationStatus.mockReset()
@@ -59,6 +60,7 @@ afterEach(async () => {
   root = null
   container = null
   clearGovernedReviewRuntimeMetadata()
+  localStorage.removeItem('atlas-governed-review-uncertain-start')
   vi.useRealTimers()
 })
 
@@ -99,6 +101,55 @@ describe('governed review result visibility', () => {
     expect(container.textContent).toContain('Preparation prep-current · pending')
     expect(container.querySelector('button').disabled).toBe(true)
     expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
+  })
+
+  it('never offers a second POST when an uncertain start is followed by an empty lookup, even after reload', async () => {
+    api.startGovernedReviewPreparation.mockRejectedValue(new Error('Connection lost'))
+
+    await renderQueue()
+    await startQueue()
+
+    expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
+    expect(container.textContent).toContain('another start is blocked')
+    expect(container.querySelector('button').disabled).toBe(true)
+    expect(localStorage.getItem('atlas-governed-review-uncertain-start')).toBe('1')
+
+    await act(async () => root.unmount())
+    container.remove()
+    root = null
+    container = null
+    await renderQueue()
+
+    expect(container.querySelector('button').disabled).toBe(true)
+    expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not treat an older terminal record as resolution of an uncertain start', async () => {
+    api.startGovernedReviewPreparation.mockRejectedValue(new Error('Connection lost'))
+    api.discoverGovernedReviewPreparation
+      .mockResolvedValueOnce({ ok: true, data: { discoveryStatus: 'NONE_ACTIVE', preparationId: null, status: 'none_active' } })
+      .mockResolvedValueOnce(status({ discoveryStatus: 'COMPLETED', status: 'completed', queueItems: [], observationCoverage: completeCoverage }))
+
+    await renderQueue()
+    await startQueue()
+
+    expect(container.textContent).toContain('A prior terminal record does not resolve it')
+    expect(container.textContent).not.toContain('found no legitimate matches')
+    expect(container.querySelector('button').disabled).toBe(true)
+    expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends only one POST for repeated clicks before the first response arrives', async () => {
+    api.startGovernedReviewPreparation.mockReturnValue(new Promise(() => {}))
+
+    await renderQueue()
+    await act(async () => {
+      container.querySelector('button').click()
+      container.querySelector('button').click()
+    })
+
+    expect(api.startGovernedReviewPreparation).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('button').disabled).toBe(true)
   })
 
   it('recovers a completed no-candidate result only with complete coverage', async () => {

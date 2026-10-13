@@ -20,6 +20,21 @@ function value(numberValue) {
   return Number.isFinite(Number(numberValue)) ? Number(numberValue) : 'Unavailable'
 }
 
+const UNCERTAIN_GOVERNED_START_KEY = 'atlas-governed-review-uncertain-start'
+
+function readUncertainGovernedStart() {
+  try { return globalThis.localStorage?.getItem(UNCERTAIN_GOVERNED_START_KEY) !== null } catch { return true }
+}
+
+function persistUncertainGovernedStart(value) {
+  try {
+    if (value) globalThis.localStorage?.setItem(UNCERTAIN_GOVERNED_START_KEY, '1')
+    else globalThis.localStorage?.removeItem(UNCERTAIN_GOVERNED_START_KEY)
+  } catch {
+    // The in-memory guard still prevents another POST in this page session.
+  }
+}
+
 export function QualifiedTradePlanCard({ evaluation }) {
   const plan = composeQualifiedTradePlan({ evaluation })
   return <article className="strategy-manager-card">
@@ -65,10 +80,12 @@ export function GovernedReviewQueue() {
   const [coverageSummary, setCoverageSummary] = useState(null)
   const [error, setError] = useState(null)
   const [pollError, setPollError] = useState(null)
+  const [uncertainStart, setUncertainStart] = useState(readUncertainGovernedStart)
   const [selectedStrategies, setSelectedStrategies] = useState({})
   const pollInterval = useRef(null)
   const currentPreparationId = useRef(null)
-  const active = ['preparing', 'pending', 'running', 'unknown'].includes(preparationStatus)
+  const uncertainStartRef = useRef(uncertainStart)
+  const active = uncertainStart || ['preparing', 'pending', 'running', 'unknown'].includes(preparationStatus)
   const completeEvaluation = coverageSummary?.status === 'COMPLETE'
     && coverageSummary.expected > 0
     && coverageSummary.evaluated === coverageSummary.expected
@@ -152,11 +169,18 @@ export function GovernedReviewQueue() {
         currentPreparationId.current = null
         clearGovernedReviewRuntimeMetadata()
         setPreparationId(null)
-        setPreparationStatus('idle')
+        setPreparationStatus(uncertainStartRef.current ? 'unknown' : 'idle')
+        if (uncertainStartRef.current) setPollError('The start response is uncertain. No durable record was found yet; another start is blocked.')
         return
       }
       if (!data.preparationId) {
         setPollError('Preparation discovery is unavailable. Retry status before starting another.')
+        return
+      }
+      if (uncertainStartRef.current && !['pending', 'running'].includes(data.status)) {
+        setPreparationId(null)
+        setPreparationStatus('unknown')
+        setPollError('The start response is uncertain. A prior terminal record does not resolve it; another start is blocked.')
         return
       }
       applyPreparationStatus(response, data.preparationId)
@@ -168,6 +192,10 @@ export function GovernedReviewQueue() {
   }, [applyPreparationStatus, watchPreparation])
 
   const handlePrepareQueue = useCallback(async () => {
+    if (uncertainStartRef.current) return
+    uncertainStartRef.current = true
+    setUncertainStart(true)
+    persistUncertainGovernedStart(true)
     clearPolling()
     currentPreparationId.current = null
     clearGovernedReviewRuntimeMetadata()
@@ -186,6 +214,9 @@ export function GovernedReviewQueue() {
         throw new Error(response?.error?.message || 'Failed to start preparation')
       }
       const pid = response.data.preparationId
+      uncertainStartRef.current = false
+      setUncertainStart(false)
+      persistUncertainGovernedStart(false)
       currentPreparationId.current = pid
       setPreparationId(pid)
       setPreparationStatus(response.data.status ?? 'unknown')
@@ -265,6 +296,7 @@ export function GovernedReviewQueue() {
 
       {error && <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>{error}</p>}
       {pollError && <p role="alert" style={{ color: 'var(--color-error, #c00)' }}>{pollError}</p>}
+      {uncertainStart && <p role="alert">The prior start response is uncertain. Prepare is blocked until its acceptance is resolved.</p>}
       {preparationStatus === 'unknown' && !preparationId && pollError && <button type="button" onClick={recoverPreparation}>Retry status</button>}
 
       {observationAttention?.required && ['completed', 'failed', 'expired'].includes(preparationStatus) && (
