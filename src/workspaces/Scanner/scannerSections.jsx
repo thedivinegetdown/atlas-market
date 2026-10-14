@@ -16,6 +16,7 @@ import {
   GOVERNED_OBSERVATION_STRATEGIES,
   GOVERNED_OBSERVATION_CHECK_STATUSES,
 } from '../../../lib/workspace/governedObservationCoverage.js'
+import { safeCandleFailureCode } from '../../../lib/market/candleFailureContract.js'
 
 function display(value) {
   return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
@@ -42,6 +43,9 @@ function presentGovernedChecks(checks) {
       ...expected,
       status: valid ? check.status : 'UNKNOWN',
       reason: valid ? check.reason : 'stored_check_unavailable',
+      candleFailureCode: valid && check.status === GOVERNED_OBSERVATION_CHECK_STATUSES.degraded
+        && check.reason === 'candle_evidence_missing' && check.candleFailureCode != null
+        ? safeCandleFailureCode(check.candleFailureCode) : null,
       valid: Boolean(valid),
     }
   })
@@ -374,6 +378,7 @@ export function GovernedReviewQueue() {
               <li key={`${check.symbol}-${check.experimentId}`}>
                 {check.symbol} · {check.experimentId} ({check.strategyId}) · {check.status}
                 {check.reason ? ` · ${check.reason}` : ''}
+                {check.candleFailureCode ? ` · ${check.candleFailureCode}` : ''}
               </li>
             ))}
           </ul>

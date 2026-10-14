@@ -234,6 +234,39 @@ describe('governed review result visibility', () => {
     expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
   })
 
+  it('shows only bounded stored candle codes after reload and leaves historical reasons unchanged', async () => {
+    const causes = { SPY: 'provider_timeout', QQQ: 'provider_rate_limited', IWM: 'provider_backoff_active', AAPL: 'credit_minute_budget_exceeded', MSFT: 'secret-url' }
+    const checks = checksWith(() => ({ status: 'BLOCKED_DEGRADED', reason: 'candle_evidence_missing' }))
+      .map(check => ({ ...check, candleFailureCode: causes[check.symbol] }))
+    delete checks[0].candleFailureCode // Historical record with only the generic reason.
+    const response = status({ discoveryStatus: 'COMPLETED', status: 'completed', queueItems: [],
+      observationCoverage: { checks, summary: { status: 'DEGRADED', expected: 15, evaluated: 15, completedCandidate: 0, completedNoCandidate: 0, blockedDegraded: 15, missedNotEvaluated: 0 } } })
+    api.discoverGovernedReviewPreparation.mockResolvedValue(response)
+
+    await renderQueue()
+    const rows = [...container.querySelectorAll('[aria-label="Governed observation results"] li')]
+    expect(rows).toHaveLength(15)
+    expect(rows[0].textContent).toContain('candle_evidence_missing')
+    expect(rows[0].textContent).not.toContain('provider_timeout')
+    expect(rows[1].textContent).toContain('provider_timeout')
+    expect(rows.filter(row => row.textContent.includes('QQQ') && row.textContent.includes('provider_rate_limited'))).toHaveLength(3)
+    expect(rows.filter(row => row.textContent.includes('IWM') && row.textContent.includes('provider_backoff_active'))).toHaveLength(3)
+    expect(rows.filter(row => row.textContent.includes('AAPL') && row.textContent.includes('credit_minute_budget_exceeded'))).toHaveLength(3)
+    expect(rows.filter(row => row.textContent.includes('MSFT') && row.textContent.includes('unknown'))).toHaveLength(3)
+    expect(container.textContent).not.toContain('secret-url')
+    expect(container.textContent).not.toContain('found no legitimate matches')
+    expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
+
+    await act(async () => root.unmount())
+    container.remove()
+    root = null
+    container = null
+    await renderQueue()
+    expect(container.querySelectorAll('[aria-label="Governed observation results"] li')).toHaveLength(15)
+    expect(container.textContent).toContain('provider_rate_limited')
+    expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
+  })
+
   it('shows unknown for missing or malformed stored checks and never infers candidate identity from a check', async () => {
     const checks = noCandidateChecks.slice(0, 14).map((check, index) => index === 0 ? { ...check, status: 'NOT_A_STATUS' } : check)
     api.discoverGovernedReviewPreparation.mockResolvedValue(status({
@@ -384,6 +417,18 @@ describe('governed review durable discovery', () => {
     status: 'running', claimToken: 'secret-claim',
     tenantContext: scope, createdAt: '2026-10-13T17:40:00.000Z',
   }
+
+  it('returns bounded durable candle causes through the existing scoped status response', async () => {
+    const check = { symbol: 'SPY', strategyId: 'breakout-momentum-v1', experimentId: 'BREAKOUT.1', status: 'BLOCKED_DEGRADED', reason: 'candle_evidence_missing', candleFailureCode: 'provider_timeout' }
+    const stored = { ...preparation, status: 'completed', observationCoverage: { version: 'governed-observation-coverage-v1', checks: [check], summary: { status: 'DEGRADED' } } }
+    const query = vi.fn(async () => ({ rows: [{ id: stored.id, payload: stored, status: stored.status }] }))
+    const repository = createPostgresRepository({ database: { connected: true, query } })
+    const result = await readStatus({ body: {}, query: { preparationId: stored.id }, repository,
+      tenantContext: scope, user: { id: scope.userId }, organizationId: scope.organizationId })
+    expect(result.data.observationCoverage.checks).toEqual([check])
+    expect(JSON.stringify(result)).not.toContain('secret-claim')
+    expect(query).toHaveBeenCalledTimes(1)
+  })
 
   it('selects an unexpired active record first using server-owned org, workspace, and user scope', async () => {
     const query = vi.fn(async () => ({ rows: [{ id: preparation.id, payload: preparation, status: 'running' }] }))

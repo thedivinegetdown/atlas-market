@@ -7,6 +7,7 @@ import {
 } from '../lib/workspace/governedObservationCoverage.js'
 import { createOrReusePreparation } from '../lib/workspace/governedReviewPreparation.js'
 import { runGovernedPreparation } from '../netlify/functions/governed-review-prepare-background.js'
+import { createMarketEvidencePacketBuilder } from '../lib/market/marketEvidencePacket.js'
 
 const CREATED_AT = '2026-09-24T14:30:00.000Z'
 
@@ -92,6 +93,48 @@ describe('Gap 5 governed observation coverage', () => {
     expect(saved.queueItems).toEqual([])
     expect(saved.observationCoverage.summary).toMatchObject({ expected: 15, evaluated: 15, blockedDegraded: 15, missedNotEvaluated: 0, status: 'DEGRADED', requiresOperatorAttention: true })
     expect(saved.observationCoverage.boundaries.edge2CountersIncremented).toBe(false)
+  })
+
+  it('persists bounded symbol-specific candle causes for all three governed strategies', async () => {
+    const { repository, store } = memoryRepository()
+    const preparation = {
+      id: 'prep-candle-causes', organizationId: 'org-a', userId: 'user-a',
+      tenantContext: { organizationId: 'org-a', teamWorkspaceId: 'team-a', userId: 'user-a' },
+      status: 'running', createdAt: CREATED_AT, updatedAt: CREATED_AT,
+      observationCoverage: createGovernedObservationCoverage({ preparationId: 'prep-candle-causes', createdAt: CREATED_AT }),
+    }
+    const causes = { SPY: 'provider_timeout', QQQ: 'provider_backoff_active', IWM: 'secret-raw-message', AAPL: 'credit_daily_budget_exceeded', MSFT: 'provider_rate_limited' }
+    const getCandles = vi.fn(async symbol => ({ ok: false, error: { code: causes[symbol], message: 'private response content' } }))
+    const packetBuilder = createMarketEvidencePacketBuilder({
+      marketDataService: {
+        getQuotes: vi.fn(async symbols => symbols.map(symbol => ({ symbol, price: 500, provenance: { provider: 'twelvedata', dataStatus: 'LIVE', mock: false } }))),
+        getCandles,
+      },
+      creditBudget: { waitForCapacity: vi.fn(async () => {}) },
+      now: () => CREATED_AT,
+    })
+    await runGovernedPreparation({ ...preparation, repository }, {
+      workspaceDataService: { buildMarketEvidencePacket: packetBuilder.build },
+      now: () => new Date(CREATED_AT),
+    })
+    const saved = store.records.get(preparation.id).payload
+    const expected = { SPY: 'provider_timeout', QQQ: 'provider_backoff_active', IWM: 'unknown', AAPL: 'credit_daily_budget_exceeded', MSFT: 'provider_rate_limited' }
+    expect(saved.observationCoverage.checks).toHaveLength(15)
+    for (const check of saved.observationCoverage.checks) {
+      expect(check).toMatchObject({ status: 'BLOCKED_DEGRADED', reason: 'candle_evidence_missing', candleFailureCode: expected[check.symbol] })
+    }
+    expect(saved.observationCoverage.summary).toMatchObject({ blockedDegraded: 15, completedCandidate: 0 })
+    expect(saved.queueItems).toEqual([])
+    expect(JSON.stringify(saved.observationCoverage)).not.toContain('secret-raw-message')
+    expect(JSON.stringify(saved.observationCoverage)).not.toContain('private response content')
+    expect(getCandles.mock.calls.map(([symbol]) => symbol)).toEqual(['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT'])
+  })
+
+  it('keeps historical generic candle failure checks readable without adding a guessed cause', () => {
+    const coverage = createGovernedObservationCoverage({ preparationId: 'prep-historical', createdAt: CREATED_AT })
+    const historical = { ...coverage, checks: coverage.checks.map(check => ({ ...check, status: 'BLOCKED_DEGRADED', reason: 'candle_evidence_missing' })) }
+    expect(historical.checks.every(check => !('candleFailureCode' in check))).toBe(true)
+    expect(governedObservationAttention(historical).checks).toHaveLength(15)
   })
 
   it('keeps never-evaluated checks explicit when the provider packet fails before evaluation', async () => {

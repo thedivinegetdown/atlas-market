@@ -143,7 +143,7 @@ export async function runGovernedPreparation(preparation, context) {
     ?? createGovernedObservationCoverage({ preparationId: preparation.id, createdAt: preparation.createdAt })
   let queueItems = Array.isArray(preparation.queueItems) ? preparation.queueItems : []
 
-  const checkpoint = async ({ symbol, strategy, status, reason, signal = null, quality = null, queueItem = null }) => {
+  const checkpoint = async ({ symbol, strategy, status, reason, candleFailureCode, signal = null, quality = null, queueItem = null }) => {
     const evaluatedAt = now().toISOString()
     observationCoverage = recordGovernedObservationCheck(observationCoverage, {
       symbol,
@@ -151,6 +151,7 @@ export async function runGovernedPreparation(preparation, context) {
       experimentId: strategy.experiment,
       status,
       reason,
+      candleFailureCode,
       evaluatedAt,
       strategyFingerprint: signal?.strategyFingerprint ?? null,
       evidenceFingerprint: quality?.evidenceFingerprint ?? null,
@@ -181,7 +182,8 @@ export async function runGovernedPreparation(preparation, context) {
       if (!evidence || !evidence.quote || !Array.isArray(evidence.candles) || evidence.candles.length === 0) {
         const reason = !evidence ? 'symbol_evidence_missing' : !evidence.quote ? 'quote_evidence_missing' : 'candle_evidence_missing'
         for (const strategy of GOVERNED_STRATEGIES) {
-          await checkpoint({ symbol, strategy, status: GOVERNED_OBSERVATION_CHECK_STATUSES.degraded, reason })
+          await checkpoint({ symbol, strategy, status: GOVERNED_OBSERVATION_CHECK_STATUSES.degraded, reason,
+            candleFailureCode: reason === 'candle_evidence_missing' ? evidence.candleFailureCode : undefined })
         }
         continue
       }

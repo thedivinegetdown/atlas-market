@@ -10,6 +10,7 @@ import '../lib/strategies/volatility/volatilityExpansionSignal.js'
 import { selectStrategiesForRegime } from '../lib/strategies/adaptive/index.js'
 import { scoreTradeQuality } from '../lib/opportunities/quality/index.js'
 import { serverLogger } from '../lib/logging/logger.js'
+import { CANDLE_FAILURE_CODES } from '../lib/market/candleFailureContract.js'
 
 const MOCK_QUOTES = {
   SPY: { symbol: 'SPY', price: 450.25, open: 449.50, high: 451.00, low: 449.00, previousClose: 449.75, change: 0.50, changePercent: 0.11, volume: 80000000, provider: 'twelvedata', updatedAt: '2026-08-15T14:30:00Z' },
@@ -161,6 +162,34 @@ describe('Market Evidence Packet', () => {
       expect(ev.provenance.quote.dataStatus).toBe('LIVE')
     }
     expect(packet.symbols.SPY.quote).toMatchObject({ bid: 450.24, ask: 450.26, bidSize: 100, askSize: 200 })
+  })
+
+  it.each(CANDLE_FAILURE_CODES.filter(code => !['empty_candle_result', 'malformed_candle_result', 'unknown'].includes(code)))('keeps safe candle service code %s on its own symbol', async (code) => {
+    const originalGetCandles = marketDataService.getCandles
+    marketDataService.getCandles = async (symbol, options) => symbol === 'SPY'
+      ? { ok: false, error: { code, message: 'private provider detail and URL' }, failure: { apiKey: 'secret' } }
+      : originalGetCandles(symbol, options)
+    const packet = await packetBuilder.build(['SPY', 'QQQ'])
+
+    expect(packet.symbols.SPY).toMatchObject({ candles: [], candleFailureCode: code })
+    expect(packet.symbols.QQQ.candles).toHaveLength(260)
+    expect(packet.symbols.QQQ.candleFailureCode).toBeUndefined()
+    expect(JSON.stringify(packet)).not.toContain('private provider detail')
+    expect(JSON.stringify(packet)).not.toContain('secret')
+  })
+
+  it.each([
+    [{ ok: true, data: [] }, 'empty_candle_result'],
+    [{ ok: true, data: { values: [] } }, 'malformed_candle_result'],
+    [{ ok: false, error: { code: 'https://private/key', message: 'secret' } }, 'unknown'],
+    [undefined, 'unknown'],
+  ])('keeps missing or malformed candle service evidence unavailable with bounded cause %#', async (response, expectedCode) => {
+    marketDataService.getCandles = async () => response
+    const packet = await packetBuilder.build(['SPY'])
+    expect(packet.symbols.SPY).toMatchObject({ candles: [], candleFailureCode: expectedCode })
+    expect(packet.symbols.SPY.indicators).toBeNull()
+    expect(JSON.stringify(packet)).not.toContain('private/key')
+    expect(JSON.stringify(packet)).not.toContain('secret')
   })
 
   it('reuses SPY benchmark evidence exactly (no duplicate)', async () => {
