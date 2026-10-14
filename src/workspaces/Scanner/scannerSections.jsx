@@ -11,6 +11,11 @@ import { workspaceApiClient } from '../../api/workspaceApiClient.js'
 import { serverLogger } from '../../../lib/logging/logger.js'
 import '../../../lib/opportunities/forwardTest/forwardObservationEngine.js'
 import { composeQualifiedTradePlan, rankQualifiedTradePlans } from '../../../lib/opportunities/qualifiedTradePlan/index.js'
+import {
+  GOVERNED_OBSERVATION_UNIVERSE,
+  GOVERNED_OBSERVATION_STRATEGIES,
+  GOVERNED_OBSERVATION_CHECK_STATUSES,
+} from '../../../lib/workspace/governedObservationCoverage.js'
 
 function display(value) {
   return String(value ?? 'UNKNOWN').replaceAll('_', ' ')
@@ -21,6 +26,27 @@ function value(numberValue) {
 }
 
 const UNCERTAIN_GOVERNED_START_KEY = 'atlas-governed-review-uncertain-start'
+const GOVERNED_CHECK_STATUSES = new Set(Object.values(GOVERNED_OBSERVATION_CHECK_STATUSES))
+const EXPECTED_GOVERNED_CHECKS = GOVERNED_OBSERVATION_UNIVERSE.flatMap((symbol) =>
+  GOVERNED_OBSERVATION_STRATEGIES.map(({ strategyId, experimentId }) => ({ symbol, strategyId, experimentId })))
+
+function presentGovernedChecks(checks) {
+  const supplied = Array.isArray(checks) ? checks : []
+  const rows = EXPECTED_GOVERNED_CHECKS.map((expected) => {
+    const matching = supplied.filter((check) => check?.symbol === expected.symbol
+      && check.strategyId === expected.strategyId && check.experimentId === expected.experimentId)
+    const check = matching.length === 1 ? matching[0] : null
+    const valid = check && GOVERNED_CHECK_STATUSES.has(check.status)
+      && (check.reason == null || typeof check.reason === 'string')
+    return {
+      ...expected,
+      status: valid ? check.status : 'UNKNOWN',
+      reason: valid ? check.reason : 'stored_check_unavailable',
+      valid: Boolean(valid),
+    }
+  })
+  return { rows, complete: supplied.length === EXPECTED_GOVERNED_CHECKS.length && rows.every((row) => row.valid) }
+}
 
 function readUncertainGovernedStart() {
   try { return globalThis.localStorage?.getItem(UNCERTAIN_GOVERNED_START_KEY) ?? null } catch { return 'storage-unavailable' }
@@ -85,6 +111,7 @@ export function GovernedReviewQueue() {
   const [queueItems, setQueueItems] = useState([])
   const [observationAttention, setObservationAttention] = useState(null)
   const [coverageSummary, setCoverageSummary] = useState(null)
+  const [observationChecks, setObservationChecks] = useState(null)
   const [error, setError] = useState(null)
   const [pollError, setPollError] = useState(null)
   const [uncertainStart, setUncertainStart] = useState(() => Boolean(readUncertainGovernedStart()))
@@ -93,11 +120,18 @@ export function GovernedReviewQueue() {
   const currentPreparationId = useRef(null)
   const uncertainStartRef = useRef(readUncertainGovernedStart())
   const active = uncertainStart || ['preparing', 'pending', 'running', 'unknown'].includes(preparationStatus)
+  const presentedChecks = presentGovernedChecks(observationChecks)
   const completeEvaluation = coverageSummary?.status === 'COMPLETE'
-    && coverageSummary.expected > 0
-    && coverageSummary.evaluated === coverageSummary.expected
+    && coverageSummary.expected === EXPECTED_GOVERNED_CHECKS.length
+    && coverageSummary.evaluated === EXPECTED_GOVERNED_CHECKS.length
     && coverageSummary.blockedDegraded === 0
     && coverageSummary.missedNotEvaluated === 0
+    && presentedChecks.complete
+    && presentedChecks.rows.every((check) => [GOVERNED_OBSERVATION_CHECK_STATUSES.candidate, GOVERNED_OBSERVATION_CHECK_STATUSES.noCandidate].includes(check.status))
+    && coverageSummary.completedCandidate === presentedChecks.rows.filter((check) => check.status === GOVERNED_OBSERVATION_CHECK_STATUSES.candidate).length
+    && coverageSummary.completedNoCandidate === presentedChecks.rows.filter((check) => check.status === GOVERNED_OBSERVATION_CHECK_STATUSES.noCandidate).length
+  const noCandidateEvaluation = completeEvaluation
+    && presentedChecks.rows.every((check) => check.status === GOVERNED_OBSERVATION_CHECK_STATUSES.noCandidate)
 
   const displayStrategyName = (strategyId) => {
     const names = {
@@ -131,6 +165,7 @@ export function GovernedReviewQueue() {
     setPreparationStatus(status)
     setObservationAttention(coverageAttention ?? null)
     setCoverageSummary(response.data.observationCoverage?.summary ?? null)
+    setObservationChecks(response.data.observationCoverage?.checks ?? null)
     publishGovernedReviewRuntimeMetadata(response.data)
     if (status === 'completed') {
       currentPreparationId.current = null
@@ -224,6 +259,7 @@ export function GovernedReviewQueue() {
     setQueueItems([])
     setObservationAttention(null)
     setCoverageSummary(null)
+    setObservationChecks(null)
     setSelectedStrategies({})
     setPreparationStatus('preparing')
 
@@ -329,6 +365,21 @@ export function GovernedReviewQueue() {
         </section>
       )}
 
+      {preparationId && ['completed', 'failed', 'expired'].includes(preparationStatus) && (
+        <section aria-label="Governed observation results" style={{ marginBottom: '1rem' }}>
+          <strong>Stored governed checks</strong>
+          {!presentedChecks.complete && <p role="status">Some stored check details are unavailable or malformed. No complete evaluation conclusion is available.</p>}
+          <ul>
+            {presentedChecks.rows.map((check) => (
+              <li key={`${check.symbol}-${check.experimentId}`}>
+                {check.symbol} · {check.experimentId} ({check.strategyId}) · {check.status}
+                {check.reason ? ` · ${check.reason}` : ''}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       {preparationStatus === 'idle' && (
         <EmptyWorkspaceState>Click "Prepare Governed Review" to evaluate BREAKOUT.1, RANGE.1, and VOL.1 strategies across the governed universe.</EmptyWorkspaceState>
       )}
@@ -337,20 +388,21 @@ export function GovernedReviewQueue() {
         <p role="status">{preparationStatus === 'preparing' ? 'Submitting governed review preparation…' : preparationStatus === 'pending' ? 'Accepted and queued; evaluation has not completed.' : preparationStatus === 'running' ? 'Evaluating governed strategies; no terminal outcome yet.' : 'Preparation accepted; waiting for its server-owned status.'}</p>
       )}
 
-      {preparationStatus === 'completed' && queueItems.length === 0 && completeEvaluation && (
+      {preparationStatus === 'completed' && queueItems.length === 0 && noCandidateEvaluation && (
         <EmptyWorkspaceState>
           <strong>No governed strategy opportunities currently have deterministic evidence.</strong>
           <br />The governed strategies (BREAKOUT.1, RANGE.1, VOL.1) found no legitimate matches in the current market regime.
         </EmptyWorkspaceState>
       )}
-      {preparationStatus === 'completed' && queueItems.length === 0 && !completeEvaluation && (
-        <p role="status">No candidate conclusion is available because governed evaluation coverage is incomplete or degraded.</p>
+      {preparationStatus === 'completed' && queueItems.length === 0 && !noCandidateEvaluation && (
+        <p role="status">No candidate conclusion is available from the stored check results and queue items.</p>
       )}
       {preparationStatus === 'unknown' && <p role="status">Current durable preparation status is unknown. Starting another is disabled.</p>}
 
       {queueItems.map((item) => (
         <article key={`${item.symbol}-${item.strategyId}`} className="strategy-manager-card" style={{ marginBottom: '1rem' }}>
           <h3>{item.symbol} — {displayStrategyName(item.strategyId)}</h3>
+          {item.quality?.opportunityId && <p>Candidate ID: {item.quality.opportunityId}</p>}
 
           <div className="metric-grid">
             <MetricCard label="TQ Score" value={item.quality?.score == null ? 'Not scored' : `${item.quality.score}/100`} />

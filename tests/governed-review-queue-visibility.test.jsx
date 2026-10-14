@@ -40,8 +40,20 @@ async function nextPoll() {
 }
 
 const status = (value) => ({ ok: true, data: { preparationId: 'prep-current', ...value } })
+const symbols = ['SPY', 'QQQ', 'IWM', 'AAPL', 'MSFT']
+const strategies = [
+  ['BREAKOUT.1', 'breakout-momentum-v1'],
+  ['RANGE.1', 'range-mean-reversion-v1'],
+  ['VOL.1', 'volatility-expansion-v1'],
+]
+const checksWith = (disposition) => symbols.flatMap((symbol) => strategies.map(([experimentId, strategyId]) => {
+  const { status: checkStatus, reason } = disposition(symbol, experimentId)
+  return { checkId: `${symbol}-${experimentId}`, symbol, strategyId, experimentId, status: checkStatus, reason }
+}))
+const noCandidateChecks = checksWith(() => ({ status: 'COMPLETED_NO_CANDIDATE', reason: 'signal_rejected' }))
 const completeCoverage = {
-  summary: { status: 'COMPLETE', expected: 15, evaluated: 15, blockedDegraded: 0, missedNotEvaluated: 0 },
+  checks: noCandidateChecks,
+  summary: { status: 'COMPLETE', expected: 15, evaluated: 15, completedCandidate: 0, completedNoCandidate: 15, blockedDegraded: 0, missedNotEvaluated: 0 },
 }
 
 beforeEach(() => {
@@ -177,6 +189,87 @@ describe('governed review result visibility', () => {
 
     expect(container.textContent).toContain('Preparation prep-current · completed')
     expect(container.textContent).toContain('found no legitimate matches')
+    expect(container.querySelectorAll('[aria-label="Governed observation results"] li')).toHaveLength(15)
+    expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
+  })
+
+  it('recovers all fifteen server-supplied dispositions, exact SPY reasons, and candidate identity only from queueItems', async () => {
+    const checks = checksWith((symbol) => symbol === 'SPY'
+      ? { status: 'BLOCKED_DEGRADED', reason: 'candle_evidence_missing' }
+      : symbol === 'IWM'
+        ? { status: 'COMPLETED_CANDIDATE', reason: 'candidate_created' }
+        : { status: 'COMPLETED_NO_CANDIDATE', reason: 'signal_rejected' })
+    const response = status({
+      discoveryStatus: 'COMPLETED', status: 'completed',
+      observationCoverage: { checks, summary: { status: 'DEGRADED', expected: 15, evaluated: 15, completedCandidate: 3, completedNoCandidate: 9, blockedDegraded: 3, missedNotEvaluated: 0 } },
+      observationAttention: { required: true, status: 'DEGRADED', count: 3, checks: checks.slice(0, 3) },
+      queueItems: [{ symbol: 'IWM', strategyId: 'breakout-momentum-v1', quality: { score: 72, opportunityId: 'opp-stored-1' } }],
+    })
+    api.discoverGovernedReviewPreparation.mockResolvedValue(response)
+
+    await renderQueue()
+
+    const results = container.querySelectorAll('[aria-label="Governed observation results"] li')
+    expect(results).toHaveLength(15)
+    expect([...results].filter((row) => row.textContent.includes('SPY'))).toHaveLength(3)
+    expect([...results].filter((row) => row.textContent.includes('SPY'))).toEqual([
+      expect.objectContaining({ textContent: expect.stringContaining('BREAKOUT.1 (breakout-momentum-v1) · BLOCKED_DEGRADED · candle_evidence_missing') }),
+      expect.objectContaining({ textContent: expect.stringContaining('RANGE.1 (range-mean-reversion-v1) · BLOCKED_DEGRADED · candle_evidence_missing') }),
+      expect.objectContaining({ textContent: expect.stringContaining('VOL.1 (volatility-expansion-v1) · BLOCKED_DEGRADED · candle_evidence_missing') }),
+    ])
+    expect([...results].filter((row) => row.textContent.includes('IWM') && row.textContent.includes('COMPLETED_CANDIDATE'))).toHaveLength(3)
+    expect([...results].filter((row) => ['QQQ', 'AAPL', 'MSFT'].some((symbol) => row.textContent.includes(symbol)) && row.textContent.includes('COMPLETED_NO_CANDIDATE'))).toHaveLength(9)
+    expect(container.textContent).toContain('Candidate ID: opp-stored-1')
+    expect(container.textContent).not.toContain('No governed strategy opportunities')
+    expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
+    expect(api.getGovernedReviewPreparationStatus).not.toHaveBeenCalled()
+
+    await act(async () => root.unmount())
+    container.remove()
+    root = null
+    container = null
+    await renderQueue()
+    expect(container.querySelectorAll('[aria-label="Governed observation results"] li')).toHaveLength(15)
+    expect(container.textContent).toContain('Candidate ID: opp-stored-1')
+    expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
+  })
+
+  it('shows unknown for missing or malformed stored checks and never infers candidate identity from a check', async () => {
+    const checks = noCandidateChecks.slice(0, 14).map((check, index) => index === 0 ? { ...check, status: 'NOT_A_STATUS' } : check)
+    api.discoverGovernedReviewPreparation.mockResolvedValue(status({
+      discoveryStatus: 'COMPLETED', status: 'completed', queueItems: [],
+      observationCoverage: { ...completeCoverage, checks },
+      observationAttention: { required: false, status: 'COMPLETE', count: 0, checks: [] },
+    }))
+
+    await renderQueue()
+
+    const results = container.querySelectorAll('[aria-label="Governed observation results"] li')
+    expect(results).toHaveLength(15)
+    expect([...results].filter((row) => row.textContent.includes('UNKNOWN · stored_check_unavailable'))).toHaveLength(2)
+    expect(container.textContent).toContain('Some stored check details are unavailable or malformed')
+    expect(container.textContent).not.toContain('found no legitimate matches')
+    expect(container.textContent).not.toContain('Candidate ID:')
+    expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
+  })
+
+  it('does not turn a stored candidate disposition without a queue item into no candidate or an invented ID', async () => {
+    const checks = checksWith((symbol, experimentId) => symbol === 'SPY' && experimentId === 'BREAKOUT.1'
+      ? { status: 'COMPLETED_CANDIDATE', reason: 'candidate_created' }
+      : { status: 'COMPLETED_NO_CANDIDATE', reason: 'signal_rejected' })
+    api.discoverGovernedReviewPreparation.mockResolvedValue(status({
+      discoveryStatus: 'COMPLETED', status: 'completed', queueItems: [],
+      observationCoverage: { checks, summary: { status: 'COMPLETE', expected: 15, evaluated: 15, completedCandidate: 1, completedNoCandidate: 14, blockedDegraded: 0, missedNotEvaluated: 0 } },
+      observationAttention: { required: false, status: 'COMPLETE', count: 0, checks: [] },
+    }))
+
+    await renderQueue()
+
+    expect(container.querySelectorAll('[aria-label="Governed observation results"] li')).toHaveLength(15)
+    expect(container.textContent).toContain('SPY · BREAKOUT.1 (breakout-momentum-v1) · COMPLETED_CANDIDATE')
+    expect(container.textContent).toContain('No candidate conclusion is available from the stored check results and queue items.')
+    expect(container.textContent).not.toContain('found no legitimate matches')
+    expect(container.textContent).not.toContain('Candidate ID:')
     expect(api.startGovernedReviewPreparation).not.toHaveBeenCalled()
   })
 
@@ -262,6 +355,7 @@ describe('governed review result visibility', () => {
     await act(async () => resolveOlderPoll(status({ status: 'running' })))
     expect(container.textContent).toContain('Preparation prep-current · completed')
     expect(container.textContent).toContain('found no legitimate matches')
+    expect(container.querySelectorAll('[aria-label="Governed observation results"] li')).toHaveLength(15)
     expect(JSON.parse(document.documentElement.getAttribute('data-atlas-governed-review-preparation')).status).toBe('completed')
   })
 
