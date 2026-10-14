@@ -117,7 +117,8 @@ describe('governed review preparation PostgreSQL contract', () => {
     })
     const repository = createPostgresRepository({ database: { connected: true, query } })
     const scope = { organizationId: 'org-1', teamWorkspaceId: 'team-1', userId: 'user-1' }
-    const start = (key, currentScope = scope) => createOrReusePreparation(repository, currentScope.organizationId, currentScope.userId, currentScope, () => new Date('2026-10-13T18:00:00.000Z'), key)
+    const createdAt = new Date()
+    const start = (key, currentScope = scope) => createOrReusePreparation(repository, currentScope.organizationId, currentScope.userId, currentScope, () => createdAt, key)
 
     const [first, sameRequest] = await Promise.all([start('logical-request-0001'), start('logical-request-0001')])
     expect(rows).toHaveLength(1)
@@ -138,7 +139,7 @@ describe('governed review preparation PostgreSQL contract', () => {
     const explicitNewRequest = await start('logical-request-0002')
     expect(explicitNewRequest).toMatchObject({ created: true, reuseReason: null })
     expect(rows).toHaveLength(2)
-    rows[1].expires_at = '2026-10-12T00:00:00.000Z'
+    rows[1].expires_at = new Date(createdAt.getTime() - 24 * 60 * 60 * 1000).toISOString()
     const afterExpiry = await start('logical-request-0003')
     expect(rows[1].status).toBe('expired')
     expect(afterExpiry.created).toBe(true)
