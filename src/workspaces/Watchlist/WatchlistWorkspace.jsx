@@ -1,9 +1,16 @@
 import { MarketOverviewPanel, SignalPanel, WatchlistPanel } from '../../components/panels.jsx'
 import { WorkspacePage, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useWatchlist } from '../../hooks/useWatchlist.js'
+import { useNavigate } from 'react-router-dom'
 
 export default function WatchlistWorkspace() {
   const watchlist = useWatchlist()
+  const navigate = useNavigate()
+
+  const openResearch = (symbol) => {
+    watchlist.setSelectedSymbol(symbol)
+    navigate(`/research/${encodeURIComponent(symbol)}`)
+  }
 
   return (
     <WorkspacePage title="Watchlist" description="Focused watchlist, selected market overview, and paper signal context.">
@@ -12,6 +19,7 @@ export default function WatchlistWorkspace() {
           quotes={watchlist.quotes}
           selectedSymbol={watchlist.selectedSymbol}
           onSelectSymbol={watchlist.setSelectedSymbol}
+          onOpenSymbol={openResearch}
           refreshing={watchlist.isRefreshing}
           loading={watchlist.isLoading}
           error={watchlist.error}

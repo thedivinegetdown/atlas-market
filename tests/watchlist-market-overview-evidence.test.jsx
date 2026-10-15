@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react-dom/test-utils'
 import { createRoot } from 'react-dom/client'
+import { MemoryRouter } from 'react-router-dom'
 import { workspaceApiClient } from '../src/api/workspaceApiClient.js'
 import WatchlistWorkspace from '../src/workspaces/Watchlist/WatchlistWorkspace.jsx'
 
@@ -37,7 +38,7 @@ let getMarketOverview
 async function renderWorkspace(quotes) {
   getWatchlist.mockResolvedValue({ quotes })
   await act(async () => {
-    root.render(<WatchlistWorkspace />)
+    root.render(<MemoryRouter><WatchlistWorkspace /></MemoryRouter>)
   })
   await vi.waitFor(() => expect(getWatchlist).toHaveBeenCalledTimes(1))
   await act(async () => {

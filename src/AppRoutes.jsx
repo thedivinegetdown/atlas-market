@@ -32,6 +32,7 @@ export function AppRoutes() {
         <Route path="strategies" element={<StrategiesWorkspace />} />
         <Route path="backtesting" element={<BacktestingWorkspace />} />
         <Route path="research" element={<ResearchWorkspace />} />
+        <Route path="research/:symbol" element={<ResearchWorkspace />} />
         <Route path="copilot" element={<AtlasCopilotWorkspace />} />
         <Route path="reports" element={<ReportsWorkspace />} />
         <Route path="health" element={<SystemHealthWorkspace />} />

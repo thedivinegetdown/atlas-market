@@ -21,7 +21,11 @@ export function createMarketOverviewHandler({
   if (!ALLOWED_TIMEFRAMES.has(timeframe)) {
     return { ok: false, statusCode: 400, error: { code: 'invalid_timeframe', message: 'timeframe is invalid' } }
   }
-  return serviceFactory().getMarketOverview(validation.symbol, { timeframe, includeHistoricalIntelligence: true })
+  return serviceFactory().getMarketOverview(validation.symbol, {
+    timeframe,
+    includeHistoricalIntelligence: true,
+    includeResearchHistory: true,
+  })
   }, { requiredPermission: 'dashboard.read', routeId: 'market-overview', ...handlerOptions })
 }
 

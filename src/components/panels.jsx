@@ -80,6 +80,7 @@ export function WatchlistPanel({
   loading,
   error,
   onRefresh,
+  onOpenSymbol,
   sortKey: initialSortKey = 'symbol',
   sortDirection = 'asc',
   autoLoad = true,
@@ -170,10 +171,19 @@ export function WatchlistPanel({
               <tr
                 key={quote.symbol}
                 className={quote.symbol === resolvedSelected ? 'active-row' : ''}
-                onClick={() => resolvedOnSelect(quote.symbol)}
+                onClick={() => onOpenSymbol ? onOpenSymbol(quote.symbol) : resolvedOnSelect(quote.symbol)}
               >
                 <td>
-                  <button type="button" className="symbol-button" onClick={() => resolvedOnSelect(quote.symbol)}>
+                  <button
+                    type="button"
+                    className="symbol-button"
+                    aria-label={onOpenSymbol ? `Research ${quote.symbol}` : `Select ${quote.symbol}`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      if (onOpenSymbol) onOpenSymbol(quote.symbol)
+                      else resolvedOnSelect(quote.symbol)
+                    }}
+                  >
                     {quote.symbol}
                   </button>
                 </td>

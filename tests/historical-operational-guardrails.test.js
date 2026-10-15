@@ -38,7 +38,7 @@ describe('historical data operational guardrails', () => {
     expect(service.getMarketOverview).not.toHaveBeenCalled()
   })
 
-  it('returns only the minimal derived read model without credentials or raw candles', async () => {
+  it('returns the bounded symbol research read model without credentials or provider request details', async () => {
     const service = {
       getMarketOverview: vi.fn().mockResolvedValue({
         paperTrading: true,
@@ -51,6 +51,12 @@ describe('historical data operational guardrails', () => {
           paperTrading: true,
           advisoryOnly: true,
         },
+        research: {
+          version: 'symbol-technical-research-v1',
+          history: { candles: [{ timestamp: '2026-10-14T00:00:00.000Z', open: 625, high: 632, low: 624, close: 630, volume: 1000 }], candleCount: 1 },
+          indicators: { values: {}, coverage: { available: [], missing: ['shortMovingAverage'] } },
+          boundaries: { advisoryOnly: true, paperTradingOnly: true, automaticExecution: false },
+        },
       }),
     }
     const response = parse(await testHandler(service)({
@@ -62,10 +68,13 @@ describe('historical data operational guardrails', () => {
     expect(service.getMarketOverview).toHaveBeenCalledWith('SPY', {
       timeframe: '1D',
       includeHistoricalIntelligence: true,
+      includeResearchHistory: true,
     })
     expect(response.json.data.regime.classification.status).toBe('COMPLETE')
     expect(response.json.data).not.toHaveProperty('indicatorBundle')
     expect(response.json.data).not.toHaveProperty('candles')
+    expect(response.json.data.research.history.candles).toHaveLength(1)
+    expect(response.json.data.research.boundaries.automaticExecution).toBe(false)
     expect(JSON.stringify(response.json)).not.toMatch(/private-session|configured-existing-key|apikey|api_key|rawHistory/i)
   })
 })
