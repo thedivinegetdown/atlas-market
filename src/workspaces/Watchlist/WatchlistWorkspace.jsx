@@ -2,13 +2,22 @@ import { MarketOverviewPanel, SignalPanel, WatchlistPanel } from '../../componen
 import { WorkspacePage, WorkspacePanel } from '../../components/workspace/WorkspacePage.jsx'
 import { useWatchlist } from '../../hooks/useWatchlist.js'
 import { useNavigate } from 'react-router-dom'
+import { useMarketSession } from '../../state/marketSessionState.js'
 
 export default function WatchlistWorkspace() {
-  const watchlist = useWatchlist()
+  const marketSession = useMarketSession()
+  const restoredWatchlist = marketSession?.readWatchlist()
+  const watchlist = useWatchlist({
+    initialQuotes: restoredWatchlist?.quotes,
+    initialSymbol: restoredWatchlist?.selectedSymbol,
+    autoLoad: !restoredWatchlist,
+    onSnapshot: marketSession?.writeWatchlist,
+  })
   const navigate = useNavigate()
 
   const openResearch = (symbol) => {
     watchlist.setSelectedSymbol(symbol)
+    marketSession?.selectWatchlistSymbol(symbol)
     navigate(`/research/${encodeURIComponent(symbol)}`)
   }
 

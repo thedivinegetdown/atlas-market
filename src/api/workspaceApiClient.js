@@ -161,8 +161,8 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
       return request('health', {}, 'Unable to load system health')
     },
 
-    getMarketOverview(symbol, timeframe = '1D') {
-      return request('market-overview', { symbol, timeframe }, 'Unable to load market overview')
+    getMarketOverview(symbol, timeframe = '1D', { skipQuote = false } = {}) {
+      return request('market-overview', { symbol, timeframe, ...(skipQuote ? { skipQuote: 'true' } : {}) }, 'Unable to load market overview')
     },
 
     getStrategySuitability(symbol, timeframe = '1D') {

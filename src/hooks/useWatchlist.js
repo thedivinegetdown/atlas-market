@@ -14,6 +14,7 @@ export function useWatchlist({
   initialSymbol = defaultSymbols[0],
   pollingIntervalMs = null,
   autoLoad = true,
+  onSnapshot,
 } = {}) {
   const [quotes, setQuotes] = useState(initialQuotes)
   const [selectedSymbol, setSelectedSymbol] = useState(initialSymbol)
@@ -28,11 +29,12 @@ export function useWatchlist({
     try {
       const response = await workspaceApiClient.getWatchlist()
       const nextQuotes = response.quotes ?? []
+      const nextSelectedSymbol = nextQuotes.some((quote) => quote.symbol === selectedSymbol)
+        ? selectedSymbol
+        : nextQuotes[0]?.symbol ?? selectedSymbol
       setQuotes(nextQuotes)
-
-      if (!selectedSymbol && nextQuotes[0]?.symbol) {
-        setSelectedSymbol(nextQuotes[0].symbol)
-      }
+      if (nextSelectedSymbol !== selectedSymbol) setSelectedSymbol(nextSelectedSymbol)
+      onSnapshot?.({ quotes: nextQuotes, selectedSymbol: nextSelectedSymbol })
 
       return nextQuotes
     } catch (fetchError) {
@@ -42,16 +44,10 @@ export function useWatchlist({
       setIsLoading(false)
       setIsRefreshing(false)
     }
-  }, [selectedSymbol])
+  }, [onSnapshot, selectedSymbol])
 
   useEffect(() => {
-    if (initialQuotes.length > 0) {
-      setQuotes(initialQuotes)
-      setIsLoading(false)
-      return
-    }
-
-    if (!autoLoad) return
+    if (initialQuotes.length > 0 || !autoLoad) return
 
     if (pollingIntervalMs) {
       const subscription = createPollingSubscription({
@@ -63,7 +59,9 @@ export function useWatchlist({
       return () => subscription.stop()
     }
 
-    void fetchQuotes()
+    let active = true
+    void Promise.resolve().then(() => active && fetchQuotes())
+    return () => { active = false }
   }, [autoLoad, fetchQuotes, initialQuotes, pollingIntervalMs])
 
   const selectedQuote = useMemo(() => {
@@ -73,8 +71,9 @@ export function useWatchlist({
   const selectSymbol = useCallback((symbol) => {
     if (symbol) {
       setSelectedSymbol(symbol)
+      onSnapshot?.({ quotes, selectedSymbol: symbol })
     }
-  }, [])
+  }, [onSnapshot, quotes])
 
   return {
     quotes,

@@ -80,6 +80,22 @@ describe('Part 11B workspace API client integration', () => {
     await expect(client.getMarketOverview('../SPY')).rejects.toThrow('symbol is invalid')
   })
 
+  it('requests history-only Market Overview evidence when a session quote is already owned', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      async json() {
+        return { ok: true, data: { paperTrading: true, symbol: 'AAPL', quote: null, research: { history: { candles: [] } } } }
+      },
+    })
+    const client = createWorkspaceApiClient({ fetchImpl })
+
+    await client.getMarketOverview('AAPL', '1D', { skipQuote: true })
+
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(fetchImpl.mock.calls[0][0]).toContain('symbol=AAPL')
+    expect(fetchImpl.mock.calls[0][0]).toContain('skipQuote=true')
+  })
+
   it('exposes hook loading and refresh behavior with API-backed data', async () => {
     const fetchMock = vi.fn().mockResolvedValue({
       ok: true,

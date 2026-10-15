@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { workspaceApiClient } from '../api/workspaceApiClient.js'
+import { isReusableQuoteEvidence } from '../state/marketSessionState.js'
 
 function message(error, fallback) {
   return error instanceof Error ? error.message : fallback
 }
 
-export function useSymbolResearch({ symbol, initialOverview = null, initialScanner = null, autoLoad = true } = {}) {
-  const [overview, setOverview] = useState(initialOverview)
+export function useSymbolResearch({ symbol, initialOverview = null, initialQuote = null, initialScanner = null, autoLoad = true } = {}) {
+  const reusableQuote = isReusableQuoteEvidence(initialQuote ?? initialOverview?.quote, symbol)
+    ? initialQuote ?? initialOverview.quote
+    : null
+  const [overview, setOverview] = useState(() => reusableQuote
+    ? { ...(initialOverview ?? {}), quote: reusableQuote }
+    : initialOverview)
   const [scanner, setScanner] = useState(initialScanner)
   const [overviewError, setOverviewError] = useState(null)
   const [scannerError, setScannerError] = useState(null)
@@ -21,16 +27,20 @@ export function useSymbolResearch({ symbol, initialOverview = null, initialScann
     setOverviewError(null)
     setScannerError(null)
     const [overviewResult, scannerResult] = await Promise.allSettled([
-      workspaceApiClient.getMarketOverview(symbol),
+      workspaceApiClient.getMarketOverview(symbol, '1D', { skipQuote: Boolean(reusableQuote) }),
       workspaceApiClient.getGovernedReviewPreparationStatus(),
     ])
     if (requestSequence.current !== requestId) return
-    if (overviewResult.status === 'fulfilled') setOverview(overviewResult.value)
+    if (overviewResult.status === 'fulfilled') {
+      setOverview(reusableQuote
+        ? { ...overviewResult.value, quote: reusableQuote }
+        : overviewResult.value)
+    }
     else setOverviewError(message(overviewResult.reason, 'Symbol market evidence is unavailable'))
     if (scannerResult.status === 'fulfilled') setScanner(scannerResult.value)
     else setScannerError(message(scannerResult.reason, 'Stored Scanner evidence is unavailable'))
     setLoading(false)
-  }, [symbol])
+  }, [reusableQuote, symbol])
 
   useEffect(() => {
     if (!autoLoad) return undefined

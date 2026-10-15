@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { createMarketOverviewHandler } from '../netlify/functions/market-overview.js'
+import { createWorkspaceDataService } from '../lib/workspace/workspaceDataService.js'
 
 function parse(response) {
   return { ...response, json: JSON.parse(response.body) }
@@ -69,6 +70,7 @@ describe('historical data operational guardrails', () => {
       timeframe: '1D',
       includeHistoricalIntelligence: true,
       includeResearchHistory: true,
+      includeQuote: true,
     })
     expect(response.json.data.regime.classification.status).toBe('COMPLETE')
     expect(response.json.data).not.toHaveProperty('indicatorBundle')
@@ -76,5 +78,52 @@ describe('historical data operational guardrails', () => {
     expect(response.json.data.research.history.candles).toHaveLength(1)
     expect(response.json.data.research.boundaries.automaticExecution).toBe(false)
     expect(JSON.stringify(response.json)).not.toMatch(/private-session|configured-existing-key|apikey|api_key|rawHistory/i)
+  })
+
+  it('uses the authenticated history-only mode without broadening query inputs', async () => {
+    const service = { getMarketOverview: vi.fn().mockResolvedValue({ paperTrading: true, symbol: 'AAPL', quote: null, research: { history: { candles: [] } } }) }
+    const handler = testHandler(service)
+    const response = parse(await handler({
+      httpMethod: 'GET',
+      queryStringParameters: { symbol: 'AAPL', timeframe: '1D', skipQuote: 'true' },
+      headers: { authorization: 'Bearer private-session' },
+    }))
+    const invalid = parse(await handler({
+      httpMethod: 'GET',
+      queryStringParameters: { symbol: 'AAPL', skipQuote: 'sometimes' },
+      headers: { authorization: 'Bearer private-session' },
+    }))
+
+    expect(response.statusCode).toBe(200)
+    expect(service.getMarketOverview).toHaveBeenCalledWith('AAPL', {
+      timeframe: '1D',
+      includeHistoricalIntelligence: true,
+      includeResearchHistory: true,
+      includeQuote: false,
+    })
+    expect(invalid.statusCode).toBe(400)
+    expect(invalid.json.error.code).toBe('invalid_quote_mode')
+  })
+
+  it('builds research history without a provider quote acquisition when carried evidence is valid', async () => {
+    const marketDataService = { getQuote: vi.fn(), getWatchlistQuotes: vi.fn(), getCandles: vi.fn() }
+    const indicatorPipeline = { build: vi.fn().mockResolvedValue({
+      asOf: '2026-10-15T00:00:00.000Z',
+      history: { candles: [{ timestamp: '2026-10-15T00:00:00.000Z', close: 200 }], candleCount: 1 },
+      indicators: {}, coverage: { available: [], missing: [] }, provenance: {}, warnings: [], pipelineVersion: 'test',
+    }) }
+    const service = createWorkspaceDataService({ marketDataService, indicatorPipeline })
+
+    const result = await service.getMarketOverview('AAPL', {
+      timeframe: '1D',
+      includeHistoricalIntelligence: true,
+      includeResearchHistory: true,
+      includeQuote: false,
+    })
+
+    expect(marketDataService.getQuote).not.toHaveBeenCalled()
+    expect(indicatorPipeline.build).toHaveBeenCalledOnce()
+    expect(result.quote).toBeNull()
+    expect(result.research.history.candles).toHaveLength(1)
   })
 })

@@ -4,7 +4,7 @@ import { requireSymbol } from '../../lib/workspace/validators.js'
 
 const ALLOWED_TIMEFRAMES = new Set(['1D', 'D', 'DAY', 'DAILY', '1DAY'])
 
-const ALLOWED_QUERY_FIELDS = new Set(['symbol', 'timeframe'])
+const ALLOWED_QUERY_FIELDS = new Set(['symbol', 'timeframe', 'skipQuote'])
 
 export function createMarketOverviewHandler({
   serviceFactory = createWorkspaceDataService,
@@ -21,10 +21,15 @@ export function createMarketOverviewHandler({
   if (!ALLOWED_TIMEFRAMES.has(timeframe)) {
     return { ok: false, statusCode: 400, error: { code: 'invalid_timeframe', message: 'timeframe is invalid' } }
   }
+  const skipQuote = String(query.skipQuote ?? 'false').trim().toLowerCase()
+  if (!['true', 'false'].includes(skipQuote)) {
+    return { ok: false, statusCode: 400, error: { code: 'invalid_quote_mode', message: 'skipQuote is invalid' } }
+  }
   return serviceFactory().getMarketOverview(validation.symbol, {
     timeframe,
     includeHistoricalIntelligence: true,
     includeResearchHistory: true,
+    includeQuote: skipQuote !== 'true',
   })
   }, { requiredPermission: 'dashboard.read', routeId: 'market-overview', ...handlerOptions })
 }

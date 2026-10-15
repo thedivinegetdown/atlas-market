@@ -108,12 +108,13 @@ function ScannerContext({ scanner, error, symbol }) {
 
 export default function SymbolResearchWorkspace({
   symbol,
+  initialQuote = null,
   initialOverview = null,
   initialScanner = null,
   autoLoad = true,
 }) {
   const [timeframe, setTimeframe] = useState('3M')
-  const research = useSymbolResearch({ symbol, initialOverview, initialScanner, autoLoad })
+  const research = useSymbolResearch({ symbol, initialOverview, initialQuote, initialScanner, autoLoad })
   const overview = research.overview?.quote?.symbol === symbol ? research.overview : null
   const quote = overview?.quote ?? null
   const history = overview?.research?.history
