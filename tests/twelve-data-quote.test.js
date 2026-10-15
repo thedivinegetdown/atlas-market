@@ -7,6 +7,8 @@ function response(payload, { status = 200, ok = status >= 200 && status < 300, h
 }
 
 describe('Twelve Data production quote compatibility', () => {
+  const watchlistSymbols = ['SPY', 'QQQ', 'AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META']
+
   it('normalizes the documented root-level quote response and provider timestamp', async () => {
     const fetchImpl = vi.fn().mockResolvedValue(response({
       symbol: 'SPY', timestamp: 1_786_379_400, open: '630.10', high: '634.50', low: '629.90',
@@ -55,6 +57,43 @@ describe('Twelve Data production quote compatibility', () => {
       provenance: { provider: 'twelvedata', dataStatus: 'LIVE', freshness: 'FRESH', fallbackUsed: false, mock: false },
     })
     expect(result.data[0].provenance.warningCodes).not.toContain('FALLBACK_PROVIDER_USED')
+  })
+
+  it('admits one eight-symbol Watchlist batch within the verified minute allowance', async () => {
+    const timestamp = Math.floor(Date.now() / 1000)
+    const fetchImpl = vi.fn().mockResolvedValue(response({
+      data: watchlistSymbols.map((symbol, index) => ({
+        symbol,
+        last_quote_at: timestamp,
+        close: String(100 + index),
+      })),
+    }))
+    const provider = createDefaultMarketDataProvider({
+      finnhubApiKey: '', twelveDataApiKey: 'key', fetchImpl, logger: { info: vi.fn(), warn: vi.fn() },
+    })
+
+    const result = await provider.getQuotes(watchlistSymbols)
+
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(result.data.map(({ symbol }) => symbol)).toEqual(watchlistSymbols)
+    expect(result.data.every(({ provenance }) => provenance.dataStatus === 'LIVE' && provenance.mock === false)).toBe(true)
+  })
+
+  it('keeps an unavailable eight-symbol Watchlist batch visibly fail-closed', async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(response(
+      { status: 'error', code: 429, message: 'rate limited' },
+      { status: 429, ok: false },
+    ))
+    const provider = createDefaultMarketDataProvider({
+      finnhubApiKey: '', twelveDataApiKey: 'key', fetchImpl, logger: { info: vi.fn(), warn: vi.fn() },
+    })
+
+    const result = await provider.getQuotes(watchlistSymbols)
+
+    expect(fetchImpl).toHaveBeenCalledOnce()
+    expect(result).toMatchObject({ ok: true, provider: 'mock', fallbackUsed: true, mock: true })
+    expect(result.data).toHaveLength(8)
+    expect(result.data.every(({ provenance }) => provenance.dataStatus === 'MOCK' && provenance.fallbackUsed === true)).toBe(true)
   })
 
   it('logs one sanitized quote failure for HTTP 429 and preserves fallback behavior', async () => {

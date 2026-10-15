@@ -26,6 +26,19 @@ describe('Credit Budget - 6 credits/minute enforcement', () => {
     return currentTime
   }
 
+  it('defaults to the verified eight-credit minute allowance', async () => {
+    const defaultBudget = createCreditBudget({
+      now,
+      sleep: async () => {
+        throw new Error('an eight-credit reservation must not wait')
+      },
+    })
+
+    const result = await defaultBudget.waitForCapacity(8)
+
+    expect(result).toMatchObject({ minuteLimit: 8, minuteUsed: 8 })
+  })
+
   it('consumes credits up to minute limit', () => {
     expect(budget.consume(1).ok).toBe(true)
     expect(budget.consume(1).ok).toBe(true)
