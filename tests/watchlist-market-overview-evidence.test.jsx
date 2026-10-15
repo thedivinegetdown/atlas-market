@@ -71,7 +71,9 @@ describe('Watchlist Market Overview evidence reuse', () => {
     expect(container.textContent).toContain('Provider: twelvedata')
     expect(container.textContent).toContain('STALE')
     expect(container.textContent).not.toContain('MOCK DATA')
-    expect(container.querySelector('#watchlist-market-overview')?.textContent).toContain('10/15/2026, 3:59:00 PM')
+    expect(container.querySelector('#watchlist-market-overview')?.textContent).toContain(
+      new Date(staleQuote.updatedAt).toLocaleString(),
+    )
   })
 
   it('preserves mock provenance instead of upgrading unavailable provider evidence', async () => {
