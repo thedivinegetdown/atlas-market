@@ -6,6 +6,14 @@ import {
   normalizeMarketSessionSymbol,
 } from './marketSessionState.js'
 
+function immutableSnapshot(snapshot) {
+  const quotes = snapshot.quotes.map((quote) => Object.freeze({
+    ...quote,
+    provenance: Object.freeze({ ...quote.provenance }),
+  }))
+  return Object.freeze({ ...snapshot, quotes: Object.freeze(quotes) })
+}
+
 export function MarketSessionProvider({ identityKey, children }) {
   const snapshotRef = useRef(null)
 
@@ -18,7 +26,7 @@ export function MarketSessionProvider({ identityKey, children }) {
   const writeWatchlist = useCallback(({ quotes, selectedSymbol } = {}) => {
     const snapshot = { identityKey, quotes, selectedSymbol: normalizeMarketSessionSymbol(selectedSymbol), capturedAt: new Date().toISOString() }
     if (!identityKey || !isReusableWatchlistSnapshot(snapshot)) return false
-    snapshotRef.current = snapshot
+    snapshotRef.current = immutableSnapshot(snapshot)
     return true
   }, [identityKey])
 
@@ -26,7 +34,7 @@ export function MarketSessionProvider({ identityKey, children }) {
     const snapshot = readWatchlist()
     const nextSymbol = normalizeMarketSessionSymbol(symbol)
     if (!snapshot || !snapshot.quotes.some((quote) => normalizeMarketSessionSymbol(quote.symbol) === nextSymbol)) return false
-    snapshotRef.current = { ...snapshot, selectedSymbol: nextSymbol }
+    snapshotRef.current = immutableSnapshot({ ...snapshot, selectedSymbol: nextSymbol })
     return true
   }, [readWatchlist])
 

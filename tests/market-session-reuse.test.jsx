@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom'
 import { workspaceApiClient } from '../src/api/workspaceApiClient.js'
 import { MarketSessionProvider } from '../src/state/MarketSessionProvider.jsx'
-import { createMarketSessionIdentityKey, useMarketSession } from '../src/state/marketSessionState.js'
+import { createMarketSessionIdentityKey, isReusableQuoteEvidence, useMarketSession } from '../src/state/marketSessionState.js'
 import WatchlistWorkspace from '../src/workspaces/Watchlist/WatchlistWorkspace.jsx'
 import ResearchWorkspace from '../src/workspaces/Research/ResearchWorkspace.jsx'
 
@@ -72,6 +72,7 @@ function SessionProbe({ snapshot, symbol = 'AAPL' }) {
   return <div>
     <button type="button" onClick={() => { session.writeWatchlist(snapshot); setRevision((value) => value + 1) }}>Store snapshot</button>
     <span data-testid="cached-quote">{session.readQuote(symbol)?.evidenceId ?? 'none'}</span>
+    <span data-testid="cached-status">{session.readQuote(symbol)?.provenance?.dataStatus ?? 'none'}</span>
   </div>
 }
 
@@ -171,7 +172,10 @@ describe('authenticated market session reuse', () => {
 
   it('restores Watchlist on Back with zero automatic batch refetches and retains manual Refresh', async () => {
     const aapl = quote()
-    workspaceApiClient.getWatchlist.mockResolvedValue({ quotes: [aapl] })
+    const refreshed = quote('AAPL', 'LIVE', 205)
+    workspaceApiClient.getWatchlist
+      .mockResolvedValueOnce({ quotes: [aapl] })
+      .mockResolvedValueOnce({ quotes: [refreshed] })
     workspaceApiClient.getMarketOverview.mockResolvedValue(historyOverview())
     render(<TestApp />)
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Research AAPL"]')).toBeTruthy())
@@ -185,6 +189,8 @@ describe('authenticated market session reuse', () => {
 
     await click('[aria-label="Refresh watchlist"]')
     await vi.waitFor(() => expect(workspaceApiClient.getWatchlist).toHaveBeenCalledTimes(2))
+    expect(container.textContent).toContain('$205.00')
+    expect(container.querySelector('[aria-label="Market data status LIVE"]')).toBeTruthy()
   })
 
   it('hard reload loses the in-memory snapshot and loads Watchlist normally', async () => {
@@ -263,5 +269,33 @@ describe('authenticated market session reuse', () => {
     await vi.waitFor(() => expect(container.textContent).toContain('watchlist refresh failed'))
     expect(container.querySelector('[aria-label="Research AAPL"]')).toBeTruthy()
     expect(container.querySelector('[aria-label="Market data status STALE"]')).toBeTruthy()
+  })
+
+  it('rejects malformed prices, timestamps, providers, and contradictory provenance', () => {
+    const provenance = quote().provenance
+    for (const price of [null, '', 0, -1, Number.NaN]) {
+      expect(isReusableQuoteEvidence({ ...quote(), price }, 'AAPL')).toBe(false)
+    }
+    expect(isReusableQuoteEvidence({ ...quote(), provenance: { ...provenance, observedAt: 'not-a-timestamp' } }, 'AAPL')).toBe(false)
+    expect(isReusableQuoteEvidence({ ...quote(), provenance: { ...provenance, observedAt: undefined }, updatedAt: NOW }, 'AAPL')).toBe(false)
+    expect(isReusableQuoteEvidence({ ...quote(), provenance: { ...provenance, provider: 'unknown' } }, 'AAPL')).toBe(false)
+    expect(isReusableQuoteEvidence({ ...quote(), provenance: { ...provenance, dataStatus: 'LIVE', provider: 'mock', mock: true } }, 'AAPL')).toBe(false)
+    expect(isReusableQuoteEvidence({ ...quote(), provenance: { ...provenance, dataStatus: 'MOCK', mock: false } }, 'AAPL')).toBe(false)
+    expect(isReusableQuoteEvidence({ ...quote(), provenance: { ...provenance, dataStatus: 'LIVE', fallbackUsed: true } }, 'AAPL')).toBe(false)
+  })
+
+  it('stores an immutable copy so later source mutation cannot upgrade provenance', async () => {
+    const original = quote('AAPL', 'MOCK')
+    const snapshot = { quotes: [original], selectedSymbol: 'AAPL' }
+    render(<MarketSessionProvider identityKey="org-a:user-a"><SessionProbe snapshot={snapshot} /></MarketSessionProvider>)
+    await click('button')
+    expect(container.querySelector('[data-testid="cached-status"]').textContent).toBe('MOCK')
+
+    original.price = 999
+    original.provenance = { ...original.provenance, provider: 'twelvedata', dataStatus: 'LIVE', mock: false, fallbackUsed: false }
+    act(() => root.render(<MarketSessionProvider identityKey="org-a:user-a"><SessionProbe snapshot={snapshot} /></MarketSessionProvider>))
+
+    expect(container.querySelector('[data-testid="cached-status"]').textContent).toBe('MOCK')
+    expect(container.querySelector('[data-testid="cached-quote"]').textContent).toBe('AAPL-MOCK-evidence')
   })
 })

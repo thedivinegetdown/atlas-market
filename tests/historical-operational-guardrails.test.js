@@ -27,11 +27,11 @@ describe('historical data operational guardrails', () => {
     expect(clientApi).not.toMatch(/TWELVEDATA_API_KEY|apikey|time_series/i)
   })
 
-  it('rejects unauthenticated public access before any provider-backed service call', async () => {
+  it('rejects unauthenticated skipQuote access before any provider-backed service call', async () => {
     const service = { getMarketOverview: vi.fn() }
     const response = parse(await testHandler(service)({
       httpMethod: 'GET',
-      queryStringParameters: { symbol: 'SPY', timeframe: '1D' },
+      queryStringParameters: { symbol: 'SPY', timeframe: '1D', skipQuote: 'true' },
       headers: {},
     }))
     expect(response.statusCode).toBe(401)
@@ -93,6 +93,11 @@ describe('historical data operational guardrails', () => {
       queryStringParameters: { symbol: 'AAPL', skipQuote: 'sometimes' },
       headers: { authorization: 'Bearer private-session' },
     }))
+    const injectedQuote = parse(await handler({
+      httpMethod: 'GET',
+      queryStringParameters: { symbol: 'AAPL', skipQuote: 'true', quote: JSON.stringify({ price: 999, dataStatus: 'LIVE' }) },
+      headers: { authorization: 'Bearer private-session' },
+    }))
 
     expect(response.statusCode).toBe(200)
     expect(service.getMarketOverview).toHaveBeenCalledWith('AAPL', {
@@ -103,6 +108,9 @@ describe('historical data operational guardrails', () => {
     })
     expect(invalid.statusCode).toBe(400)
     expect(invalid.json.error.code).toBe('invalid_quote_mode')
+    expect(injectedQuote.statusCode).toBe(400)
+    expect(injectedQuote.json.error.code).toBe('unsupported_history_parameters')
+    expect(service.getMarketOverview).toHaveBeenCalledOnce()
   })
 
   it('builds research history without a provider quote acquisition when carried evidence is valid', async () => {
@@ -124,6 +132,7 @@ describe('historical data operational guardrails', () => {
     expect(marketDataService.getQuote).not.toHaveBeenCalled()
     expect(indicatorPipeline.build).toHaveBeenCalledOnce()
     expect(result.quote).toBeNull()
+    expect(result.regime).toBeNull()
     expect(result.research.history.candles).toHaveLength(1)
   })
 })
