@@ -32,6 +32,16 @@ function timestamp(value) {
   return new Date(value).toLocaleString()
 }
 
+function dailySessionDate(value) {
+  if (!value || Number.isNaN(Date.parse(value))) return 'Unavailable'
+  return new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(value))
+}
+
 function chartPath(values, width, top, height, minimum, maximum) {
   const span = Math.max(maximum - minimum, 0.0001)
   return values.map((value, index) => {
@@ -146,7 +156,7 @@ export default function SymbolResearchWorkspace({
       </div>
       {history?.historyCompleteness === 'TRUNCATED' ? <p className="research-evidence-note">Partial history: {history.candleCount} of {history.requestedCount} requested daily candles.</p> : null}
       <PriceVolumeChart candles={candles} timeframe={timeframe} />
-      <p className="research-evidence-note">Volume is displayed beneath the close-price line. Historical as of {timestamp(history?.asOf)}.</p>
+      <p className="research-evidence-note">Volume is displayed beneath the close-price line. Historical session through {dailySessionDate(history?.asOf)}.</p>
     </WorkspacePanel>
 
     <WorkspacePanel id="symbol-research-trend" className="symbol-research-panel" title="Trend & volatility" subtitle="Deterministic daily indicators">
@@ -158,7 +168,7 @@ export default function SymbolResearchWorkspace({
         <article className={`research-metric ${indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? '' : 'is-insufficient'}`}><span>ATR % of close</span><strong>{indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? percent(indicators.atrPct) : 'INSUFFICIENT'}</strong><small>{indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? 'Wilder ATR14' : 'Requires ATR and latest close'}</small></article>
         <article className={`research-metric ${indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? '' : 'is-insufficient'}`}><span>20-day relative strength vs SPY</span><strong>{indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? percent(indicators.relativeStrengthPct) : 'INSUFFICIENT'}</strong><small>{indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? 'Aligned return difference' : 'Requires aligned symbol and SPY history'}</small></article>
       </div>
-      <p className="research-evidence-note">Indicator evidence as of {timestamp(overview?.research?.indicators?.asOf)}. Missing inputs remain insufficient and are not inferred from the quote.</p>
+      <p className="research-evidence-note">Indicator inputs through session {dailySessionDate(overview?.research?.indicators?.asOf)}. Missing inputs remain insufficient and are not inferred from the quote.</p>
     </WorkspacePanel>
 
     <WorkspacePanel id="symbol-research-levels" className="symbol-research-panel" title="Support & resistance" subtitle={timeframe}>

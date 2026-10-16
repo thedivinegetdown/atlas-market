@@ -119,6 +119,17 @@ describe('mobile symbol research workspace', () => {
     expect(container.querySelector('form')).toBeNull()
   })
 
+  it('renders date-only daily evidence as a session date without a local-time day shift', () => {
+    const history = candles()
+    history[history.length - 1] = { ...history.at(-1), timestamp: '2026-10-16T00:00:00.000Z' }
+
+    render(<SymbolResearchWorkspace symbol="AAPL" initialOverview={overview(history)} initialScanner={scanner} autoLoad={false} />)
+
+    expect(container.textContent).toContain('Historical session through Oct 16, 2026')
+    expect(container.textContent).toContain('Indicator inputs through session Oct 16, 2026')
+    expect(container.textContent).not.toContain('Oct 15, 2026, 8:00:00 PM')
+  })
+
   it('switches 1M/3M/1Y locally over the trusted supplied candle set', () => {
     render(<SymbolResearchWorkspace symbol="AAPL" initialOverview={overview()} initialScanner={scanner} autoLoad={false} />)
     const oneMonth = container.querySelector('button[aria-pressed="false"]')

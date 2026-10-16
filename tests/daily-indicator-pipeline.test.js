@@ -138,6 +138,38 @@ describe('daily indicator bundle and MI.2 integration', () => {
     expect(result.inputCoverage.stale).toEqual([])
   })
 
+  it('uses the October 16 session candle as the indicator cutoff after the session', () => {
+    const sessionCandles = Array.from({ length: 20 }, (_, index) => ({
+      symbol: 'AAPL',
+      timestamp: new Date(Date.UTC(2026, 9, 16 - (19 - index))).toISOString().slice(0, 10),
+      open: 100 + index,
+      high: 102 + index,
+      low: 99 + index,
+      close: 101 + index,
+      volume: 1000 + index,
+      provider: 'twelvedata',
+      completed: true,
+    }))
+    const bundle = buildDailyIndicatorBundle({
+      symbol: 'AAPL',
+      source: 'twelvedata',
+      candles: sessionCandles,
+      benchmarkSymbol: 'SPY',
+      benchmarkCandles: sessionCandles.map((candle) => ({ ...candle, symbol: 'SPY' })),
+      marketOpen: false,
+    }, {
+      calculatedAt: '2026-10-16T20:05:00.000Z',
+      now: '2026-10-16T20:05:00.000Z',
+      includeHistory: true,
+    })
+
+    expect(bundle.asOf).toBe('2026-10-16T00:00:00.000Z')
+    expect(bundle.history.asOf).toBe('2026-10-16T00:00:00.000Z')
+    expect(bundle.history.candles.at(-1)).toMatchObject({ close: 120, completed: true })
+    expect(bundle.indicators.price).toBe(120)
+    expect(bundle.indicators.shortMovingAverage).toBe(110.5)
+  })
+
   it('isolates missing indicators when history is insufficient or malformed', () => {
     const malformed = [...candles(20), { ...candles(1)[0], timestamp: 'bad' }]
     const bundle = buildDailyIndicatorBundle({ symbol: 'AAPL', candles: malformed, benchmarkCandles: [] }, { calculatedAt: NOW, now: NOW })
