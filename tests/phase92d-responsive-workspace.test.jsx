@@ -145,4 +145,10 @@ describe('Phase 92D responsive workspace shell', () => {
     expect(css).toContain('transition-duration: 0.01ms')
     expect(css).toContain('.workspace-route-content')
   })
+
+  it('keeps Watchlist actions inside their dashboard and workspace panels', () => {
+    const css = readFileSync('src/App.css', 'utf8')
+
+    expect(css).toMatch(/#top-watchlist \.panel-actions,\s*#watchlist \.panel-actions\s*\{[^}]*flex-wrap:\s*wrap/)
+  })
 })
