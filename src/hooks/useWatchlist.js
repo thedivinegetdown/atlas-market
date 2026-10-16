@@ -9,6 +9,23 @@ function getErrorMessage(error) {
   return error instanceof Error ? error.message : 'Unable to load market data'
 }
 
+function getMockOnlyMessage(response, quotes) {
+  if (!quotes.length || !quotes.every((quote) => quote?.provenance?.dataStatus === 'MOCK')) return null
+  const issue = response?.marketDataIssue
+  const base = 'Live Watchlist quotes were not acquired. Mock-only fallback is shown and is not current market evidence.'
+  if (!issue) return `${base} Provider failure details are unavailable.`
+  if (issue.code === 'provider_rate_limited') {
+    return issue.quotaScope === 'daily'
+      ? `${base} Twelve Data reported a daily quota limit.`
+      : `${base} Twelve Data reported provider rate limiting.`
+  }
+  if (issue.classification === 'AUTHENTICATION') return `${base} Twelve Data authentication was unavailable.`
+  if (issue.classification === 'TIMEOUT') return `${base} The Twelve Data request timed out.`
+  if (issue.classification === 'NETWORK') return `${base} The Twelve Data request failed in transport.`
+  if (issue.classification === 'PROVIDER_ERROR') return `${base} Twelve Data returned an unusable provider response.`
+  return `${base} Provider failure classification: unavailable.`
+}
+
 export function useWatchlist({
   initialQuotes = emptyQuotes,
   initialSymbol = defaultSymbols[0],
@@ -33,6 +50,7 @@ export function useWatchlist({
         ? selectedSymbol
         : nextQuotes[0]?.symbol ?? selectedSymbol
       setQuotes(nextQuotes)
+      setError(getMockOnlyMessage(response, nextQuotes))
       if (nextSelectedSymbol !== selectedSymbol) setSelectedSymbol(nextSelectedSymbol)
       onSnapshot?.({ quotes: nextQuotes, selectedSymbol: nextSelectedSymbol })
 

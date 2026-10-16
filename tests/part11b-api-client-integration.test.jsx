@@ -158,6 +158,29 @@ describe('Part 11B workspace API client integration', () => {
     expect(container.textContent).toContain('workspace unavailable')
   })
 
+  it('labels a successful mock-only response as failed live acquisition with its safe cause', async () => {
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      async json() {
+        return {
+          ok: true,
+          data: {
+            paperTrading: true,
+            quotes: [{ symbol: 'SPY', price: 100, provenance: { provider: 'mock', dataStatus: 'MOCK', mock: true, fallbackUsed: true } }],
+            marketDataIssue: { provider: 'twelvedata', code: 'provider_rate_limited', classification: 'RATE_LIMITED', quotaScope: 'minute' },
+          },
+        }
+      },
+    })
+
+    renderWithRoot(<HookProbe />)
+    await flushApi()
+
+    expect(container.textContent).toContain('Live Watchlist quotes were not acquired')
+    expect(container.textContent).toContain('provider rate limiting')
+    expect(container.textContent).toContain('SPY')
+  })
+
   it('renders workspace panels with API-backed data', async () => {
     renderWithRoot(<App />)
     await flushApi()

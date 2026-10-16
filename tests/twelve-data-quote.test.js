@@ -80,20 +80,40 @@ describe('Twelve Data production quote compatibility', () => {
   })
 
   it('keeps an unavailable eight-symbol Watchlist batch visibly fail-closed', async () => {
+    const logger = { info: vi.fn(), warn: vi.fn() }
     const fetchImpl = vi.fn().mockResolvedValue(response(
       { status: 'error', code: 429, message: 'rate limited' },
-      { status: 429, ok: false },
+      { status: 429, ok: false, headers: { 'retry-after': '30', 'x-ratelimit-scope': 'minute' } },
     ))
     const provider = createDefaultMarketDataProvider({
-      finnhubApiKey: '', twelveDataApiKey: 'key', fetchImpl, logger: { info: vi.fn(), warn: vi.fn() },
+      finnhubApiKey: '', twelveDataApiKey: 'key', fetchImpl, logger,
     })
 
     const result = await provider.getQuotes(watchlistSymbols)
+    const failure = logger.warn.mock.calls.find(([event]) => event === 'twelve data provider request failed')?.[1]
 
     expect(fetchImpl).toHaveBeenCalledOnce()
-    expect(result).toMatchObject({ ok: true, provider: 'mock', fallbackUsed: true, mock: true })
+    expect(result).toMatchObject({
+      ok: true,
+      provider: 'mock',
+      fallbackUsed: true,
+      mock: true,
+      marketDataIssue: {
+        provider: 'twelvedata',
+        operation: 'quote_batch',
+        code: 'provider_rate_limited',
+        classification: 'RATE_LIMITED',
+        httpStatus: 429,
+        quotaScope: 'minute',
+        retryAfterSeconds: 30,
+        category: 'RATE_LIMIT',
+      },
+    })
     expect(result.data).toHaveLength(8)
     expect(result.data.every(({ provenance }) => provenance.dataStatus === 'MOCK' && provenance.fallbackUsed === true)).toBe(true)
+    expect(result.data.every(({ marketDataIssue }) => marketDataIssue?.code === 'provider_rate_limited')).toBe(true)
+    expect(failure).toMatchObject({ operation: 'quote_batch', normalizedErrorCode: 'provider_rate_limited', quotaScope: 'minute' })
+    expect(JSON.stringify({ result, failure })).not.toMatch(/\bkey\b|apikey|authorization/i)
   })
 
   it('logs one sanitized quote failure for HTTP 429 and preserves fallback behavior', async () => {

@@ -9,6 +9,7 @@ import { handler as journalSummaryHandler } from '../netlify/functions/journal-s
 import { handler as ordersHandler } from '../netlify/functions/orders.js'
 import { handler as positionsHandler } from '../netlify/functions/positions.js'
 import { createApiHandler } from '../netlify/functions/_shared/api.js'
+import { createWorkspaceDataService } from '../lib/workspace/workspaceDataService.js'
 import { createJournalRepository } from '../lib/repositories/journalRepository.js'
 import { createOrderRepository } from '../lib/repositories/orderRepository.js'
 import { createPortfolioRepository } from '../lib/repositories/portfolioRepository.js'
@@ -43,6 +44,23 @@ describe('Part 11A Netlify workspace API', () => {
       },
     })
     expect(response.json.data.quotes.length).toBeGreaterThan(0)
+  })
+
+  it('returns the safe provider cause for a mock-only Watchlist fallback', async () => {
+    const marketDataIssue = { provider: 'twelvedata', operation: 'quote_batch', code: 'provider_rate_limited', classification: 'RATE_LIMITED', quotaScope: 'minute' }
+    const service = createWorkspaceDataService({
+      marketDataService: {
+        async getWatchlistQuotes() {
+          return [{ symbol: 'SPY', price: 100, marketDataIssue, provenance: { provider: 'mock', dataStatus: 'MOCK', mock: true, fallbackUsed: true } }]
+        },
+      },
+    })
+
+    await expect(service.getWatchlist()).resolves.toMatchObject({
+      paperTrading: true,
+      marketDataIssue,
+      quotes: [{ symbol: 'SPY', marketDataIssue }],
+    })
   })
 
   it('returns market overview, signals, and risk summary by symbol', async () => {
