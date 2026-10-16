@@ -146,9 +146,10 @@ describe('Phase 92D responsive workspace shell', () => {
     expect(css).toContain('.workspace-route-content')
   })
 
-  it('keeps Watchlist actions inside their dashboard and workspace panels', () => {
+  it('keeps Watchlist actions and wide tables contained in their component', () => {
     const css = readFileSync('src/App.css', 'utf8')
 
-    expect(css).toMatch(/#top-watchlist \.panel-actions,\s*#watchlist \.panel-actions\s*\{[^}]*flex-wrap:\s*wrap/)
+    expect(css).toMatch(/\.watchlist-panel \.panel-actions\s*\{[^}]*flex-wrap:\s*wrap/)
+    expect(css).toMatch(/\.watchlist-panel \.table-card\s*\{[^}]*min-width:\s*0[^}]*width:\s*100%[^}]*overflow-x:\s*auto/)
   })
 })

@@ -63,6 +63,7 @@ describe('Part 10B watchlist and market overview', () => {
   it('renders watchlist market columns and signal badges', () => {
     renderWithRoot(<WatchlistPanel quotes={quotes} selectedSymbol="MSFT" />)
 
+    expect(container.querySelector('.watchlist-panel > .table-card')).toBeTruthy()
     expect(container.textContent).toContain('Last price')
     expect(container.textContent).toContain('Daily $')
     expect(container.textContent).toContain('Trend')

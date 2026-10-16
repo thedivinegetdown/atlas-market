@@ -118,7 +118,7 @@ export function WatchlistPanel({
   }, [displayQuotes])
 
   return (
-    <div className="panel-stack">
+    <div className="panel-stack watchlist-panel">
       <div className="panel-actions">
         <div>
           <h3>Watchlist</h3>
