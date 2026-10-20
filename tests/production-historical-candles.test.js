@@ -190,7 +190,7 @@ describe('production historical candle integration', () => {
     expect(result.candles.every((candle) => candle.source === 'fixture')).toBe(true)
   })
 
-  it('supplies genuine history to MI.3 without trading side effects', async () => {
+  it('withholds MI.3 indicators when genuine history has no independent finality', async () => {
     const historical = await provider(vi.fn().mockResolvedValue(response({ status: 'ok', values: values() }))).getCandles('SPY', { interval: '1d' })
     const marketDataService = {
       getCandles: vi.fn().mockResolvedValue(historical),
@@ -200,14 +200,11 @@ describe('production historical candle integration', () => {
       { symbol: 'SPY', timeframe: '1D' },
       { now: '2026-07-30T22:00:00.000Z', calculatedAt: '2026-07-30T22:00:00.000Z' },
     )
-    expect(bundle.indicators).toMatchObject({
-      shortMovingAverage: expect.any(Number),
-      mediumMovingAverage: expect.any(Number),
-      longMovingAverage: expect.any(Number),
-      adx: expect.any(Number),
-      atrPct: expect.any(Number),
-      rsi: expect.any(Number),
-    })
+    expect(bundle.indicators).toEqual({})
+    expect(bundle.coverage.missing).toEqual(expect.arrayContaining([
+      'shortMovingAverage', 'mediumMovingAverage', 'longMovingAverage', 'adx', 'atrPct', 'rsi',
+    ]))
+    expect(bundle.coverage.completion.status).toBe('UNKNOWN')
     expect(bundle.paperTrading).toBe(true)
     expect(bundle.advisoryOnly).toBe(true)
   })

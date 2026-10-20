@@ -35,7 +35,7 @@ function service(results) {
 const OPTIONS = { calculatedAt: AS_OF, now: AS_OF, evidenceCheckedAt: AS_OF }
 
 describe('governed daily candle reuse', () => {
-  it('reuses five qualified histories and SPY benchmark without changing indicator outputs', async () => {
+  it('reuses five acquired histories without upgrading their unqualified finality', async () => {
     const results = Object.fromEntries(GOVERNED_UNIVERSE.map(symbol => [symbol, result(symbol)]))
     const data = service(results)
     const pipeline = createDailyIndicatorPipeline({ marketDataService: data })
@@ -64,7 +64,9 @@ describe('governed daily candle reuse', () => {
       expect(packet.symbols[symbol].candles).toEqual(results[symbol].data)
       expect(packet.symbols[symbol].provenance.candles.provider).toBe('twelvedata')
     }
-    expect(packet.symbols.QQQ.indicatorProvenance.relativeStrengthPct.benchmark).toBe('SPY')
+    expect(packet.symbols.QQQ.indicatorCoverage.missing).toContain('relativeStrengthPct')
+    expect(packet.symbols.QQQ.indicatorCoverage.completion.status).toBe('UNKNOWN')
+    expect(packet.symbols.QQQ.indicators).toEqual({})
     expect(Object.keys(packet.symbols)).toEqual(GOVERNED_UNIVERSE)
   })
 

@@ -36,11 +36,13 @@ function candles(symbol = 'AAPL', count = 260) {
 
 function historyOverview(symbol = 'AAPL', responseQuote = null) {
   const history = candles(symbol)
+  // Supplied-response rendering fixture only; this does not qualify a provider.
+  const completion = { status: 'CONFIRMED_COMPLETED' }
   return {
     quote: responseQuote,
     research: {
-      history: { candles: history, candleCount: 260, requestedCount: 260, historyCompleteness: 'COMPLETE', provider: 'twelvedata', asOf: history.at(-1).timestamp },
-      indicators: { asOf: history.at(-1).timestamp, values: { shortMovingAverage: 199, mediumMovingAverage: 194, longMovingAverage: 178, atr: 4.2, atrPct: 2.1, relativeStrengthPct: 3.4 } },
+      history: { candles: history, candleCount: 260, requestedCount: 260, historyCompleteness: 'COMPLETE', provider: 'twelvedata', asOf: history.at(-1).timestamp, completion },
+      indicators: { asOf: history.at(-1).timestamp, coverage: { completion }, values: { shortMovingAverage: 199, mediumMovingAverage: 194, longMovingAverage: 178, atr: 4.2, atrPct: 2.1, relativeStrengthPct: 3.4 } },
     },
   }
 }

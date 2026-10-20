@@ -40,11 +40,13 @@ function overview(history = candles(), values = {
   atrPct: 2.1,
   relativeStrengthPct: 3.4,
 }) {
+  // Supplied-response rendering fixture only; this does not qualify a provider.
+  const completion = { status: 'CONFIRMED_COMPLETED' }
   return {
     quote,
     research: {
-      history: { candles: history, candleCount: history.length, requestedCount: 260, historyCompleteness: history.length === 260 ? 'COMPLETE' : 'TRUNCATED', provider: 'twelvedata', asOf: history.at(-1)?.timestamp },
-      indicators: { asOf: history.at(-1)?.timestamp, values, coverage: { available: Object.keys(values), missing: [] } },
+      history: { candles: history, candleCount: history.length, requestedCount: 260, historyCompleteness: history.length === 260 ? 'COMPLETE' : 'TRUNCATED', provider: 'twelvedata', asOf: history.at(-1)?.timestamp, completion },
+      indicators: { asOf: history.at(-1)?.timestamp, values, coverage: { available: Object.keys(values), missing: [], completion } },
     },
   }
 }
@@ -85,6 +87,32 @@ afterEach(() => {
 })
 
 describe('mobile symbol research workspace', () => {
+  it.each(['UNKNOWN', 'CONFIRMED_INCOMPLETE', undefined])('withholds unqualified/legacy history and levels for %s while preserving LIVE quotes', (status) => {
+    const data = overview()
+    data.quote = { ...quote, provenance: { ...quote.provenance, dataStatus: 'LIVE' } }
+    data.research.history.completion = status ? { status } : undefined
+    data.research.indicators.coverage.completion = status ? { status } : undefined
+    render(<SymbolResearchWorkspace symbol="AAPL" initialOverview={data} autoLoad={false} />)
+
+    expect(container.querySelector('[aria-label="Market data status LIVE"]')).not.toBeNull()
+    expect(container.querySelector('#symbol-research-quote').textContent).toContain('$201.80')
+    expect(container.textContent).toContain('require independently qualified completion evidence')
+    expect(container.textContent).toContain(`Daily session completion is ${status ?? 'UNKNOWN'}.`)
+    expect(container.querySelector('.research-chart')).toBeNull()
+    expect(container.querySelector('#symbol-research-trend').textContent).not.toContain('$199.20')
+    expect(container.querySelector('#symbol-research-levels').textContent).toContain('INSUFFICIENT')
+    expect(container.textContent).toContain('Historical session through Unavailable')
+    expect(container.textContent).toContain('Indicator inputs through session Unavailable')
+  })
+
+  it('withholds indicators when their cutoff contradicts the supplied history cutoff', () => {
+    const data = overview()
+    data.research.indicators.asOf = '2026-10-20T00:00:00.000Z'
+    render(<SymbolResearchWorkspace symbol="AAPL" initialOverview={data} autoLoad={false} />)
+    expect(container.querySelector('#symbol-research-trend').textContent).not.toContain('$199.20')
+    expect(container.textContent).toContain('Indicator inputs through session Unavailable')
+  })
+
   it('opens the selected Watchlist symbol in one tap with route context preserved', async () => {
     workspaceApiClient.getWatchlist.mockResolvedValue({ quotes: [quote] })
     function Destination() { return <div data-testid="destination">Research {useParams().symbol}</div> }

@@ -128,10 +128,16 @@ export default function SymbolResearchWorkspace({
   const overview = research.overview?.quote?.symbol === symbol ? research.overview : null
   const quote = overview?.quote ?? null
   const history = overview?.research?.history
-  const allCandles = Array.isArray(history?.candles) ? history.candles : []
+  const historyCompletion = ['CONFIRMED_COMPLETED', 'CONFIRMED_INCOMPLETE'].includes(history?.completion?.status)
+    ? history.completion.status : 'UNKNOWN'
+  const historyCompleted = historyCompletion === 'CONFIRMED_COMPLETED'
+  const indicatorsCompleted = historyCompleted
+    && overview?.research?.indicators?.coverage?.completion?.status === 'CONFIRMED_COMPLETED'
+    && history?.asOf === overview?.research?.indicators?.asOf
+  const allCandles = historyCompleted && Array.isArray(history?.candles) ? history.candles : []
   const selected = TIMEFRAMES.find((item) => item.id === timeframe) ?? TIMEFRAMES[1]
   const candles = allCandles.slice(-selected.candles)
-  const indicators = overview?.research?.indicators?.values ?? {}
+  const indicators = indicatorsCompleted ? overview?.research?.indicators?.values ?? {} : {}
   const levels = useMemo(() => calculateTechnicalLevels(candles), [candles])
   const quoteStatus = quote?.provenance?.dataStatus ?? 'INSUFFICIENT'
   const changeTone = Number(quote?.change ?? 0) >= 0 ? 'positive' : 'negative'
@@ -151,12 +157,13 @@ export default function SymbolResearchWorkspace({
     </WorkspacePanel>
 
     <WorkspacePanel id="symbol-research-chart" className="symbol-research-panel" title="Price & volume history" subtitle={`${history?.provider ?? 'unknown'} daily candles`}>
+      {!historyCompleted ? <p className="research-insufficient" role="status">Daily session completion is {historyCompletion}. History, indicators, and technical levels require independently qualified completion evidence. Intraday quotes remain separate.</p> : null}
       <div className="research-timeframes" role="group" aria-label="Historical timeframe">
         {TIMEFRAMES.map((item) => <button type="button" aria-pressed={timeframe === item.id} key={item.id} onClick={() => setTimeframe(item.id)}>{item.id}<span>{item.label}</span></button>)}
       </div>
       {history?.historyCompleteness === 'TRUNCATED' ? <p className="research-evidence-note">Partial history: {history.candleCount} of {history.requestedCount} requested daily candles.</p> : null}
       <PriceVolumeChart candles={candles} timeframe={timeframe} />
-      <p className="research-evidence-note">Volume is displayed beneath the close-price line. Historical session through {dailySessionDate(history?.asOf)}.</p>
+      <p className="research-evidence-note">Volume is displayed beneath the close-price line. Historical session through {dailySessionDate(historyCompleted ? history?.asOf : null)}.</p>
     </WorkspacePanel>
 
     <WorkspacePanel id="symbol-research-trend" className="symbol-research-panel" title="Trend & volatility" subtitle="Deterministic daily indicators">
@@ -168,7 +175,7 @@ export default function SymbolResearchWorkspace({
         <article className={`research-metric ${indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? '' : 'is-insufficient'}`}><span>ATR % of close</span><strong>{indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? percent(indicators.atrPct) : 'INSUFFICIENT'}</strong><small>{indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? 'Wilder ATR14' : 'Requires ATR and latest close'}</small></article>
         <article className={`research-metric ${indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? '' : 'is-insufficient'}`}><span>20-day relative strength vs SPY</span><strong>{indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? percent(indicators.relativeStrengthPct) : 'INSUFFICIENT'}</strong><small>{indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? 'Aligned return difference' : 'Requires aligned symbol and SPY history'}</small></article>
       </div>
-      <p className="research-evidence-note">Indicator inputs through session {dailySessionDate(overview?.research?.indicators?.asOf)}. Missing inputs remain insufficient and are not inferred from the quote.</p>
+      <p className="research-evidence-note">Indicator inputs through session {dailySessionDate(indicatorsCompleted ? overview?.research?.indicators?.asOf : null)}. Missing inputs remain insufficient and are not inferred from the quote.</p>
     </WorkspacePanel>
 
     <WorkspacePanel id="symbol-research-levels" className="symbol-research-panel" title="Support & resistance" subtitle={timeframe}>

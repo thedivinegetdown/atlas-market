@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildVolatilityExpansionSignal } from '../lib/strategies/volatility/volatilityExpansionSignal.js'
+
+// Isolate strategy arithmetic with normalized fixtures. The unmocked production
+// finality gate is covered by daily-candle-finality.test.js.
+vi.hoisted(() => vi.resetModules())
+vi.mock('../lib/market/indicators/normalizeDailyCandles.js', async () => {
+  const { normalizeHistoricalDailyCandles } = await import('../lib/market/historicalCandleNormalizer.js')
+  return { normalizeDailyCandles: (candles, options) => normalizeHistoricalDailyCandles(candles, { symbol: options.symbol, minimumCount: 0 }) }
+})
 
 const candles = Array.from({ length: 120 }, (_, index) => { const range = index < 116 ? 5 : 1; const close = 100 + index * 0.1; return { timestamp: new Date(Date.UTC(2026, 0, index + 1)).toISOString(), open: close, high: close + range, low: close - range, close, volume: 1000, completed: true } })
 const indicators = { shortMovingAverage: 115, mediumMovingAverage: 110, longMovingAverage: 100, atr: 2, atrPct: 2, atrPercentile: 30, adx: 20, rsi: 55, relativeVolume: 1.2, relativeStrengthPct: 1 }

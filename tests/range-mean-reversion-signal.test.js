@@ -1,5 +1,13 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { buildRangeMeanReversionSignal } from '../lib/strategies/range/rangeMeanReversionSignal.js'
+
+// Isolate strategy arithmetic with normalized fixtures. The unmocked production
+// finality gate is covered by daily-candle-finality.test.js.
+vi.hoisted(() => vi.resetModules())
+vi.mock('../lib/market/indicators/normalizeDailyCandles.js', async () => {
+  const { normalizeHistoricalDailyCandles } = await import('../lib/market/historicalCandleNormalizer.js')
+  return { normalizeDailyCandles: (candles, options) => normalizeHistoricalDailyCandles(candles, { symbol: options.symbol, minimumCount: 0 }) }
+})
 
 const candles = Array.from({ length: 20 }, (_, index) => ({ timestamp: `2026-07-${String(index + 1).padStart(2, '0')}T00:00:00.000Z`, open: 100, high: 105, low: 90 + index / 10, close: 100, volume: 1000, completed: true }))
 const indicators = { shortMovingAverage: 110, atr: 10, adx: 19.9, rsi: 30, relativeVolume: 1.5, relativeStrengthPct: -0.1 }

@@ -2,8 +2,9 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   buildDailyIndicatorBundle, calculateAdx, calculateAtr, calculateRelativeStrength,
   calculateRelativeVolume, calculateRsi, calculateSma, createDailyIndicatorPipeline,
-  normalizeDailyCandles,
+  normalizeDailyCandles, calculateAtrPercentileSeries, calculateNormalizedSlope, calculateSmaSeries,
 } from '../lib/market/indicators/index.js'
+import { normalizeHistoricalDailyCandles } from '../lib/market/historicalCandleNormalizer.js'
 import { createMarketRegimeOrchestrator } from '../lib/market/regime/marketRegimeOrchestrator.js'
 import { createWorkspaceDataService } from '../lib/workspace/workspaceDataService.js'
 
@@ -31,7 +32,7 @@ describe('daily candle normalization', () => {
     const latest = candles(1)[0]
     const prior = { ...latest, timestamp: new Date(Date.parse(latest.timestamp) - 86400000).toISOString(), close: 99, open: 98.5, high: 101, low: 97 }
     const input = [prior, latest, { ...latest, close: 101, high: 103 }]
-    const result = normalizeDailyCandles(input, { symbol: 'SPY', now: NOW })
+    const result = normalizeHistoricalDailyCandles(input, { symbol: 'SPY' })
     expect(result.candles.map((candle) => candle.close)).toEqual([99, 101])
     expect(result.duplicateCount).toBe(1)
   })
@@ -51,7 +52,7 @@ describe('daily candle normalization', () => {
     const explicit = { ...candles(1)[0], timestamp: '2026-07-29T20:00:00.000Z', completed: false }
     const result = normalizeDailyCandles([explicit, current], { symbol: 'SPY', now: NOW, marketOpen: true })
     expect(result.candles).toEqual([])
-    expect(result.invalid.every((entry) => entry.reason === 'incomplete_current_candle')).toBe(true)
+    expect(result.invalid.every((entry) => entry.completionStatus === 'UNKNOWN')).toBe(true)
   })
 })
 
@@ -65,18 +66,17 @@ describe('deterministic daily calculations', () => {
     expect(calculateSma([1, 2, 3], 20)).toBeNull()
   })
 
-  it('calculates Wilder ATR 14 and ATR percentage through the bundle', () => {
+  it('preserves ATR arithmetic while withholding an unqualified bundle', () => {
     expect(calculateAtr(candles(30), 14).value).toBe(4)
     const bundle = buildDailyIndicatorBundle({ symbol: 'SPY', candles: candles(30), benchmarkCandles: candles(30) }, { calculatedAt: NOW, now: NOW })
-    expect(bundle.indicators.atr).toBe(4)
-    expect(bundle.indicators.atrPct).toBeCloseTo((4 / 129) * 100, 5)
+    expect(calculateAtr(candles(14), 14).value).toBeNull()
+    expect(bundle.indicators).toEqual({})
+    expect(bundle.coverage.missing).toEqual(expect.arrayContaining(['atr', 'atrPct']))
   })
 
   it('calculates ATR percentile only with the configured ATR sample', () => {
-    const sufficient = buildDailyIndicatorBundle({ symbol: 'SPY', candles: candles(260), benchmarkCandles: candles(260) }, { calculatedAt: NOW, now: NOW })
-    const insufficient = buildDailyIndicatorBundle({ symbol: 'SPY', candles: candles(50), benchmarkCandles: candles(50) }, { calculatedAt: NOW, now: NOW })
-    expect(sufficient.indicators.atrPercentile).toBe(100)
-    expect(insufficient.coverage.missing).toContain('atrPercentile')
+    expect(calculateAtrPercentileSeries(candles(260)).at(-1)).toBe(100)
+    expect(calculateAtrPercentileSeries(candles(50)).at(-1)).toBeNull()
   })
 
   it('calculates Wilder ADX after warm-up and omits it before warm-up', () => {
@@ -95,17 +95,16 @@ describe('deterministic daily calculations', () => {
   })
 
   it('calculates normalized SMA slopes, benchmark condition, and aligned relative strength', () => {
-    const bundle = buildDailyIndicatorBundle({
-      symbol: 'AAPL',
-      candles: candles(260, { symbol: 'AAPL', step: 2 }),
-      benchmarkSymbol: 'SPY',
-      benchmarkCandles: candles(260, { symbol: 'SPY', step: 1 }),
-    }, { calculatedAt: NOW, now: NOW })
-    expect(bundle.indicators.movingAverageSlopePct).toBeGreaterThan(0)
-    expect(bundle.indicators.mediumMovingAverageSlopePct).toBeGreaterThan(0)
-    expect(bundle.indicators.benchmarkAboveLongAverage).toBe(true)
-    expect(bundle.indicators.benchmarkChangePct).toBeGreaterThan(0)
-    expect(bundle.indicators.relativeStrengthPct).toBeGreaterThan(0)
+    const symbol = candles(260, { symbol: 'AAPL', step: 2 })
+    const benchmark = candles(260, { symbol: 'SPY', step: 1 })
+    const closes = symbol.map(candle => candle.close)
+    const benchmarkCloses = benchmark.map(candle => candle.close)
+    expect(calculateNormalizedSlope(calculateSmaSeries(closes, 20))).toBeGreaterThan(0)
+    expect(calculateNormalizedSlope(calculateSmaSeries(closes, 50))).toBeGreaterThan(0)
+    expect(benchmarkCloses.at(-1)).toBeGreaterThan(calculateSma(benchmarkCloses, 200))
+    expect(calculateNormalizedSlope(benchmarkCloses, 20)).toBeGreaterThan(0)
+    expect(calculateRelativeStrength(symbol, benchmark, 20)).toBeGreaterThan(0)
+    expect(calculateRelativeStrength(symbol.slice(-20), benchmark.slice(-20), 20)).toBeNull()
   })
 
   it('aligns relative strength by trading date and reports insufficient overlap', () => {
@@ -121,24 +120,24 @@ describe('daily indicator bundle and MI.2 integration', () => {
     const first = buildDailyIndicatorBundle(input, { calculatedAt: NOW, now: NOW })
     const second = buildDailyIndicatorBundle(input, { calculatedAt: NOW, now: NOW })
     expect(first).toEqual(second)
-    expect(first.provenance.adx).toMatchObject({
-      source: 'fixture', symbol: 'SPY', timeframe: '1D', calculation: 'wilder-adx',
-      sourceCandleCount: 260,
+    expect(first.provenance).toEqual({})
+    expect(first.coverage.invalid[0]).toMatchObject({
+      source: 'fixture', completionStatus: 'UNKNOWN', reason: 'unqualified_daily_completion',
     })
     expect(first.pipelineVersion).toBe('daily-indicators-v1')
   })
 
-  it('treats a completed date-only daily bar as evidence for its full trading date', () => {
+  it('does not promote an older date-only daily bar to confirmed evidence', () => {
     const calculatedAt = '2026-07-31T15:30:00.000Z'
     const input = { symbol: 'SPY', source: 'twelvedata', candles: candles(260), benchmarkCandles: candles(260) }
     const bundle = buildDailyIndicatorBundle(input, { calculatedAt, now: calculatedAt })
-    expect(bundle.provenance.price.observedAt).toBe('2026-07-30T23:59:59.999Z')
+    expect(bundle.provenance.price).toBeUndefined()
+    expect(bundle.coverage.completion.sourceSessionDate).toBe('2026-07-30')
     const result = createMarketRegimeOrchestrator().classify({ symbol: 'SPY', timeframe: '1D', indicatorBundle: bundle }, { now: calculatedAt })
-    expect(result.freshness).toBe('FRESH')
-    expect(result.inputCoverage.stale).toEqual([])
+    expect(result.classification.status).toBe('INSUFFICIENT_DATA')
   })
 
-  it('uses the October 16 session candle as the indicator cutoff after the session', () => {
+  it('preserves the October 16 source date without claiming post-close finality', () => {
     const sessionCandles = Array.from({ length: 20 }, (_, index) => ({
       symbol: 'AAPL',
       timestamp: new Date(Date.UTC(2026, 9, 16 - (19 - index))).toISOString().slice(0, 10),
@@ -163,19 +162,20 @@ describe('daily indicator bundle and MI.2 integration', () => {
       includeHistory: true,
     })
 
-    expect(bundle.asOf).toBe('2026-10-16T00:00:00.000Z')
-    expect(bundle.history.asOf).toBe('2026-10-16T00:00:00.000Z')
-    expect(bundle.history.candles.at(-1)).toMatchObject({ close: 120, completed: true })
-    expect(bundle.indicators.price).toBe(120)
-    expect(bundle.indicators.shortMovingAverage).toBe(110.5)
+    expect(bundle.asOf).toBeNull()
+    expect(bundle.history.asOf).toBeNull()
+    expect(bundle.history.candles).toEqual([])
+    expect(bundle.indicators).toEqual({})
+    expect(bundle.history.completion).toMatchObject({ status: 'UNKNOWN', sourceSessionDate: '2026-10-16' })
   })
 
   it('isolates missing indicators when history is insufficient or malformed', () => {
     const malformed = [...candles(20), { ...candles(1)[0], timestamp: 'bad' }]
     const bundle = buildDailyIndicatorBundle({ symbol: 'AAPL', candles: malformed, benchmarkCandles: [] }, { calculatedAt: NOW, now: NOW })
-    expect(bundle.indicators.shortMovingAverage).toBeDefined()
+    expect(bundle.indicators.shortMovingAverage).toBeUndefined()
     expect(bundle.coverage.missing).toContain('longMovingAverage')
-    expect(bundle.coverage.invalid).toHaveLength(1)
+    expect(bundle.coverage.invalid.filter(entry => entry.reason === 'invalid_daily_candle')).toHaveLength(1)
+    expect(bundle.coverage.invalid.filter(entry => entry.reason === 'unqualified_daily_completion')).toHaveLength(20)
     expect(bundle.warnings).toContain('Benchmark SPY history is unavailable')
   })
 
@@ -183,7 +183,7 @@ describe('daily indicator bundle and MI.2 integration', () => {
     const getCandles = vi.fn().mockResolvedValue({ ok: true, provider: 'fixture', data: candles(260) })
     const bundle = await createDailyIndicatorPipeline({ marketDataService: { getCandles } }).build({ symbol: 'SPY', timeframe: '1D' }, { calculatedAt: NOW, now: NOW })
     expect(getCandles).toHaveBeenCalledTimes(1)
-    expect(bundle.indicators.longMovingAverage).toBeDefined()
+    expect(bundle.coverage.missing).toContain('longMovingAverage')
   })
 
   it('accepts approved daily timeframe aliases and rejects intraday input', async () => {
@@ -198,17 +198,18 @@ describe('daily indicator bundle and MI.2 integration', () => {
       .mockResolvedValueOnce({ ok: true, provider: 'mock-fallback', data: candles(30, { symbol: 'AAPL' }) })
       .mockResolvedValueOnce({ ok: false, provider: 'atlas-default', error: { code: 'unavailable' } })
     const bundle = await createDailyIndicatorPipeline({ marketDataService: { getCandles } }).build({ symbol: 'AAPL', timeframe: '1D' }, { calculatedAt: NOW, now: NOW })
-    expect(bundle.provenance.price.source).toBe('fixture')
+    expect(bundle.coverage.invalid[0].source).toBe('fixture')
+    expect(bundle.provenance.price).toBeUndefined()
     expect(bundle.coverage.missing).toContain('relativeStrengthPct')
     expect(bundle.warnings).toContain('Benchmark SPY provider is unavailable')
   })
 
-  it('passes normalized observations to MI.2 and improves the regime result', () => {
+  it('keeps MI.2 insufficient when daily completion is unqualified', () => {
     const bundle = buildDailyIndicatorBundle({ symbol: 'SPY', candles: candles(260), benchmarkCandles: candles(260) }, { calculatedAt: NOW, now: NOW })
     const result = createMarketRegimeOrchestrator().classify({ symbol: 'SPY', timeframe: '1D', indicatorBundle: bundle }, { now: NOW })
-    expect(result.classification.status).toBe('COMPLETE')
-    expect(result.classification.trendRegime).not.toBe('UNKNOWN')
-    expect(result.inputCoverage.available).toContain('longMovingAverage')
+    expect(result.classification.status).toBe('INSUFFICIENT_DATA')
+    expect(result.classification.trendRegime).toBe('UNKNOWN')
+    expect(result.inputCoverage.available).not.toContain('longMovingAverage')
     expect(result.paperTrading).toBe(true)
     expect(result.advisoryOnly).toBe(true)
   })
@@ -232,7 +233,7 @@ describe('daily indicator bundle and MI.2 integration', () => {
     const service = createWorkspaceDataService({ marketDataService, indicatorPipeline })
     const result = await service.getMarketOverview('SPY', { now: NOW, includeHistoricalIntelligence: true })
     expect(indicatorPipeline.build).toHaveBeenCalledOnce()
-    expect(result.regime.classification.status).toBe('COMPLETE')
+    expect(result.regime.classification.status).toBe('INSUFFICIENT_DATA')
     expect(result.indicatorBundle).toBeUndefined()
     expect(result.paperTrading).toBe(true)
   })
