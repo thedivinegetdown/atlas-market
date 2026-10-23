@@ -42,7 +42,7 @@ describe('isolated provisional observation contract', () => {
     const results = ['UTC', 'America/New_York'].map(TZ => execFileSync(process.execPath, ['--input-type=module', '-e', script], { env: { ...process.env, TZ }, encoding: 'utf8' }))
     expect(results[0]).toBe(results[1])
   })
-  it.each(['symbol', 'exchange', 'timezone', 'interval'])('withholds estimates without instrument %s', (field) => {
+  it.each(['symbol', 'exchange', 'mic', 'timezone', 'interval'])('withholds estimates without instrument %s', (field) => {
     const response = researchResponse(); delete response.researchSource.instrument[field]
     expect(build(response).history.candles).toEqual([])
     expect(build(response).sufficiency.available).toEqual([])
@@ -50,6 +50,23 @@ describe('isolated provisional observation contract', () => {
   it.each([{ exchange: 'UNKNOWN' }, { timezone: 'Europe/London' }, { symbol: 'MSFT' }, { mic: 'UNKNOWN' }])('withholds inconsistent metadata %j', (metadata) => {
     const response = researchResponse(); Object.assign(response.researchSource.instrument, metadata)
     expect(build(response).history.reason).toMatch(/identity/)
+  })
+  it.each(['not-a-timestamp', '2026-10-20T17:15:00.000Z'])('withholds estimates for invalid retrieval evidence: %s', (receivedAt) => {
+    const response = researchResponse(); response.receivedAt = receivedAt
+    const result = build(response)
+    expect(result.history.candles).toEqual([])
+    expect(result.sufficiency.available).toEqual([])
+    expect(result.history.reason).toMatch(/retrieval/)
+  })
+  it('accepts provider-owned AAPL segment MIC without treating it as the NASDAQ operating MIC', () => {
+    const result = build()
+    expect(result.history.instrument).toMatchObject({ symbol: 'AAPL', exchange: 'NASDAQ', mic: 'XNGS', timezone: 'America/New_York', interval: '1day' })
+    expect(result.history.candles).toHaveLength(259)
+    expect(result.history.inputCutoff).toBe('2026-10-19')
+    expect(result.estimates.inputCutoff).toBe(result.history.inputCutoff)
+    expect(result.sufficiency.available).toEqual(expect.arrayContaining(['shortMovingAverage', 'mediumMovingAverage', 'longMovingAverage', 'atr', 'atrPct', 'relativeStrengthPct']))
+    expect(result.completion.status).toBe('UNKNOWN')
+    expect(result.authoritativeCompletedSessionCutoff).toBeNull()
   })
   it('excludes contradictory, invalid, missing and duplicate labels without inventing replacements', () => {
     const response = researchResponse(); const bars = response.researchSource.observations
@@ -140,7 +157,7 @@ describe('isolated provisional observation contract', () => {
     expect(marketDataService.getCandles).toHaveBeenCalledTimes(1)
   })
   it('preserves provider metadata and raw completion contradictions across existing cache hits without changing canonical candles', async () => {
-    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ meta: { symbol: 'AAPL', exchange: 'NASDAQ', exchange_timezone: 'America/New_York', interval: '1day' }, values: [{ datetime: '2026-10-19', open: 10, high: 12, low: 9, close: 11, volume: 100, completed: true, complete: false }] }) }))
+    const fetchImpl = vi.fn(async () => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => ({ meta: { symbol: 'AAPL', exchange: 'NASDAQ', mic_code: 'XNGS', exchange_timezone: 'America/New_York', interval: '1day' }, values: [{ datetime: '2026-10-19', open: 10, high: 12, low: 9, close: 11, volume: 100, completed: true, complete: false }] }) }))
     const provider = createDefaultMarketDataProvider({ twelveDataApiKey: 'fixture', fetchImpl, logger: { info: vi.fn(), warn: vi.fn() } })
     const first = await provider.getCandles('AAPL'); const second = await provider.getCandles('AAPL')
     expect(second.cache.state).toBe('HIT'); expect(fetchImpl).toHaveBeenCalledTimes(1)

@@ -9,7 +9,7 @@ export function researchResponse(symbol = 'AAPL', count = 260) {
       open: close - 0.5, high: close + 2, low: close - 2, close, volume: 1000000 + index * 1000, completed: true }
   })
   return { ok: true, provider: 'twelvedata', receivedAt: RESEARCH_NOW, fallbackUsed: false,
-    researchSource: captureResearchSource({ metadata: { symbol, exchange: symbol === 'SPY' ? 'NYSE Arca' : 'NASDAQ', exchange_timezone: 'America/New_York', interval: '1day' }, data: values }) }
+    researchSource: captureResearchSource({ metadata: { symbol, exchange: symbol === 'SPY' ? 'NYSE Arca' : 'NASDAQ', mic_code: symbol === 'SPY' ? 'ARCX' : 'XNGS', exchange_timezone: 'America/New_York', interval: '1day' }, data: values }) }
 }
 export function researchOverview(symbol = 'AAPL') {
   return { quote: { symbol, price: 201.8, change: 1.2, changePercent: 0.6, updatedAt: RESEARCH_NOW,
