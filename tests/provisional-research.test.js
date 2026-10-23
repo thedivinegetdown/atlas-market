@@ -4,7 +4,7 @@ import { pathToFileURL } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { buildProvisionalResearch } from '../lib/research/provisionalResearch.js'
 import { createProvisionalResearchService } from '../lib/research/provisionalResearchService.js'
-import { createDefaultMarketDataProvider } from '../lib/market/defaultMarketDataProvider.js'
+import { createDefaultMarketDataProvider, toMarketServiceQuote } from '../lib/market/defaultMarketDataProvider.js'
 import { calculateAtr, calculateSma, calculateRelativeStrength } from '../lib/market/indicators/indicatorCalculations.js'
 import { buildDailyIndicatorBundle } from '../lib/market/indicators/buildDailyIndicatorBundle.js'
 import { buildBreakoutMomentumSignal } from '../lib/strategies/breakout/breakoutMomentumSignal.js'
@@ -99,6 +99,28 @@ describe('isolated provisional observation contract', () => {
     const service = createProvisionalResearchService({ marketDataService, clock: () => RESEARCH_NOW })
     await service.read('AAPL'); expect(marketDataService.getCandles).not.toHaveBeenCalled()
     await service.read('AAPL', { skipQuote: true }); expect(marketDataService.getCandles).toHaveBeenCalledTimes(1)
+  })
+  it.each([429, 200])('stops a direct Research acquisition after a real adapter quote-limit response (HTTP %s)', async (status) => {
+    const paths = []
+    const fetchImpl = vi.fn(async url => {
+      paths.push(new URL(url).pathname)
+      return { ok: status === 200, status, headers: { get: () => null }, json: async () => ({ code: 429, status: 'error', message: 'API credits exceeded' }) }
+    })
+    const provider = createDefaultMarketDataProvider({ twelveDataApiKey: 'fixture-only', fetchImpl, logger: { info: vi.fn(), warn: vi.fn() } })
+    const service = createProvisionalResearchService({ marketDataService: {
+      getQuote: async symbol => toMarketServiceQuote(await provider.getQuote(symbol), symbol),
+      getCandles: (symbol, options) => provider.getCandles(symbol, options),
+    }, clock: () => RESEARCH_NOW })
+    const result = await service.read('AAPL')
+    expect(paths).toEqual(['/quote'])
+    expect(result.quote.provenance.dataStatus).toBe('MOCK')
+    expect(result.quote.provenance.sourceObservedAt).toBeNull()
+    expect(result.quote.marketDataIssue).toMatchObject({ provider: 'twelvedata', classification: 'RATE_LIMITED', code: 'provider_rate_limited', httpStatus: status })
+    expect(result.provisionalResearch.history.providerError).toBe('provider_rate_limited')
+    expect(result.provisionalResearch.history.candles).toEqual([])
+    expect(result.provisionalResearch.sufficiency.available).toEqual([])
+    expect(JSON.stringify(result)).not.toContain('fixture-only')
+    expect(JSON.stringify(result)).not.toContain('API credits exceeded')
   })
   it('retains usable quote independently of unavailable history and skips acquisition for reused quotes', async () => {
     const quote = { symbol: 'AAPL', provenance: { dataStatus: 'LIVE' } }
