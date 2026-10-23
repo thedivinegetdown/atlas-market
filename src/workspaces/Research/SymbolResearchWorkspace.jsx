@@ -125,20 +125,30 @@ export default function SymbolResearchWorkspace({
 }) {
   const [timeframe, setTimeframe] = useState('3M')
   const research = useSymbolResearch({ symbol, initialOverview, initialQuote, initialScanner, autoLoad })
-  const overview = research.overview?.quote?.symbol === symbol ? research.overview : null
+  const overview = research.overview?.quote?.symbol === symbol || research.overview?.provisionalResearch?.symbol === symbol ? research.overview : null
   const quote = overview?.quote ?? null
-  const history = overview?.research?.history
+  const estimate = overview?.provisionalResearch
+  const provisional = estimate?.version === 'provisional-research-v1' && estimate?.evidenceClass === 'PROVISIONAL_RESEARCH_ESTIMATE'
+    && estimate?.symbol === symbol && estimate?.completion?.status === 'UNKNOWN'
+    && estimate?.history?.completion?.status === 'UNKNOWN' && estimate?.authoritativeCompletedSessionCutoff === null
+    && estimate?.history?.inputCutoff === estimate?.estimates?.inputCutoff
+  const history = provisional ? estimate.history : overview?.research?.history
   const historyCompletion = ['CONFIRMED_COMPLETED', 'CONFIRMED_INCOMPLETE'].includes(history?.completion?.status)
     ? history.completion.status : 'UNKNOWN'
   const historyCompleted = historyCompletion === 'CONFIRMED_COMPLETED'
   const indicatorsCompleted = historyCompleted
     && overview?.research?.indicators?.coverage?.completion?.status === 'CONFIRMED_COMPLETED'
     && history?.asOf === overview?.research?.indicators?.asOf
-  const allCandles = historyCompleted && Array.isArray(history?.candles) ? history.candles : []
+  const allCandles = (provisional || historyCompleted) && Array.isArray(history?.candles) ? history.candles : []
   const selected = TIMEFRAMES.find((item) => item.id === timeframe) ?? TIMEFRAMES[1]
   const candles = allCandles.slice(-selected.candles)
-  const indicators = indicatorsCompleted ? overview?.research?.indicators?.values ?? {} : {}
-  const levels = useMemo(() => calculateTechnicalLevels(candles), [candles])
+  const indicators = provisional ? estimate.estimates.values : indicatorsCompleted ? overview?.research?.indicators?.values ?? {} : {}
+  const levels = useMemo(() => {
+    const calculated = calculateTechnicalLevels(candles)
+    if (!provisional) return calculated
+    const label = (level) => ({ ...level, kind: `provisional ${level.kind.replace('confirmed ', '')}` })
+    return { ...calculated, support: calculated.support.map(label), resistance: calculated.resistance.map(label), method: calculated.method.replace('confirmed ', 'provisional observation '), reason: calculated.reason?.replace('daily candles', 'prior-date observations') }
+  }, [candles, provisional])
   const quoteStatus = quote?.provenance?.dataStatus ?? 'INSUFFICIENT'
   const changeTone = Number(quote?.change ?? 0) >= 0 ? 'positive' : 'negative'
 
@@ -147,6 +157,14 @@ export default function SymbolResearchWorkspace({
     title={symbol}
     description="Mobile technical evidence workspace for human research. Technical levels are references, not predictions or trade instructions."
   >
+    {provisional ? <section className="research-boundary-card" aria-label="Provisional Research evidence">
+      <strong>PROVISIONAL RESEARCH — NOT GOVERNED EVIDENCE</strong>
+      <p>{estimate.revisionUncertainty} Completion UNKNOWN. No confirmed completed-session cutoff.</p>
+      <p>Source: {history.provider}. Exchange: {history.instrument?.exchange ?? 'Unavailable'} · {history.instrument?.timezone ?? 'Unavailable'}. Retrieved: {timestamp(history.retrievedAt)}. Adjustment: {history.adjustmentBasis}.</p>
+      <p>Current/future exchange-date labels and explicitly incomplete bars are excluded, including after close. Prior-date observations are estimates, not certified sessions.</p>
+      {history.reason ? <p role="status">INSUFFICIENT — {history.reason}.</p> : null}
+      {history.providerError || estimate.benchmark?.providerError ? <p role="status">History acquisition: {history.providerError ?? estimate.benchmark.providerError}. No automatic retry.</p> : null}
+    </section> : null}
     <WorkspacePanel id="symbol-research-quote" className="symbol-research-panel" title="Quote & provenance" subtitle="Latest available evidence">
       <div className="research-quote-header">
         <div><span className="research-symbol">{symbol}</span><strong>{currency(quote?.price)}</strong></div>
@@ -157,27 +175,28 @@ export default function SymbolResearchWorkspace({
     </WorkspacePanel>
 
     <WorkspacePanel id="symbol-research-chart" className="symbol-research-panel" title="Price & volume history" subtitle={`${history?.provider ?? 'unknown'} daily candles`}>
-      {!historyCompleted ? <p className="research-insufficient" role="status">Daily session completion is {historyCompletion}. History, indicators, and technical levels require independently qualified completion evidence. Intraday quotes remain separate.</p> : null}
+      {!historyCompleted && !provisional ? <p className="research-insufficient" role="status">Daily session completion is {historyCompletion}. History, indicators, and technical levels require independently qualified completion evidence. Intraday quotes remain separate.</p> : null}
       <div className="research-timeframes" role="group" aria-label="Historical timeframe">
         {TIMEFRAMES.map((item) => <button type="button" aria-pressed={timeframe === item.id} key={item.id} onClick={() => setTimeframe(item.id)}>{item.id}<span>{item.label}</span></button>)}
       </div>
       {history?.historyCompleteness === 'TRUNCATED' ? <p className="research-evidence-note">Partial history: {history.candleCount} of {history.requestedCount} requested daily candles.</p> : null}
       <PriceVolumeChart candles={candles} timeframe={timeframe} />
-      <p className="research-evidence-note">Volume is displayed beneath the close-price line. Historical session through {dailySessionDate(historyCompleted ? history?.asOf : null)}.</p>
+      <p className="research-evidence-note">Volume is displayed beneath the close-price line. {provisional ? 'Provisional historical inputs through provider session label' : 'Historical session through'} {dailySessionDate(provisional ? history.inputCutoff : historyCompleted ? history?.asOf : null)}.</p>
+      {provisional ? <p className="research-evidence-note">{estimate.sufficiency.observations} usable observations of 260 requested; missing sessions are not inferred. {history.rejected.length} excluded observations. {history.sessionInterpretation}.</p> : null}
     </WorkspacePanel>
 
-    <WorkspacePanel id="symbol-research-trend" className="symbol-research-panel" title="Trend & volatility" subtitle="Deterministic daily indicators">
+    <WorkspacePanel id="symbol-research-trend" className="symbol-research-panel" title="Trend & volatility" subtitle={provisional ? 'Provisional daily indicator estimates' : 'Deterministic daily indicators'}>
       <div className="research-metric-grid">
-        <EvidenceMetric label="SMA20" value={indicators.shortMovingAverage} requirement="20 completed daily closes" />
-        <EvidenceMetric label="SMA50" value={indicators.mediumMovingAverage} requirement="50 completed daily closes" />
-        <EvidenceMetric label="SMA200" value={indicators.longMovingAverage} requirement="200 completed daily closes" />
-        <EvidenceMetric label="ATR14" value={indicators.atr} requirement="15 completed daily candles" />
+        <EvidenceMetric label="SMA20" value={indicators.shortMovingAverage} requirement={provisional ? '20 usable prior-date observations' : '20 completed daily closes'} />
+        <EvidenceMetric label="SMA50" value={indicators.mediumMovingAverage} requirement={provisional ? '50 usable prior-date observations' : '50 completed daily closes'} />
+        <EvidenceMetric label="SMA200" value={indicators.longMovingAverage} requirement={provisional ? '200 usable prior-date observations' : '200 completed daily closes'} />
+        <EvidenceMetric label="ATR14" value={indicators.atr} requirement={provisional ? '15 usable prior-date observations' : '15 completed daily candles'} />
         <article className={`research-metric ${indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? '' : 'is-insufficient'}`}><span>ATR % of close</span><strong>{indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? percent(indicators.atrPct) : 'INSUFFICIENT'}</strong><small>{indicators.atrPct != null && Number.isFinite(Number(indicators.atrPct)) ? 'Wilder ATR14' : 'Requires ATR and latest close'}</small></article>
         <article className={`research-metric ${indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? '' : 'is-insufficient'}`}><span>20-day relative strength vs SPY</span><strong>{indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? percent(indicators.relativeStrengthPct) : 'INSUFFICIENT'}</strong><small>{indicators.relativeStrengthPct != null && Number.isFinite(Number(indicators.relativeStrengthPct)) ? 'Aligned return difference' : 'Requires aligned symbol and SPY history'}</small></article>
       </div>
-      <p className="research-evidence-note">Indicator inputs through session {dailySessionDate(indicatorsCompleted ? overview?.research?.indicators?.asOf : null)}. Missing inputs remain insufficient and are not inferred from the quote.</p>
+      <p className="research-evidence-note">{provisional ? 'Provisional indicator inputs through provider session label' : 'Indicator inputs through session'} {dailySessionDate(provisional ? estimate.estimates.inputCutoff : indicatorsCompleted ? overview?.research?.indicators?.asOf : null)}. Missing inputs remain insufficient and are not inferred from the quote.</p>
+      {provisional ? <p className="research-evidence-note">SPY inputs through {dailySessionDate(estimate.benchmark.inputCutoff)}; {estimate.sufficiency.alignedObservations} aligned observations. {estimate.benchmark.reason}</p> : null}
     </WorkspacePanel>
-
     <WorkspacePanel id="symbol-research-levels" className="symbol-research-panel" title="Support & resistance" subtitle={timeframe}>
       {levels.status === 'INSUFFICIENT' ? <p className="research-insufficient" role="status">INSUFFICIENT — {levels.reason}.</p> : <>
         <div className="research-level-columns">

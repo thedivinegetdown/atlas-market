@@ -165,6 +165,10 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
       return request('market-overview', { symbol, timeframe, ...(skipQuote ? { skipQuote: 'true' } : {}) }, 'Unable to load market overview')
     },
 
+    getResearchHistory(symbol, { skipQuote = false } = {}) {
+      return request('research-history', { symbol, organizationId: 'org-atlas-local', ...(skipQuote ? { skipQuote: 'true' } : {}) }, 'Unable to load provisional Research')
+    },
+
     getStrategySuitability(symbol, timeframe = '1D') {
       return request('strategy-suitability', { symbol, timeframe }, 'Unable to load strategy suitability')
     },
@@ -183,7 +187,7 @@ export function createWorkspaceApiClient({ fetchImpl, accessTokenProvider = read
     saveReviewedOpportunity(qualitySnapshot) {
       return request('opportunity-intelligence', {}, 'Unable to save reviewed opportunity', {
         method: 'POST',
-        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', qualitySnapshot },
+        body: { organizationId: 'org-atlas-local', accountId: 'paper-portfolio', reviewState: qualitySnapshot?.reviewState ?? 'saved', reviewReference: { symbol: qualitySnapshot?.symbol, opportunityId: qualitySnapshot?.opportunityId, strategyId: qualitySnapshot?.strategyId } },
       })
     },
 

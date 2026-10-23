@@ -1,0 +1,22 @@
+{
+  "scope": "Local deterministic fixture, actual Research route/component; no production acceptance or provider qualification",
+  "fixture": "/tests/browser/provisional-research.html",
+  "browser": "Supported in-app Chromium browser via Computer Use",
+  "mobile": {
+    "viewport": { "width": 390, "height": 844 },
+    "documentScrollWidth": 375,
+    "chartBoundsAfterClick": { "left": 17, "right": 358, "width": 341, "height": 222 },
+    "timeframeCenterHitTests": { "1M": true, "3M": true, "1Y": true },
+    "pointerClick": { "selection": "1M", "volumeBars": 22 },
+    "keyboardEnter": { "selection": "1Y", "volumeBars": 259 },
+    "horizontalOverflow": false,
+    "provisionalWarningVisible": true,
+    "quoteProvenanceSeparate": true
+  },
+  "desktop": {
+    "viewport": { "width": 1280, "height": 720 },
+    "documentScrollWidth": 1265,
+    "chartBounds": { "left": 17, "right": 1248, "width": 1231 },
+    "horizontalOverflow": false
+  }
+}

@@ -10,19 +10,19 @@ This inventory reports source-level controls. It does not prove production ident
 
 | Classification | Count |
 | --- | ---: |
-| Total functions | 281 |
+| Total functions | 282 |
 | Wrapper: team-authenticated | 8 |
-| Wrapper: organization-authenticated | 250 |
+| Wrapper: organization-authenticated | 251 |
 | Wrapper: authenticated | 21 |
 | Wrapper: plain-api | 2 |
 | Wrapper: unknown | 0 |
-| Access: read | 80 |
+| Access: read | 81 |
 | Access: mutation | 60 |
 | Access: read-and-mutation | 141 |
 | Priority: P0 | 0 |
 | Priority: P1 | 0 |
 | Priority: P2 | 0 |
-| Priority: P3 | 281 |
+| Priority: P3 | 282 |
 
 ## Control semantics
 
@@ -288,6 +288,7 @@ This inventory reports source-level controls. It does not prove production ident
 | `remediation-plan-detail` | `netlify/functions/remediation-plan-detail.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `remediation-plan-status-update` | `netlify/functions/remediation-plan-status-update.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `remediation-plans` | `netlify/functions/remediation-plans.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | GET, POST | read-and-mutation | organization-authenticated | organization | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
+| `research-history` | `netlify/functions/research-history.js` | AUTHENTICATED_READ | Protected by the existing authenticated control and authorization boundary. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `revoke-other-sessions` | `netlify/functions/revoke-other-sessions.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | authenticated | authenticated-user/workspace-role | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `revoke-selected-session` | `netlify/functions/revoke-selected-session.js` | AUTHENTICATED_MUTATION | Protected by the existing authenticated control and authorization boundary. | POST | mutation | authenticated | authenticated-user/workspace-role | required | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |
 | `risk-summary` | `netlify/functions/risk-summary.js` | ORGANIZATION_READ | Risk output is tenant-sensitive decision evidence. | GET | read | organization-authenticated | organization | no | controlled | P3 | Retain wrapper coverage and verify production identity/provider configuration. |

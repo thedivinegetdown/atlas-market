@@ -15,18 +15,18 @@ describe('API control inventory', () => {
 
   it('covers every Netlify Function with a known shared wrapper', () => {
     const inventory = buildApiControlInventory()
-    expect(inventory.summary.total).toBe(281)
+    expect(inventory.summary.total).toBe(282)
     expect(inventory.summary.byWrapper).toEqual({
       'team-authenticated': 8,
-      'organization-authenticated': 250,
+      'organization-authenticated': 251,
       authenticated: 21,
       'plain-api': 2,
       unknown: 0,
     })
-    expect(inventory.summary.byAccess).toEqual({ read: 80, mutation: 60, 'read-and-mutation': 141 })
-    expect(inventory.summary.byPriority).toEqual({ P0: 0, P1: 0, P2: 0, P3: 281 })
+    expect(inventory.summary.byAccess).toEqual({ read: 81, mutation: 60, 'read-and-mutation': 141 })
+    expect(inventory.summary.byPriority).toEqual({ P0: 0, P1: 0, P2: 0, P3: 282 })
     expect(inventory.functions.filter((entry) => entry.wrapper === 'plain-api').map((entry) => entry.function)).toEqual(['health', 'watchlist'])
-    expect(inventory.functions).toHaveLength(281)
+    expect(inventory.functions).toHaveLength(282)
     expect(inventory.functions.every((entry) => entry.path.startsWith('netlify/functions/'))).toBe(true)
   })
 })

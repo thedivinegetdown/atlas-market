@@ -111,7 +111,7 @@ async function clickButton(label) {
 
 beforeEach(() => {
   vi.spyOn(workspaceApiClient, 'getWatchlist')
-  vi.spyOn(workspaceApiClient, 'getMarketOverview')
+  vi.spyOn(workspaceApiClient, 'getResearchHistory')
   vi.spyOn(workspaceApiClient, 'getGovernedReviewPreparationStatus').mockResolvedValue({ observationCoverage: { checks: [] } })
 })
 
@@ -128,12 +128,12 @@ describe('authenticated market session reuse', () => {
     const aapl = quote()
     let resolveHistory
     workspaceApiClient.getWatchlist.mockResolvedValue({ quotes: [aapl] })
-    workspaceApiClient.getMarketOverview.mockReturnValue(new Promise((resolve) => { resolveHistory = resolve }))
+    workspaceApiClient.getResearchHistory.mockReturnValue(new Promise((resolve) => { resolveHistory = resolve }))
     render(<TestApp />)
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Research AAPL"]')).toBeTruthy())
 
     await click('[aria-label="Research AAPL"]')
-    await vi.waitFor(() => expect(workspaceApiClient.getMarketOverview).toHaveBeenCalledWith('AAPL', '1D', { skipQuote: true }))
+    await vi.waitFor(() => expect(workspaceApiClient.getResearchHistory).toHaveBeenCalledWith('AAPL', { skipQuote: true }))
     expect(container.querySelector('#symbol-research-quote').textContent).toContain('$201.80')
     expect(container.querySelector('[aria-label="Market data status STALE"]')).toBeTruthy()
 
@@ -146,26 +146,26 @@ describe('authenticated market session reuse', () => {
     const aapl = quote()
     const msft = quote('MSFT', 'LIVE', 420)
     workspaceApiClient.getWatchlist.mockResolvedValue({ quotes: [aapl] })
-    workspaceApiClient.getMarketOverview.mockImplementation(async (symbol) => historyOverview(symbol, symbol === 'MSFT' ? msft : aapl))
+    workspaceApiClient.getResearchHistory.mockImplementation(async (symbol) => historyOverview(symbol, symbol === 'MSFT' ? msft : aapl))
     render(<TestApp />)
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Research AAPL"]')).toBeTruthy())
 
     await clickButton('Open MSFT directly')
-    await vi.waitFor(() => expect(workspaceApiClient.getMarketOverview).toHaveBeenCalledWith('MSFT', '1D', { skipQuote: false }))
+    await vi.waitFor(() => expect(workspaceApiClient.getResearchHistory).toHaveBeenCalledWith('MSFT', { skipQuote: false }))
     expect(container.querySelector('#symbol-research-quote').textContent).toContain('$420.00')
 
     act(() => root.unmount())
     container.remove()
     root = null
     container = null
-    workspaceApiClient.getMarketOverview.mockClear()
+    workspaceApiClient.getResearchHistory.mockClear()
     render(<TestApp initialEntries={['/research/AAPL']} />)
-    await vi.waitFor(() => expect(workspaceApiClient.getMarketOverview).toHaveBeenCalledWith('AAPL', '1D', { skipQuote: false }))
+    await vi.waitFor(() => expect(workspaceApiClient.getResearchHistory).toHaveBeenCalledWith('AAPL', { skipQuote: false }))
   })
 
   it.each(['STALE', 'MOCK'])('preserves the carried %s classification exactly', async (status) => {
     workspaceApiClient.getWatchlist.mockResolvedValue({ quotes: [quote('AAPL', status)] })
-    workspaceApiClient.getMarketOverview.mockResolvedValue(historyOverview())
+    workspaceApiClient.getResearchHistory.mockResolvedValue(historyOverview())
     render(<TestApp />)
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Research AAPL"]')).toBeTruthy())
     await click('[aria-label="Research AAPL"]')
@@ -178,7 +178,7 @@ describe('authenticated market session reuse', () => {
     workspaceApiClient.getWatchlist
       .mockResolvedValueOnce({ quotes: [aapl] })
       .mockResolvedValueOnce({ quotes: [refreshed] })
-    workspaceApiClient.getMarketOverview.mockResolvedValue(historyOverview())
+    workspaceApiClient.getResearchHistory.mockResolvedValue(historyOverview())
     render(<TestApp />)
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Research AAPL"]')).toBeTruthy())
     await click('[aria-label="Research AAPL"]')
@@ -210,7 +210,7 @@ describe('authenticated market session reuse', () => {
 
   it('keeps 1M, 3M, and 1Y switching local after the single history request', async () => {
     workspaceApiClient.getWatchlist.mockResolvedValue({ quotes: [quote()] })
-    workspaceApiClient.getMarketOverview.mockResolvedValue(historyOverview())
+    workspaceApiClient.getResearchHistory.mockResolvedValue(historyOverview())
     render(<TestApp />)
     await vi.waitFor(() => expect(container.querySelector('[aria-label="Research AAPL"]')).toBeTruthy())
     await click('[aria-label="Research AAPL"]')
@@ -222,7 +222,7 @@ describe('authenticated market session reuse', () => {
     expect(container.querySelector('#research-chart-description').textContent).toContain('66 supplied')
     await click('.research-timeframes button:nth-child(3)')
     expect(container.querySelector('#research-chart-description').textContent).toContain('260 supplied')
-    expect(workspaceApiClient.getMarketOverview).toHaveBeenCalledOnce()
+    expect(workspaceApiClient.getResearchHistory).toHaveBeenCalledOnce()
     expect(workspaceApiClient.getGovernedReviewPreparationStatus).toHaveBeenCalledOnce()
   })
 

@@ -27,7 +27,7 @@ export function useSymbolResearch({ symbol, initialOverview = null, initialQuote
     setOverviewError(null)
     setScannerError(null)
     const [overviewResult, scannerResult] = await Promise.allSettled([
-      workspaceApiClient.getMarketOverview(symbol, '1D', { skipQuote: Boolean(reusableQuote) }),
+      workspaceApiClient.getResearchHistory(symbol, { skipQuote: Boolean(reusableQuote) }),
       workspaceApiClient.getGovernedReviewPreparationStatus(),
     ])
     if (requestSequence.current !== requestId) return
