@@ -68,6 +68,30 @@ describe('isolated provisional observation contract', () => {
     expect(result.completion.status).toBe('UNKNOWN')
     expect(result.authoritativeCompletedSessionCutoff).toBeNull()
   })
+  it('accepts provider-owned SPY ARCX identity under the provider NYSE exchange label', () => {
+    const benchmarkResponse = researchResponse('SPY')
+    const result = build(undefined, benchmarkResponse)
+    const benchmark = buildProvisionalResearch({ symbol: 'SPY', historyResponse: benchmarkResponse, now: RESEARCH_NOW })
+    expect(benchmark.history.instrument).toMatchObject({ symbol: 'SPY', exchange: 'NYSE', mic: 'ARCX', timezone: 'America/New_York', interval: '1day' })
+    expect(benchmark.history.candles).toHaveLength(259)
+    expect(result.sufficiency.alignedObservations).toBe(259)
+    expect(result.estimates.values.relativeStrengthPct).toBe(calculateRelativeStrength(result.history.candles, benchmark.history.candles))
+    expect(result.benchmark.inputCutoff).toBe(result.history.inputCutoff)
+    expect(result.completion.status).toBe('UNKNOWN')
+    expect(result.authoritativeCompletedSessionCutoff).toBeNull()
+  })
+  it.each([
+    { mic: null },
+    { mic: 'XNAS' },
+    { exchange: 'NASDAQ', mic: 'ARCX' },
+    { timezone: 'Europe/London' },
+  ])('withholds SPY benchmark estimates for invalid metadata %j', (metadata) => {
+    const benchmark = researchResponse('SPY'); Object.assign(benchmark.researchSource.instrument, metadata)
+    const result = build(undefined, benchmark)
+    expect(result.estimates.values.relativeStrengthPct).toBeNull()
+    expect(result.sufficiency.alignedObservations).toBe(0)
+    expect(result.benchmark.reason).toMatch(/identity|timezone/)
+  })
   it('excludes contradictory, invalid, missing and duplicate labels without inventing replacements', () => {
     const response = researchResponse(); const bars = response.researchSource.observations
     bars[0].complete = false; bars[1].providerDateLabel = null; bars[2].providerDateLabel = '2026-02-30'; bars[3].providerDateLabel += 'T00:00:00Z'
